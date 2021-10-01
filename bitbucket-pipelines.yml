@@ -1,0 +1,20 @@
+image: continuumio/miniconda:latest
+
+pipelines:
+  default:
+    - step:
+        caches:
+          - pip
+          - instant
+          - dijitso
+        script:
+          - conda env create -f environment.yml
+          - conda activate emimechanicalmodel
+          - pip install .
+          - pip install pytest
+          - python -m pytest tests -vv
+
+definitions:
+  caches:
+    instant: ~/.cache/instant
+    dijitso: ~/.cache/dijitso

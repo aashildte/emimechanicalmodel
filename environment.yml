@@ -1,0 +1,11 @@
+name: emimechanicalmodel
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+    - python
+    - fenics
+    - scipy
+    - numpy
+    - matplotlib
+    - mpi4py
