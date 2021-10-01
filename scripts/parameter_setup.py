@@ -187,18 +187,18 @@ def add_active_arguments(parser):
     parser.add_argument(
         "-tm",
         "--time_max",
-        default=1000,
+        default=500,
         type=int,
         help="Length of cardiac cycle to simulate, in ms; integer between 1 and \
-                1000 (max contraction = 138).",
+                1000 (max contraction = 138, default 500).",
     )
 
     parser.add_argument(
         "-t",
         "--num_time_steps",
-        default=1000,
+        default=500,
         type=int,
-        help="Number of time steps to simulate",
+        help="Number of time steps to simulate (default 500)",
     )
 
 
