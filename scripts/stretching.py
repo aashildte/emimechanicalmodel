@@ -4,7 +4,7 @@
 
 Script for simulating uniaxial stretching, in both directions.
 
-This is used in Fig. 7, 8, 10, 11 and 14 in the paper.
+This script is used for most experiments involving stretching in the paper, the exceptions being the parameter estimation and non-uniqueness experiments, which have their own scripts.
 
 """
 

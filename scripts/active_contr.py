@@ -7,7 +7,7 @@
 
 Script for simulating active contraction; over (parts of) one cardiac cycle.
 
-This is used for Fig. 7 + 9–13 in the paper.
+This is used for all experiments involving active contraction in the paper.
 
 """
 

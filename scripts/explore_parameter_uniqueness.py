@@ -5,9 +5,9 @@
 
 Åshild Telle / Simula Research Labratory / 2021
 
-Script for exploring parameter uniqueness for the material parameters assigned to our EMI model.
+Script for exploring relative feasibility of the material parameters assigned to our EMI model.
 
-This script is used for Fig. 6 in the paper.
+This script is used for the non-uniqueness experiment in the paper.
 
 """
 

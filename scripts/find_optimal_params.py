@@ -4,7 +4,7 @@ Script for estimating optimal values for a_f / b_f, or a_s, b_s;
 using a probabilistic scheme. We compare with the tissue level model,
 then change the EMI model parameters to match these.
 
-This is used for Fig. 5 in the paper.
+This is used for the parameter estimation experiment in the paper.
 
 """
 
