@@ -30,7 +30,6 @@ class CardiacModel(ABC):
             verbose (int): Set to 0 (no verbose output; default), 1 (some),
                 or 2 (quite a bit)
         """
-
         # mesh properties
         self.mesh = mesh
 

@@ -144,7 +144,7 @@ class Boundary:
         """
         self.stretch.assign(stretch_value * self.stretch_length)
 
-    def _define_x_bnd_cond(self, V):
+    def _define_xx_bnd_cond(self, V):
         boundaries = self.boundaries
 
         bnd_xmin = boundaries["x_min"]["subdomain"]
@@ -164,7 +164,7 @@ class Boundary:
 
         return "x_max", length, bcs
 
-    def _define_y_bnd_cond(self, V):
+    def _define_yy_bnd_cond(self, V):
         boundaries = self.boundaries
 
         bnd_xmin = boundaries["x_min"]["subdomain"]
@@ -183,23 +183,63 @@ class Boundary:
         width = ymax - ymin
 
         return "y_max", width, bcs
+    
+    def _define_shear_bnd_cond(self, V, x=False, y=False, z=False):
+        boundaries = self.boundaries
+
+        assert (x and y) or (x and z) or (y and z), \
+                "Error: Two of three components needs to be true."
+        assert not (x and y and z), \
+                "Error: Two of three components needs to be true."
+
+        if x and y:
+            bnd_min = boundaries["z_min"]["subdomain"]
+            bnd_max = boundaries["z_max"]["subdomain"]
+            minval, maxval = self.dimensions[2]
+            wall = "zmax"
+        elif x and z:
+            bnd_min = boundaries["y_min"]["subdomain"]
+            bnd_max = boundaries["y_max"]["subdomain"]
+            minval, maxval = self.dimensions[1]
+            wall = "ymax"
+        elif y and z:
+            bnd_min = boundaries["x_min"]["subdomain"]
+            bnd_max = boundaries["x_max"]["subdomain"]
+            minval, maxval = self.dimensions[0]
+            wall = "xmax"
+
+        bcs = [
+            df.DirichletBC(V.sub(0), df.Constant(0), bnd_min),
+            df.DirichletBC(V.sub(1), df.Constant(0), bnd_min),
+            df.DirichletBC(V.sub(2), df.Constant(0), bnd_min),
+            df.DirichletBC(V.sub(0), self.stretch, bnd_max),
+            df.DirichletBC(V.sub(1), df.Constant(0), bnd_max),
+            df.DirichletBC(V.sub(2), df.Constant(0), bnd_max),
+        ]
+        
+        length = maxval - minval
+
+        return wall, length, bcs
+
 
     def _define_boundary_conditions(self, experiment, V):
-        assert experiment in [
-            "contr",
-            "xstretch",
-            "ystretch",
-        ], "Error: experiment must be 'contr', 'xstretch' or 'ystretch', " + \
-                f"current value: {experiment}"
-
         if experiment == "contr":
             wall, stretch_length, bcs = None, 0, []  # enforce in weak form instead
 
         if experiment == "xstretch":
-            wall, stretch_length, bcs = self._define_x_bnd_cond(V)
+            wall, stretch_length, bcs = self._define_xx_bnd_cond(V)
 
         if experiment == "ystretch":
-            wall, stretch_length, bcs = self._define_y_bnd_cond(V)
+            wall, stretch_length, bcs = self._define_yy_bnd_cond(V)
+
+        if experiment == "xyshear":
+            wall, stretch_length, bcs = self._define_shear_bnd_cond(V, x=True, y=True)
+        
+        if experiment == "xzshear":
+            wall, stretch_length, bcs = self._define_shear_bnd_cond(V, x=True, z=True)
+        
+        if experiment == "yzshear":
+            wall, stretch_length, bcs = self._define_shear_bnd_cond(V, y=True, z=True)
 
         return wall, stretch_length, bcs
 

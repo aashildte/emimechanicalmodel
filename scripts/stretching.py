@@ -4,7 +4,7 @@
 
 Script for simulating uniaxial stretching, in both directions.
 
-This script is used for most experiments involving stretching in the paper, the exceptions being the parameter estimation and non-uniqueness experiments, which have their own scripts.
+This is used in Fig. 7, 8, 10, 11 and 14 in the paper.
 
 """
 
@@ -89,7 +89,7 @@ def read_cl_args():
 stretch = np.linspace(0, strain, num_steps)
 peak_index = num_steps - 1
 
-assert dir_stretch in ["xdir", "ydir"], "Error: set 'd' to be 'xdir' or 'ydir'"
+assert dir_stretch in ["xdir", "ydir", "xy"], "Error: set 'd' to be 'xdir' or 'ydir' or 'xy'"
 
 # load mesh, subdomains
 
@@ -113,8 +113,10 @@ material_params = {
 
 if dir_stretch == "xdir":
     experiment = "xstretch"
-else:
+elif dir_stretch == "ydir":
     experiment = "ystretch"
+elif dir_stretch == "xy":
+    experiment = "xyshear"
 
 model = EMIModel(
     mesh,
