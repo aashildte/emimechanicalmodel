@@ -3,7 +3,8 @@ import pytest
 import dolfin as df
 from math import isclose
 
-from emimechanicalmodel import TissueModel
+from emimechanicalmodel import TissueModel, EMIModel
+
 
 @pytest.mark.parametrize(
     ("mat_param_name", "mat_param_value", "experiment"),
@@ -18,7 +19,7 @@ from emimechanicalmodel import TissueModel
         ("b_fs", 3.476, "shear_fs"),
     ],
 )
-def test_tissue_model(mat_param_name, mat_param_value, experiment):
+def test_tissue_params(mat_param_name, mat_param_value, experiment):
 
     mesh = df.UnitCubeMesh(1, 1, 1)
 
@@ -26,6 +27,43 @@ def test_tissue_model(mat_param_name, mat_param_value, experiment):
     
     model = TissueModel(
         mesh,
+        material_parameters=material_parameters,
+        experiment=experiment,
+    )
+
+    model.assign_stretch(0.05)
+    model.solve()
+    load1 = model.evaluate_load()  
+    
+    model.mat_model.__dict__[mat_param_name].assign(2*mat_param_value)
+    model.solve()
+    load2 = model.evaluate_load()
+    
+    assert not isclose(load1, load2), \
+            f"No sensitivity for material parameter {mat_param_name}."
+
+@pytest.mark.parametrize(
+    ("mat_param_name", "mat_param_value", "experiment"),
+    [
+        ("a_i", 0.074, "stretch_ff"),
+        ("b_i", 4.878, "stretch_ff"),
+        ("a_e", 1, "stretch_ff"),
+        ("b_e", 10, "stretch_ff"),
+        ("a_if", 2.628, "stretch_ff"),
+        ("b_if", 5.214, "stretch_ff"),
+    ],
+)
+def test_emi_params(mat_param_name, mat_param_value, experiment):
+
+    mesh = df.UnitCubeMesh(1, 1, 1)
+    volumes = df.MeshFunction('size_t', mesh, 3)
+    volumes.array()[0] = 1
+
+    material_parameters = {mat_param_name : df.Constant(mat_param_value)}
+    
+    model = EMIModel(
+        mesh,
+        volumes,
         material_parameters=material_parameters,
         experiment=experiment,
     )
