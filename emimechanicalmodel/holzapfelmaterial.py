@@ -29,6 +29,7 @@ class HolzapfelMaterial:
         a_fs=df.Constant(0.062),
         b_fs=df.Constant(3.476),
     ):
+
         self.a, self.b, self.a_f, self.b_f, self.a_s, self.b_s, self.a_fs, self.b_fs = (
             a,
             b,

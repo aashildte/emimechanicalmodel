@@ -36,10 +36,8 @@ df.set_log_level(60)
 def go_to_stretch(model, stretch):
     loads = np.zeros_like(stretch)
 
-    print(stretch)
-
     for (step, st) in enumerate(stretch):
-        print(f"Forward step : {step}/{len(stretch)}", flush=True)
+        #print(f"Forward step : {step}/{len(stretch)}", flush=True)
         model.assign_stretch(st)
         model.solve()
     
@@ -69,17 +67,22 @@ def initiate_emi_model(emi_params, experiment):
     return model
 
 def cost_function(material_parameters, target_loads, stretch_values, experiments, mesh, volume):
-    a_i, b_i, a_e, b_e, a_if, b_if = material_parameters
+    b = material_parameters[0]
     cf = 0
-    
-    emi_params = {
-        "a_i": a_i,
-        "b_i": b_i,
-        "a_e": a_e,
-        "b_e": b_e,
-        "a_if": a_if,
-        "b_if": b_if,
+
+    tissue_params = {
+        "a": 0.074,
+        "b": b,
+        "a_f": 2.628,
+        "b_f": 5.214,
+        "a_s": 0.438,
+        "b_s": 3.002,
+        "a_fs": 0.062,
+        "b_fs": 3.476,
     }
+
+
+    print("current values: ", tissue_params)
 
     cf = 0
 
@@ -87,8 +90,11 @@ def cost_function(material_parameters, target_loads, stretch_values, experiments
 
         print(f"Experiment {i}: {experiment}")
 
-        model = initiate_emi_model(emi_params, experiment) 
-        emi_load = go_to_stretch(model, stretch_values)
+        try:
+            model = initiate_tissue_model(tissue_params, experiment) 
+            emi_load = go_to_stretch(model, stretch_values)
+        except RuntimeError:
+            return np.inf
 
         cf += np.linalg.norm(target_loads[experiment] - emi_load)
 
@@ -117,10 +123,10 @@ tissue_params = {
     "b_fs": 3.476,
 }
 
-target_stretch = 0.02
+target_stretch = 0.05
 stretch_values = np.linspace(0, target_stretch, 5)
 
-experiments = ["stretch_ff", "stretch_ss", "stretch_nn", "shear_ns", "shear_fn", "shear_sf", "shear_nf", "shear_fs", "shear_sn"]
+experiments = ["stretch_ff", "stretch_ss"] #, "stretch_nn", "shear_ns", "shear_fn", "shear_sf", "shear_nf", "shear_fs", "shear_sn"]
 experiments.reverse()
 
 tissue_models = []
@@ -134,12 +140,20 @@ for experiment in experiments:
 
 print("Init values tissue:", target_loads, flush=True)
 
-a_i = 0.074
-b_i = 4.878
-a_e = 0.074
-b_e = 4.878
-a_if = 2.628
-b_if = 5.214
+#a_i = 0.074
+#b_i = 4.878
+#a_e = 0.074
+#b_e = 4.878
+#a_if = 2.628
+#b_if = 5.214
 
-opt = minimize(cost_function, np.array((a_i, b_i, a_e, b_e, a_if, b_if)), (target_loads, stretch_values, experiments, mesh, volumes))
+
+a = 1
+b = 10
+af = 1
+bf = 10
+
+bounds = [(0, np.inf) for _ in range(1)]
+
+opt = minimize(cost_function, np.array((b,)), (target_loads, stretch_values, experiments, mesh, volumes), bounds=bounds)
 print(opt)

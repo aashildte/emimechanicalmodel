@@ -115,13 +115,10 @@ class Monitor:
             )
 
     def _init_tracked_scalar_functions(self):
-
         model = self.cardiac_model
-
+        
         scalar_functions = {
-            "load_xy": model.evaluate_load_xy,
-            "load_xz": model.evaluate_load_xz,
-            "load_yz": model.evaluate_load_yz,
+            "load": model.evaluate_load,
         }
 
         for subdomain_id in range(model.num_subdomains):

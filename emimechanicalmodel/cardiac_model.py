@@ -161,13 +161,6 @@ class CardiacModel(ABC):
         u_CG = df.Function(V_CG, name="Displacement ($\mu$m)")
         E_DG = df.Function(T_DG, name="Strain")
         sigma_DG = df.Function(T_DG, name="Cauchy stress (kPa)")
-        inv_fun = [
-            df.Function(U_DG, name="I1"),
-            df.Function(U_DG, name="I4e1"),
-            df.Function(U_DG, name="I4e2"),
-            df.Function(U_DG, name="I8e1e2"),
-        ]
-        inv_ufl = [mat_model.I1, mat_model.I4e1, mat_model.I4e2, mat_model.I8e1e2]
 
         # then projection objects
 
@@ -176,17 +169,14 @@ class CardiacModel(ABC):
         E_proj = ProjectionFunction(self.E, E_DG)
         sigma_proj = ProjectionFunction(self.sigma, sigma_DG)
 
-        invariants = [
-            ProjectionFunction(inv, fun) for (inv, fun) in zip(inv_ufl, inv_fun)
-        ]
-
-        self.projections = [u_proj_DG, u_proj_CG, E_proj, sigma_proj] + invariants
+        self.projections = [u_proj_DG, u_proj_CG, E_proj, sigma_proj]
 
         self.u_DG, self.u_CG, self.E_DG, self.sigma_DG = u_DG, u_CG, E_DG, sigma_DG
 
         # gather tracked functions into a list for easy access
 
-        self.tracked_variables = [u_DG, u_CG, E_DG, sigma_DG] + inv_fun
+        self.tracked_variables = [u_DG, u_CG, E_DG, sigma_DG]
+
 
     def _define_kinematic_variables(self, experiment):
         state_space = self.state_space

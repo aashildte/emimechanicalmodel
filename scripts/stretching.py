@@ -45,10 +45,6 @@ def read_cl_args():
         pp.b_e,
         pp.a_f,
         pp.b_f,
-        pp.a_s,
-        pp.b_s,
-        pp.a_fs,
-        pp.b_fs,
         pp.mesh_file,
         pp.output_folder,
         pp.dir_stretch,
@@ -69,13 +65,9 @@ def read_cl_args():
     b_e,
     a_f,
     b_f,
-    a_s,
-    b_s,
-    a_fs,
-    b_fs,
     mesh_file,
     output_folder,
-    dir_stretch,
+    experiment,
     strain,
     num_steps,
     plot_at_peak,
@@ -88,8 +80,6 @@ def read_cl_args():
 
 stretch = np.linspace(0, strain, num_steps)
 peak_index = num_steps - 1
-
-assert dir_stretch in ["xdir", "ydir", "xy"], "Error: set 'd' to be 'xdir' or 'ydir' or 'xy'"
 
 # load mesh, subdomains
 
@@ -104,19 +94,7 @@ material_params = {
     "b_e": b_e,
     "a_if": a_f,
     "b_if": b_f,
-    "a_is": a_s,
-    "b_is": b_s,
-    "a_ifs": a_fs,
-    "b_ifs": b_fs,
 }
-
-
-if dir_stretch == "xdir":
-    experiment = "xstretch"
-elif dir_stretch == "ydir":
-    experiment = "ystretch"
-elif dir_stretch == "xy":
-    experiment = "xyshear"
 
 model = EMIModel(
     mesh,
@@ -132,7 +110,7 @@ enable_monitor = bool(output_folder)  # save output if != None
 
 if enable_monitor:
     monitor = setup_monitor(
-        f"stretch_emi_{dir_stretch}",
+        f"stretch_emi_{experiment}",
         output_folder,
         model,
         mesh_file,
