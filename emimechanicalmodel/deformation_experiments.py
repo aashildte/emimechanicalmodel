@@ -100,13 +100,12 @@ class DeformationExperiment:
     def assign_stretch(self, stretch_value):
         """
 
-        Assign a given stretch, as a fraction (between 0 and 1), which
-        will be imposed as Dirichlet BC in the relevant direction.
+        Assign a given stretch or a shear, as a fraction (usually between 0 and 1),
+        which will be imposed as Dirichlet BC in the relevant direction.
 
         """
 
-        #self.stretch.assign(stretch_value * self.stretch_length)
-        self.bcsfun.k = stretch_value
+        self.stretch.assign(stretch_value * self.stretch_length)
 
 class Contraction(DeformationExperiment):
     
@@ -214,6 +213,11 @@ class ShearNS(DeformationExperiment):
         wall_idt = self.boundaries["z_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
+    
+    @property
+    def stretch_length(self):
+        min_v, max_v = self.dimensions[2]
+        return max_v - min_v
 
     @property
     def bcs(self):
@@ -246,6 +250,11 @@ class ShearNF(DeformationExperiment):
         wall_idt = self.boundaries["z_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
+
+    @property
+    def stretch_length(self):
+        min_v, max_v = self.dimensions[2]
+        return max_v - min_v
 
     @property
     def bcs(self):
