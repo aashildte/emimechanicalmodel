@@ -26,7 +26,7 @@ import dolfin as df
 from emimechanicalmodel import TissueModel, ShearFN, ShearNF, ShearFS, ShearSF, ShearNS, ShearSN
 
 def test_tissue_shear_ns():
-    mesh = df.UnitCubeMesh(1, 1, 1)
+    mesh = df.UnitCubeMesh(3, 3, 3)
     
     model = TissueModel(
         mesh, experiment="shear_ns",

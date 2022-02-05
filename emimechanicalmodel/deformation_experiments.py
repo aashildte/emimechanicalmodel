@@ -109,7 +109,9 @@ class DeformationExperiment:
 
 
 class Contraction(DeformationExperiment):
-    def define_bcs(self):
+    
+    @property
+    def bcs(self):
         return []
 
 
