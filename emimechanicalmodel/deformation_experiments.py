@@ -209,10 +209,6 @@ class StretchNN(DeformationExperiment):
 
 
 class ShearNS(DeformationExperiment):
-    def __init__(self, mesh, V_CG):
-        self.bcsfun = df.Expression((0, "k*x[2]", 0), k=0, degree=2)        
-        super().__init__(mesh, V_CG)
-
     def evaluate_load(self, F, P):
         unit_vector = df.as_vector([0.0, 1.0, 0.0])
         wall_idt = self.boundaries["z_max"]["idt"]
@@ -228,22 +224,23 @@ class ShearNS(DeformationExperiment):
         bnd_zmin = boundaries["z_min"]["subdomain"]
         bnd_zmax = boundaries["z_max"]["subdomain"]
 
-
         bcs = [
-            df.DirichletBC(V_CG2, self.bcsfun, bnd_ymin),
-            df.DirichletBC(V_CG2, self.bcsfun, bnd_ymax),
-            df.DirichletBC(V_CG2, self.bcsfun, bnd_zmin),
-            df.DirichletBC(V_CG2, self.bcsfun, bnd_zmax),
+            df.DirichletBC(V_CG2.sub(0), df.Constant(0), bnd_ymin),
+            df.DirichletBC(V_CG2.sub(2), df.Constant(0), bnd_ymin),
+            df.DirichletBC(V_CG2.sub(0), df.Constant(0), bnd_ymax),
+            df.DirichletBC(V_CG2.sub(2), df.Constant(0), bnd_ymax),
+            df.DirichletBC(V_CG2.sub(0), df.Constant(0), bnd_zmin),
+            df.DirichletBC(V_CG2.sub(1), df.Constant(0), bnd_zmin),
+            df.DirichletBC(V_CG2.sub(2), df.Constant(0), bnd_zmin),
+            df.DirichletBC(V_CG2.sub(0), df.Constant(0), bnd_zmax),
+            df.DirichletBC(V_CG2.sub(1), stretch, bnd_zmax),
+            df.DirichletBC(V_CG2.sub(2), df.Constant(0), bnd_zmax),
         ]
 
         return bcs
 
 
 class ShearNF(DeformationExperiment):
-    def __init__(self, mesh, V_CG):
-        self.bcsfun = df.Expression(("k*x[2]", 0, 0), k=0, degree=2)        
-        super().__init__(mesh, V_CG)
-    
     def evaluate_load(self, F, P):
         unit_vector = df.as_vector([1.0, 0.0, 0.0])
         wall_idt = self.boundaries["z_max"]["idt"]
@@ -260,13 +257,6 @@ class ShearNF(DeformationExperiment):
         bnd_zmax = boundaries["z_max"]["subdomain"]
 
         bcs = [
-            df.DirichletBC(V_CG2, self.bcsfun, bnd_xmin),
-            df.DirichletBC(V_CG2, self.bcsfun, bnd_xmax),
-            df.DirichletBC(V_CG2, self.bcsfun, bnd_zmin),
-            df.DirichletBC(V_CG2, self.bcsfun, bnd_zmax),
-            ]
-        """
-        bcs = [
             df.DirichletBC(V_CG2.sub(1), df.Constant(0), bnd_xmin),
             df.DirichletBC(V_CG2.sub(2), df.Constant(0), bnd_xmin),
             df.DirichletBC(V_CG2.sub(1), df.Constant(0), bnd_xmax),
@@ -278,7 +268,7 @@ class ShearNF(DeformationExperiment):
             df.DirichletBC(V_CG2.sub(1), df.Constant(0), bnd_zmax),
             df.DirichletBC(V_CG2.sub(2), df.Constant(0), bnd_zmax),
         ]
-        """
+
         return bcs
 
 
