@@ -10,7 +10,7 @@ from mpi4py import MPI
 from emimechanicalmodel.cardiac_model import CardiacModel
 from emimechanicalmodel.mesh_setup import assign_discrete_values
 from emimechanicalmodel.emi_holzapfelmaterial import EMIHolzapfelMaterial
-
+#from emimechanicalmodel.mooneyrivlin import EMIMooneyRivlin
 
 class EMIModel(CardiacModel):
     """
@@ -50,7 +50,7 @@ class EMIModel(CardiacModel):
 
         U = df.FunctionSpace(mesh, "DG", 0)
         subdomain_map = volumes.array()  # only works for DG-0
-
+  
         mat_model = EMIHolzapfelMaterial(U, subdomain_map, **material_parameters)
 
         self.U, self.subdomain_map, self.mat_model = U, subdomain_map, mat_model

@@ -119,6 +119,8 @@ class Monitor:
         
         scalar_functions = {
             "load": model.evaluate_load,
+            "normal_load": model.evaluate_normal_load,
+            "shear_load": model.evaluate_shear_load,
         }
 
         for subdomain_id in range(model.num_subdomains):
