@@ -160,6 +160,7 @@ class CardiacModel(ABC):
         u_CG = df.Function(V_CG, name="Displacement ($\mu$m)")
         E_DG = df.Function(T_DG, name="Strain")
         sigma_DG = df.Function(T_DG, name="Cauchy stress (kPa)")
+        P_DG = df.Function(T_DG, name="Piola-Kirchhoff stress (kPa)")
 
         # then projection objects
 
@@ -167,14 +168,15 @@ class CardiacModel(ABC):
         u_proj_CG = ProjectionFunction(self.u, u_CG)
         E_proj = ProjectionFunction(self.E, E_DG)
         sigma_proj = ProjectionFunction(self.sigma, sigma_DG)
+        P_proj = ProjectionFunction(self.P, P_DG)
 
-        self.projections = [u_proj_DG, u_proj_CG, E_proj, sigma_proj]
+        self.projections = [u_proj_DG, u_proj_CG, E_proj, sigma_proj, P_proj]
 
-        self.u_DG, self.u_CG, self.E_DG, self.sigma_DG = u_DG, u_CG, E_DG, sigma_DG
+        self.u_DG, self.u_CG, self.E_DG, self.sigma_DG, self.P_DG = u_DG, u_CG, E_DG, sigma_DG, P_DG
 
         # gather tracked functions into a list for easy access
 
-        self.tracked_variables = [u_DG, u_CG, E_DG, sigma_DG]
+        self.tracked_variables = [u_DG, u_CG, E_DG, sigma_DG, P_DG]
 
 
     def _define_kinematic_variables(self, experiment):
@@ -244,9 +246,9 @@ class CardiacModel(ABC):
     def solve(self, project=True):
         # just keep the simple version here for easy comparison:
         df.solve(self.weak_form == 0, self.state, self.exp.bcs)
-        """
-        self._solver.solve(self.problem, self.state.vector())
-        """
+        
+        #self._solver.solve(self.problem, self.state.vector())
+        
 
         # save stress and strain to fenics functions
         if project:
@@ -268,9 +270,6 @@ class CardiacModel(ABC):
             subdomain_id
         )
 
-    def evaluate_load(self):
-        return self.exp.evaluate_load(self.F, self.P)
-    
     def evaluate_normal_load(self):
         return self.exp.evaluate_normal_load(self.F, self.P)
     

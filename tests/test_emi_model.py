@@ -81,11 +81,14 @@ def test_emi_deformation(deformation_mode):
     stretch_value = 0.05
     model.assign_stretch(stretch_value)
     model.solve()
-    
-    assert(model.evaluate_load() > 0)
 
+    if "stretch" in deformation_mode:
+        assert(model.evaluate_normal_load() > 0)
+    else:
+        assert(model.evaluate_shear_load() > 0)
 
 if __name__ == "__main__":
-    test_emi_active()
-    test_emi_proj_strain()
-    test_emi_proj_stress()
+    #test_emi_active()
+    #test_emi_proj_strain()
+    #test_emi_proj_stress()
+    test_emi_deformation("shear_fs")

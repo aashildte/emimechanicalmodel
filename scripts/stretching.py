@@ -98,8 +98,8 @@ material_params = {
     "b_e": b_e,
     "a_if": a_f,
     "b_if": b_f,
-    "a_es": a_es,
-    "b_es": b_es,
+    "a_esn": a_es,
+    "b_esn": b_es,
 }
 
 model = EMIModel(

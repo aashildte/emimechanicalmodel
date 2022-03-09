@@ -34,9 +34,6 @@ class DeformationExperiment:
         self.normal_vector = df.FacetNormal(mesh)
 
     # replaced in various subclasses depending on deformation mode
-    def evaluate_load(self, F, P):
-        return -1
-
     def evaluate_normal_load(self, F, P):
         return -1
 
@@ -44,7 +41,7 @@ class DeformationExperiment:
         return -1
 
     def _evaluate_load(self, F, P, wall_idt, unit_vector):
-        load = df.inner(P * self.normal_vector, unit_vector)
+        load = df.inner(P*self.normal_vector, unit_vector)
         total_load = df.assemble(load * self.ds(wall_idt))
         area = df.assemble(
             df.det(F)
@@ -125,7 +122,7 @@ class Contraction(DeformationExperiment):
 
 
 class StretchFF(DeformationExperiment):
-    def evaluate_load(self, F, P):
+    def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([1.0, 0.0, 0.0])
         wall_idt = self.boundaries["x_max"]["idt"]
 
@@ -156,7 +153,7 @@ class StretchFF(DeformationExperiment):
 
 
 class StretchSS(DeformationExperiment):
-    def evaluate_load(self, F, P):
+    def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([0.0, 1.0, 0.0])
         wall_idt = self.boundaries["y_max"]["idt"]
 
@@ -187,7 +184,7 @@ class StretchSS(DeformationExperiment):
 
 
 class StretchNN(DeformationExperiment):
-    def evaluate_load(self, F, P):
+    def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([0.0, 0.0, 1.0])
         wall_idt = self.boundaries["z_max"]["idt"]
 
@@ -221,13 +218,11 @@ class ShearNS(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[2]
-        min_e, max_e = self.dimensions[1]
+        L = max_v - min_v
+        
         self.bcsfun = df.Expression(
-            (0, "k*(x[2] - min_v)/(max_v - min_v)*(max_e - min_e)", 0), 
+            (0, "k*(x[2] - min_v)", 0), 
             min_v=min_v, 
-            max_v=max_v,
-            min_e=min_e,
-            max_e=max_e,
             k=0, 
             degree=2
         )
@@ -257,6 +252,7 @@ class ShearNS(DeformationExperiment):
         zmax = boundaries["z_max"]["subdomain"]
 
         boundaries = [zmin, zmax]  # [ymin, ymax, zmin, zmax]
+        #boundaries = [ymin, ymax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
@@ -266,13 +262,10 @@ class ShearNF(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[2]
-        min_e, max_e = self.dimensions[1]     # HACK TODO Fix; should be [0]
+
         self.bcsfun = df.Expression(
-            ("k*(x[2] - min_v)/(max_v - min_v)*(max_e - min_e)", 0, 0), 
+            ("k*(x[2] - min_v)", 0, 0),
             min_v=min_v, 
-            max_v=max_v,
-            min_e=min_e,
-            max_e=max_e,
             k=0, 
             degree=2
         )
@@ -302,6 +295,7 @@ class ShearNF(DeformationExperiment):
         zmax = boundaries["z_max"]["subdomain"]
 
         boundaries = [zmin, zmax]  # [xmin, xmax, zmin, zmax]
+        #boundaries = [xmin, xmax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
@@ -311,13 +305,10 @@ class ShearFN(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[0]
-        min_e, max_e = self.dimensions[0]  # FIXME [2]?
+        
         self.bcsfun = df.Expression(
-            (0, 0, "k*(x[0] - min_v)/(max_v - min_v)*(max_e - min_e)"), 
+            (0, 0, "k*(x[0] - min_v)"), 
             min_v=min_v, 
-            max_v=max_v,
-            min_e=min_e,
-            max_e=max_e,
             k=0, 
             degree=2
         )
@@ -347,6 +338,7 @@ class ShearFN(DeformationExperiment):
         zmax = boundaries["z_max"]["subdomain"]
 
         boundaries = [xmin, xmax]  # [xmin, xmax, zmin, zmax]
+        #boundaries = [xmin, xmax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
@@ -355,15 +347,12 @@ class ShearFN(DeformationExperiment):
 class ShearFS(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
-        min_v, max_v = self.dimensions[0]
-        min_e, max_e = self.dimensions[0]  # FIXME [1]?
+        min_v, max_v = self.dimensions[0] 
+
         self.bcsfun = df.Expression(
-            (0, "k*(x[0] - min_v)/(max_v - min_v)*(max_e - min_e)", 0), 
-            min_v=min_v, 
-            max_v=max_v,
-            min_e=min_e,
-            max_e=max_e,
-            k=0, 
+            (0, "k*(x[0] - min_v)", 0), 
+            min_v=min_v,
+            k=0,
             degree=2
         )
 
@@ -392,22 +381,21 @@ class ShearFS(DeformationExperiment):
         zmax = boundaries["z_max"]["subdomain"]
 
         boundaries = [xmin, xmax]  # [xmin, xmax, zmin, zmax]
+        #boundaries = [xmin, xmax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
 
+#(0, "H*k*(x[0] - min_v)/L", 0), 
 
 class ShearSF(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[1]
-        min_e, max_e = self.dimensions[1]    # HACK TODO FIXME should be [0]
+
         self.bcsfun = df.Expression(
-            ("k*(x[1] - min_v)/(max_v - min_v)*(max_e - min_e)", 0, 0), 
-            min_v=min_v, 
-            max_v=max_v,
-            min_e=min_e, 
-            max_e=max_e,
+            ("k*(x[1] - min_v)", 0, 0), 
+            min_v=min_v,
             k=0, 
             degree=2
         )
@@ -437,6 +425,7 @@ class ShearSF(DeformationExperiment):
         zmax = boundaries["z_max"]["subdomain"]
 
         boundaries = [ymin, ymax]  # [ymin, ymax, zmin, zmax]
+        #boundaries = [ymin, ymax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
@@ -446,13 +435,10 @@ class ShearSN(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[1]
-        min_e, max_e = self.dimensions[2]
+
         self.bcsfun = df.Expression(
-            (0, 0, "k*(x[1] - min_v)/(max_v - min_v)*(max_e - min_e)"), 
+            (0, 0, "k*(x[1] - min_v)"), 
             min_v=min_v, 
-            max_v=max_v,
-            min_e=min_e, 
-            max_e=max_e,
             k=0, 
             degree=2
         )
@@ -482,6 +468,7 @@ class ShearSN(DeformationExperiment):
         zmax = boundaries["z_max"]["subdomain"]
 
         boundaries = [ymin, ymax]  # [ymin, ymax, zmin, zmax]
+        #boundaries = [ymin, ymax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs

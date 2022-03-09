@@ -174,13 +174,14 @@ class Monitor:
         Closes all files; call this when the simulation is finalized.
 
         """
-
+        print("her")
         xdmf_files, scalar_values = self.xdmf_files, self.scalar_values
 
         # Only the first MPI rank will save the numpy arrays to file
         mesh = self.cardiac_model.mesh
         comm = mesh.mpi_comm()
         if comm.rank == 0:
+            print("her 2")
             npy_sv_filename = os.path.join(
                 self.full_path, "output_scalar_variables.npy"
             )

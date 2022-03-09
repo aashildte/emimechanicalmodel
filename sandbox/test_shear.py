@@ -2,10 +2,6 @@
 
 Analytic solution of simple shear experiments, checked against Dokos et al (appendix)
 
-Note that this only works for a unit cube with (1, 1, 1) setup for elements;
-as we increase the number of elements the FEM code will find a solution with
-a slightly curved surface for four of the six sides.
-
 Bit of code that is useful for finding bugs:
 
     e1 = df.as_vector([1, 0, 0])

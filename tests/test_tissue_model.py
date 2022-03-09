@@ -76,9 +76,10 @@ def test_tissue_deformation(deformation_mode):
     model.assign_stretch(stretch_value)
     model.solve()
     
-    print(model.evaluate_load())
-
-    assert(model.evaluate_load() > 0)
+    if "stretch" in deformation_mode:
+        assert(model.evaluate_normal_load() > 0)
+    else:
+        assert(model.evaluate_shear_load() > 0)
 
 
 if __name__ == "__main__":

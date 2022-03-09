@@ -52,8 +52,10 @@ class HolzapfelMaterial:
             self.a_fs,
             self.b_fs,
         )
+
         e1 = df.as_vector([1.0, 0.0, 0.0])
         e2 = df.as_vector([0.0, 1.0, 0.0])
+        e3 = df.as_vector([0.0, 0.0, 1.0])
 
         J = df.det(F)
         C = pow(J, -float(2) / 3) * F.T * F
@@ -62,17 +64,15 @@ class HolzapfelMaterial:
         I4e1 = df.inner(C * e1, e1)
         I4e2 = df.inner(C * e2, e2)
         I8e1e2 = df.inner(C * e1, e2)
+        I8e1e3 = df.inner(C * e1, e3)
+        I8e2e3 = df.inner(C * e2, e3)
 
         cond = lambda a: ufl.conditional(a > 0, a, 0)
 
         W_hat = a / (2 * b) * (df.exp(b * (IIFx - 3)) - 1)
         W_f = a_f / (2 * b_f) * (df.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
         W_s = a_s / (2 * b_s) * (df.exp(b_s * cond(I4e2 - 1) ** 2) - 1)
-        W_fs = a_fs / (2 * b_fs) * (df.exp(b_fs * I8e1e2 ** 2) - 1)
+        W_fs = a_fs / (2 * b_fs) * (df.exp(b_fs * (I8e1e3**2)) - 1)
         W_ani = W_f + W_s + W_fs
-
-        self.I1, self.I4e1, self.I4e2, self.I8e1e2 = IIFx, I4e1, I4e2, I8e1e2
-
-        self.W_hat, self.W_f, self.W_s, self.W_fs = W_hat, W_f, W_s, W_fs
 
         return W_hat + W_ani
