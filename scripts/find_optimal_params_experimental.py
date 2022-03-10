@@ -53,8 +53,7 @@ def load_experimental_data_stretch(fin):
     
     print("num steps: ", len(stretch[i:]))
 
-    return stretch[i:i+5], load[i:i+5]
-
+    return stretch[i:], load[i:]
 
 def load_experimental_data_shear(fin):
     data = np.loadtxt(fin, delimiter=",", skiprows=1)
@@ -78,7 +77,7 @@ def load_experimental_data_shear(fin):
     
     print("num steps: ", len(stretch[i:]))
 
-    return stretch[i:i+5], normal_load[i:i+5], shear_load[i:i+5]
+    return stretch[i:], normal_load[i:], shear_load[i:]
 
 
 def go_to_stretch(model, stretch, experiment):
@@ -134,7 +133,7 @@ def values_to_states(targets, experiments, models, original_states):
             state_values = original_states[target_stretch][experiment]
             model.state.vector()[:] = state_values
 
-def cost_function(params, experiments, experimental_data, models):
+def cost_function(params, experiments, experimental_data, models, i):
     a_i, b_i, a_e, b_e, a_if, b_if, a_esn, b_esn = params
     cf = 0
 
@@ -154,16 +153,16 @@ def cost_function(params, experiments, experimental_data, models):
         model.mat_model.a_esn.assign(a_esn)
         model.mat_model.b_esn.assign(b_esn)
 
-        stretch_values = experimental_data[experiment]["stretch_values"]
+        stretch_values = experimental_data[experiment]["stretch_values"][:i]
         try:
             normal_load, shear_load = go_to_stretch(model, stretch_values, experiment)
         except RuntimeError:
             return np.inf
 
-        target_normal_load = experimental_data[experiment]["normal_values"]
+        target_normal_load = experimental_data[experiment]["normal_values"][:i]
         cf += (np.linalg.norm(normal_load - target_normal_load)**2) #/ np.linalg.norm(target_load)**2)
         
-        target_shear_load = experimental_data[experiment]["shear_values"]
+        target_shear_load = experimental_data[experiment]["shear_values"][:i]
         cf += (np.linalg.norm(shear_load - target_shear_load)**2) #/ np.linalg.norm(target_load)**2)
 
     print(f"Current cost fun value: {cf**0.5}")
@@ -204,13 +203,13 @@ for experiment in experiments:
 
 
 a_i = 1.0 #1.074
-b_i = 15 #4.878
+b_i = 5.0 #4.878
 a_e = 1.0 #1.074
-b_e = 15 #4.878
+b_e = 5.0 #4.878
 a_if = 1.0 #2.628
-b_if = 15 #5.214
+b_if = 5.0 #5.214
 a_esn = 1.0 #2.628
-b_esn = 15 #5.214
+b_esn = 5.0 #5.214
 
 emi_params = {
     "a_i": df.Constant(a_i),
@@ -231,12 +230,19 @@ for experiment in experiments:
 
 params = [a_i, b_i, a_e, b_e, a_if, b_if, a_esn, b_esn]
 
-bounds = [(0.01, 40) for p in params]
+num_attempts = 0
 
-opt = minimize(
-        cost_function,
-        np.array(params),
-        (experiments, experimental_data, emi_models),
-        bounds=bounds,
-        )
-print(opt)
+while num_attempts < 11:
+    bounds = [(max(1E-2, p - 1), p + 1) for p in params]
+
+    opt = minimize(
+            cost_function,
+            np.array(params),
+            (experiments, experimental_data, emi_models, 5*num_attempts+5),
+            bounds=bounds,
+            )
+    params = opt.x
+    
+    print(opt)
+    print(params)
+    num_attempts += 1
