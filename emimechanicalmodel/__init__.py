@@ -12,3 +12,12 @@ from .mesh_setup import (
     load_mesh,
     assign_discrete_values,
 )
+
+from .deformation_experiments import (
+    ShearFN,
+    ShearNF,
+    ShearSN,
+    ShearNS,
+    ShearFS,
+    ShearSF,
+)

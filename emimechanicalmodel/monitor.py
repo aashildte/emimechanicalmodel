@@ -115,13 +115,12 @@ class Monitor:
             )
 
     def _init_tracked_scalar_functions(self):
-
         model = self.cardiac_model
-
+        
         scalar_functions = {
-            "load_xy": model.evaluate_load_xy,
-            "load_xz": model.evaluate_load_xz,
-            "load_yz": model.evaluate_load_yz,
+            "load": model.evaluate_load,
+            "normal_load": model.evaluate_normal_load,
+            "shear_load": model.evaluate_shear_load,
         }
 
         for subdomain_id in range(model.num_subdomains):
@@ -175,13 +174,14 @@ class Monitor:
         Closes all files; call this when the simulation is finalized.
 
         """
-
+        print("her")
         xdmf_files, scalar_values = self.xdmf_files, self.scalar_values
 
         # Only the first MPI rank will save the numpy arrays to file
         mesh = self.cardiac_model.mesh
         comm = mesh.mpi_comm()
         if comm.rank == 0:
+            print("her 2")
             npy_sv_filename = os.path.join(
                 self.full_path, "output_scalar_variables.npy"
             )

@@ -65,36 +65,21 @@ def add_emi_holzapfel_arguments(parser):
     )
 
     parser.add_argument(
-        "-as",
-        "--a_s",
-        default=0.309,
+        "-aes",
+        "--a_es",
+        default=1.0,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
 
     parser.add_argument(
-        "-bs",
-        "--b_s",
-        default=2.634,
+        "-bes",
+        "--b_es",
+        default=5.0,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
 
-    parser.add_argument(
-        "-afs",
-        "--a_fs",
-        default=0.062,
-        type=float,
-        help="Stress/strain scaling parameter for the intracellular domain",
-    )
-
-    parser.add_argument(
-        "-bfs",
-        "--b_fs",
-        default=3.476,
-        type=float,
-        help="Stress/strain scaling parameter for the intracellular domain",
-    )
 
 
 def add_default_arguments(parser):
@@ -107,7 +92,7 @@ def add_default_arguments(parser):
     parser.add_argument(
         "-m",
         "--mesh_file",
-        default=os.path.join(os.path.dirname(__file__), "..", "meshes", "tile_1p0.h5"),
+        default=os.path.join(os.path.dirname(__file__), "..", "meshes", "tile_cubic.h5"),
         type=str,
         help="Mesh file (h5 format)",
     )
@@ -155,9 +140,9 @@ def add_stretching_arguments(parser):
     parser.add_argument(
         "-d",
         "--dir_stretch",
-        default="xdir",
+        default="stretch_ff",
         type=str,
-        help="Direction for stretch; 'xdir' or 'ydir'",
+        help="Direction for stretch; ... ",
     )
 
     parser.add_argument(

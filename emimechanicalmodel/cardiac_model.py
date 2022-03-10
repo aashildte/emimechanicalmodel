@@ -7,10 +7,20 @@
 from abc import ABC, abstractmethod
 import dolfin as df
 
-from emimechanicalmodel.boundary import Boundary
+from emimechanicalmodel.deformation_experiments import (
+    Contraction,
+    StretchFF,
+    StretchSS,
+    StretchNN,
+    ShearNS,
+    ShearNF,
+    ShearFN,
+    ShearFS,
+    ShearSF,
+    ShearSN,
+)
 from emimechanicalmodel.proj_fun import ProjectionFunction
 from emimechanicalmodel.nonlinear_problem import NewtonSolver, NonlinearProblem
-
 
 class CardiacModel(ABC):
     def __init__(
@@ -30,7 +40,6 @@ class CardiacModel(ABC):
             verbose (int): Set to 0 (no verbose output; default), 1 (some),
                 or 2 (quite a bit)
         """
-
         # mesh properties
         self.mesh = mesh
 
@@ -45,12 +54,26 @@ class CardiacModel(ABC):
 
         # boundary conditions
 
-        self.bnd = Boundary(mesh, self.V_CG, experiment, verbose)
+        exp_dict = {
+            "contr": Contraction,
+            "stretch_ff": StretchFF,
+            "stretch_ss": StretchSS,
+            "stretch_nn": StretchNN,
+            "shear_ns": ShearNS,
+            "shear_nf": ShearNF,
+            "shear_fn": ShearFN,
+            "shear_fs": ShearFS,
+            "shear_sf": ShearSF,
+            "shear_sn": ShearSN,
+        }
+
+        self.exp = exp_dict[experiment](mesh, self.V_CG)
+
         self.fiber_dir = df.as_vector([1, 0, 0])
         self.sheet_dir = df.as_vector([0, 1, 0])
         self.normal_dir = df.as_vector([0, 0, 1])
 
-        self.bcs = self.bnd.bcs
+        self.bcs = self.exp.bcs
 
         # define solver and initiate tracked variables
         self._define_solver(verbose)
@@ -74,7 +97,7 @@ class CardiacModel(ABC):
 
     def _define_state_space(self, experiment):
 
-        # needs to be called before setting bnd conds + weak form
+        # needs to be called before setting exp conds + weak form
 
         mesh = self.mesh
 
@@ -95,7 +118,7 @@ class CardiacModel(ABC):
             print("Degrees of freedom: ", dofs, flush=True)
 
     def assign_stretch(self, stretch_value):
-        self.bnd.assign_stretch(stretch_value)
+        self.exp.assign_stretch(stretch_value)
 
     @abstractmethod
     def _define_active_strain(self):
@@ -137,13 +160,7 @@ class CardiacModel(ABC):
         u_CG = df.Function(V_CG, name="Displacement ($\mu$m)")
         E_DG = df.Function(T_DG, name="Strain")
         sigma_DG = df.Function(T_DG, name="Cauchy stress (kPa)")
-        inv_fun = [
-            df.Function(U_DG, name="I1"),
-            df.Function(U_DG, name="I4e1"),
-            df.Function(U_DG, name="I4e2"),
-            df.Function(U_DG, name="I8e1e2"),
-        ]
-        inv_ufl = [mat_model.I1, mat_model.I4e1, mat_model.I4e2, mat_model.I8e1e2]
+        P_DG = df.Function(T_DG, name="Piola-Kirchhoff stress (kPa)")
 
         # then projection objects
 
@@ -151,18 +168,16 @@ class CardiacModel(ABC):
         u_proj_CG = ProjectionFunction(self.u, u_CG)
         E_proj = ProjectionFunction(self.E, E_DG)
         sigma_proj = ProjectionFunction(self.sigma, sigma_DG)
+        P_proj = ProjectionFunction(self.P, P_DG)
 
-        invariants = [
-            ProjectionFunction(inv, fun) for (inv, fun) in zip(inv_ufl, inv_fun)
-        ]
+        self.projections = [u_proj_DG, u_proj_CG, E_proj, sigma_proj, P_proj]
 
-        self.projections = [u_proj_DG, u_proj_CG, E_proj, sigma_proj] + invariants
-
-        self.u_DG, self.u_CG, self.E_DG, self.sigma_DG = u_DG, u_CG, E_DG, sigma_DG
+        self.u_DG, self.u_CG, self.E_DG, self.sigma_DG, self.P_DG = u_DG, u_CG, E_DG, sigma_DG, P_DG
 
         # gather tracked functions into a list for easy access
 
-        self.tracked_variables = [u_DG, u_CG, E_DG, sigma_DG] + inv_fun
+        self.tracked_variables = [u_DG, u_CG, E_DG, sigma_DG, P_DG]
+
 
     def _define_kinematic_variables(self, experiment):
         state_space = self.state_space
@@ -193,7 +208,6 @@ class CardiacModel(ABC):
 
         N = df.FacetNormal(self.mesh)
         sigma = (1 / df.det(F)) * P * F.T
-        load = df.inner(P * N, N)
 
         # weak form
         weak_form = df.inner(P, df.grad(v)) * df.dx
@@ -203,11 +217,11 @@ class CardiacModel(ABC):
 
         weak_form += q * (J - 1) * df.dx  # incompressible term
 
-        (self.F, self.E, self.sigma, self.load, self.u, self.weak_form,) = (
+        (self.F, self.E, self.sigma, self.P, self.u, self.weak_form,) = (
             F,
             E,
             sigma,
-            load,
+            P,
             u,
             weak_form,
         )
@@ -231,9 +245,10 @@ class CardiacModel(ABC):
 
     def solve(self, project=True):
         # just keep the simple version here for easy comparison:
-        # df.solve(self.weak_form == 0, self.state, self.bnd.bcs)
-
-        self._solver.solve(self.problem, self.state.vector())
+        df.solve(self.weak_form == 0, self.state, self.exp.bcs)
+        
+        #self._solver.solve(self.problem, self.state.vector())
+        
 
         # save stress and strain to fenics functions
         if project:
@@ -255,14 +270,11 @@ class CardiacModel(ABC):
             subdomain_id
         )
 
-    def evaluate_load_xy(self):
-        return self.bnd.evaluate_load_xy(self.F, self.load)
-
-    def evaluate_load_xz(self):
-        return self.bnd.evaluate_load_xz(self.F, self.load)
-
-    def evaluate_load_yz(self):
-        return self.bnd.evaluate_load_yz(self.F, self.load)
+    def evaluate_normal_load(self):
+        return self.exp.evaluate_normal_load(self.F, self.P)
+    
+    def evaluate_shear_load(self):
+        return self.exp.evaluate_shear_load(self.F, self.P)
 
     def evaluate_subdomain_stress_fibre_dir(self, subdomain_id):
         unit_vector = self.fiber_dir
