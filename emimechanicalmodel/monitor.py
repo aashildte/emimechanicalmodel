@@ -118,7 +118,6 @@ class Monitor:
         model = self.cardiac_model
         
         scalar_functions = {
-            "load": model.evaluate_load,
             "normal_load": model.evaluate_normal_load,
             "shear_load": model.evaluate_shear_load,
         }
