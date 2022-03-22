@@ -92,7 +92,7 @@ def add_default_arguments(parser):
     parser.add_argument(
         "-m",
         "--mesh_file",
-        default=os.path.join(os.path.dirname(__file__), "..", "meshes", "tile_5.0.h5"),
+        default="meshes/tile_5.0.h5",
         type=str,
         help="Mesh file (h5 format)",
     )
