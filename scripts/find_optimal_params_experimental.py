@@ -137,7 +137,7 @@ def cost_function(params, experiments, experimental_data, models, i):
     a_i, b_i, a_e, b_e, a_if, b_if, a_esn, b_esn = params
     cf = 0
 
-    print(f"Current mat param values: a_i = {a_i}, b_i = {b_i}, a_e = {a_e}, b_e = {b_e}, a_if = {a_if}, b_if = {b_if}, a_esn = {a_esn}, b_esn = {b_esn}")
+    print(f"Current mat param values: a_i = {a_i}, b_i = {b_i}, a_e = {a_e}, b_e = {b_e}, a_if = {a_if}, b_if = {b_if}, a_esn = {a_esn}, b_esn = {b_esn}", flush=True)
 
     for experiment in experiments:
         #print("experiment: ", experiment)
@@ -157,15 +157,16 @@ def cost_function(params, experiments, experimental_data, models, i):
         try:
             normal_load, shear_load = go_to_stretch(model, stretch_values, experiment)
         except RuntimeError:
-            return np.inf
+            cf += 10000 # just a high number
+            continue
 
         target_normal_load = experimental_data[experiment]["normal_values"][:i]
-        cf += (np.linalg.norm(normal_load - target_normal_load)**2) #/ np.linalg.norm(target_load)**2)
+        cf += (np.linalg.norm(normal_load - target_normal_load)**2)
         
         target_shear_load = experimental_data[experiment]["shear_values"][:i]
-        cf += (np.linalg.norm(shear_load - target_shear_load)**2) #/ np.linalg.norm(target_load)**2)
+        cf += (np.linalg.norm(shear_load - target_shear_load)**2)
 
-    print(f"Current cost fun value: {cf**0.5}")
+    print(f"Current cost fun value: {cf**0.5}", flush=True)
 
     return cf**2
 
@@ -175,8 +176,9 @@ add_default_arguments(parser)
 pp = parser.parse_args()
 
 sample = "Sample1"
+print(f"Running experiments for sample {sample}", flush=True)
 
-mesh_file = "meshes/tile_cubic.h5"
+mesh_file = f"meshes/tile_5.0.h5"
 output_folder = pp.output_folder
 
 mesh, volumes = load_mesh(mesh_file)
@@ -201,15 +203,14 @@ for experiment in experiments:
     experimental_data[experiment]["normal_values"] = normal_values
     experimental_data[experiment]["shear_values"] = shear_values
 
-
-a_i = 1.0 #1.074
-b_i = 5.0 #4.878
-a_e = 1.0 #1.074
-b_e = 5.0 #4.878
-a_if = 1.0 #2.628
-b_if = 5.0 #5.214
-a_esn = 1.0 #2.628
-b_esn = 5.0 #5.214
+a_i = 0.01 #1.0
+b_i = 0.74 #15.0
+a_e = 4.74 #1.0
+b_e = 1.98 #15.0
+a_if = 35.0 #30.0
+b_if = 45.0 #50.0
+a_esn = 0.7 #1.0
+b_esn = 8.3 #15.0
 
 emi_params = {
     "a_i": df.Constant(a_i),
@@ -230,19 +231,15 @@ for experiment in experiments:
 
 params = [a_i, b_i, a_e, b_e, a_if, b_if, a_esn, b_esn]
 
-num_attempts = 0
+bounds = [(0.01, 15), (0.5, 30), (0.01, 15), (0.5, 30), (0.01, 40), (1, 50), (0.01, 15), (0.5, 30)]
 
-while num_attempts < 11:
-    bounds = [(max(1E-2, p - 1), p + 1) for p in params]
+opt = minimize(
+        cost_function,
+        np.array(params),
+        (experiments, experimental_data, emi_models, 51),
+        bounds=bounds,
+        )
+params = opt.x
 
-    opt = minimize(
-            cost_function,
-            np.array(params),
-            (experiments, experimental_data, emi_models, 5*num_attempts+5),
-            bounds=bounds,
-            )
-    params = opt.x
-    
-    print(opt)
-    print(params)
-    num_attempts += 1
+print(opt)
+print(params)

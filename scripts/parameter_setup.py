@@ -19,7 +19,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-ai",
         "--a_i",
-        default=0.074,
+        default=0.01,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
@@ -27,7 +27,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-bi",
         "--b_i",
-        default=4.878,
+        default=0.74,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
@@ -35,7 +35,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-ae",
         "--a_e",
-        default=1,
+        default=4.74,
         type=float,
         help="Stress/strain scaling parameter for the extracellular domain",
     )
@@ -43,7 +43,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-be",
         "--b_e",
-        default=10,
+        default=1.98,
         type=float,
         help="Stress/strain scaling parameter for the extracellular domain",
     )
@@ -51,7 +51,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-af",
         "--a_f",
-        default=4.071,
+        default=35.0,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
@@ -59,7 +59,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-bf",
         "--b_f",
-        default=5.433,
+        default=45.0,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
@@ -67,7 +67,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-aes",
         "--a_es",
-        default=1.0,
+        default=0.7,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
@@ -75,7 +75,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-bes",
         "--b_es",
-        default=5.0,
+        default=8.3,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
@@ -92,7 +92,7 @@ def add_default_arguments(parser):
     parser.add_argument(
         "-m",
         "--mesh_file",
-        default=os.path.join(os.path.dirname(__file__), "..", "meshes", "tile_cubic.h5"),
+        default=os.path.join(os.path.dirname(__file__), "..", "meshes", "tile_5.0.h5"),
         type=str,
         help="Mesh file (h5 format)",
     )
