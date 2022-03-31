@@ -22,6 +22,7 @@ from emimechanicalmodel.deformation_experiments import (
 from emimechanicalmodel.proj_fun import ProjectionFunction
 from emimechanicalmodel.nonlinear_problem import NewtonSolver, NonlinearProblem
 
+
 class CardiacModel(ABC):
     def __init__(
         self,
@@ -172,12 +173,17 @@ class CardiacModel(ABC):
 
         self.projections = [u_proj_DG, u_proj_CG, E_proj, sigma_proj, P_proj]
 
-        self.u_DG, self.u_CG, self.E_DG, self.sigma_DG, self.P_DG = u_DG, u_CG, E_DG, sigma_DG, P_DG
+        self.u_DG, self.u_CG, self.E_DG, self.sigma_DG, self.P_DG = (
+            u_DG,
+            u_CG,
+            E_DG,
+            sigma_DG,
+            P_DG,
+        )
 
         # gather tracked functions into a list for easy access
 
         self.tracked_variables = [u_DG, u_CG, E_DG, sigma_DG, P_DG]
-
 
     def _define_kinematic_variables(self, experiment):
         state_space = self.state_space
@@ -245,10 +251,21 @@ class CardiacModel(ABC):
 
     def solve(self, project=True):
         # just keep the simple version here for easy comparison:
-        # df.solve(self.weak_form == 0, self.state, self.exp.bcs)
-        
+        """
+        df.solve(
+            self.weak_form == 0,
+            self.state,
+            self.exp.bcs,
+            solver_parameters={
+                "newton_solver": {
+                    "absolute_tolerance": 1e-5,
+                    "maximum_iterations": 10,
+                }
+            },
+            form_compiler_parameters={"optimize": True},
+        )
+        """
         self._solver.solve(self.problem, self.state.vector())
-        
 
         # save stress and strain to fenics functions
         if project:
@@ -272,7 +289,7 @@ class CardiacModel(ABC):
 
     def evaluate_normal_load(self):
         return self.exp.evaluate_normal_load(self.F, self.P)
-    
+
     def evaluate_shear_load(self):
         return self.exp.evaluate_shear_load(self.F, self.P)
 
