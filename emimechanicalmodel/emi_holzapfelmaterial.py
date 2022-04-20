@@ -56,13 +56,11 @@ class EMIHolzapfelMaterial:
 
     def passive_component(self, F):
         
-        a, b, a_f, b_f, a_fs, b_fs = (
+        a, b, a_f, b_f = (
             self._a,
             self._b,
             self._a_f,
             self._b_f,
-            self._a_s,
-            self._b_s,
         )
         
         e1 = df.as_vector([1.0, 0.0, 0.0])

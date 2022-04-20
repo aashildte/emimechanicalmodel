@@ -15,8 +15,8 @@ from emimechanicalmodel import TissueModel, EMIModel
         ("b_f", 5.214, "stretch_ff"),
         ("a_s", 0.438, "stretch_ss"),
         ("b_s", 3.002, "stretch_ss"),
-        ("a_fs", 0.062, "shear_fn"),
-        ("b_fs", 3.476, "shear_fn"),
+        ("a_fs", 0.062, "shear_fs"),
+        ("b_fs", 3.476, "shear_fs"),
     ],
 )
 def test_tissue_params(mat_param_name, mat_param_value, experiment):
@@ -31,7 +31,7 @@ def test_tissue_params(mat_param_name, mat_param_value, experiment):
         experiment=experiment,
     )
 
-    model.assign_stretch(0.05)
+    model.assign_stretch(0.02)
     model.solve()
     load1 = model.evaluate_normal_load()  
     
@@ -53,8 +53,6 @@ def test_tissue_params(mat_param_name, mat_param_value, experiment):
         ("b_e", 10, "stretch_ff"),
         ("a_if", 2.628, "stretch_ff"),
         ("b_if", 5.214, "stretch_ff"),
-        ("a_esn", 2.628, "stretch_ss"),
-        ("b_esn", 5.214, "stretch_ss"),
     ],
 )
 def test_emi_params(mat_param_name, mat_param_value, experiment):
@@ -72,7 +70,7 @@ def test_emi_params(mat_param_name, mat_param_value, experiment):
         experiment=experiment,
     )
 
-    model.assign_stretch(0.05)
+    model.assign_stretch(0.02)
     model.solve()
     load1 = model.evaluate_normal_load()  
     
@@ -84,6 +82,7 @@ def test_emi_params(mat_param_name, mat_param_value, experiment):
     assert not isclose(load1, load2), \
             f"No sensitivity for material parameter {mat_param_name}."
 
-if __name__ == "__main__":
-    test_tissue_params("b_fs", 3.467, "shear_fn")
+if __name__ == "__main__": 
+    #test_tissue_params("a_if", 2.628, "stretch_ff")
+    test_tissue_params("a_fs", 0.062, "shear_fs"),
 
