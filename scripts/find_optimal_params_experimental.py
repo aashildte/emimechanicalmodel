@@ -162,11 +162,11 @@ def values_to_states(targets, experiments, models, original_states):
             state_values = original_states[target_stretch][experiment]
             model.state.vector()[:] = state_values
 
-def cost_function(params, experiments, experimental_data, models, i):
-    a_i, b_i, a_e, b_e, a_if, b_if, a_esn, b_esn = params
+def cost_function(params, experiments, experimental_data, models):
+    a_i, b_i, a_e, b_e, a_if, b_if = params
     cf = 0
 
-    print(f"Current mat param values: a_i = {a_i}, b_i = {b_i}, a_e = {a_e}, b_e = {b_e}, a_if = {a_if}, b_if = {b_if}, a_esn = {a_esn}, b_esn = {b_esn}", flush=True)
+    print(f"Current mat param values: a_i = {a_i}, b_i = {b_i}, a_e = {a_e}, b_e = {b_e}, a_if = {a_if}, b_if = {b_if}", flush=True)
 
     for experiment in experiments:
         print("experiment: ", experiment)
@@ -179,25 +179,23 @@ def cost_function(params, experiments, experimental_data, models, i):
         model.mat_model.b_e.assign(b_e)
         model.mat_model.a_if.assign(a_if)
         model.mat_model.b_if.assign(b_if)
-        model.mat_model.a_esn.assign(a_esn)
-        model.mat_model.b_esn.assign(b_esn)
 
-        stretch_values = experimental_data[experiment]["stretch_values"][:i]
+        stretch_values = experimental_data[experiment]["stretch_values"]
         try:
             normal_load, shear_load = go_to_stretch(model, stretch_values, experiment)
         except RuntimeError:
             cf += 500 + 10*np.random.random()  # just a high number
             continue
 
-        target_normal_load = experimental_data[experiment]["normal_values"][:i]
+        target_normal_load = experimental_data[experiment]["normal_values"]
         cf += (np.linalg.norm(normal_load - target_normal_load)**2)
         
-        target_shear_load = experimental_data[experiment]["shear_values"][:i]
+        target_shear_load = experimental_data[experiment]["shear_values"]
         cf += (np.linalg.norm(shear_load - target_shear_load)**2)
 
     print(f"Current cost fun value: {cf**0.5}", flush=True)
 
-    return cf**2
+    return cf**0.5
 
 fname_dims = "Data/LeftVentricle_MechanicalTesting/LeftVentricle_Dimensions_mm.csv"
 dimensions, areas = get_dimensions(fname_dims)
@@ -236,8 +234,6 @@ a_e = 1.0
 b_e = 15.0
 a_if = 1.0
 b_if = 15.0
-a_esn = 1.0
-b_esn = 15.0
 
 emi_params = {
     "a_i": df.Constant(a_i),
@@ -246,8 +242,6 @@ emi_params = {
     "b_e": df.Constant(b_e),
     "a_if": df.Constant(a_if),
     "b_if": df.Constant(b_if),
-    "a_esn": df.Constant(a_esn),
-    "b_esn": df.Constant(b_esn),
 }
 
 emi_models = {}
@@ -258,12 +252,12 @@ for experiment in experiments:
 
 params = [a_i, b_i, a_e, b_e, a_if, b_if, a_esn, b_esn]
 
-bounds = [(0.01, 20), (0.01, 20), (0.01, 20), (0.01, 20), (0.0, 20), (0.01, 20), (0.0, 15), (0.01, 20)]
+bounds = [(0.01, 100), (0.01, 100), (0.01, 100), (0.01, 100), (0.0, 100), (0.01, 100)]
 
 opt = minimize(
         cost_function,
         np.array(params),
-        (experiments, experimental_data, emi_models, 51),
+        (experiments, experimental_data, emi_models),
         bounds=bounds,
         )
 params = opt.x

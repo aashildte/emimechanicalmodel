@@ -45,8 +45,6 @@ def read_cl_args():
         pp.b_e,
         pp.a_f,
         pp.b_f,
-        pp.a_es,
-        pp.b_es,
         pp.mesh_file,
         pp.output_folder,
         pp.dir_stretch,
@@ -67,8 +65,6 @@ def read_cl_args():
     b_e,
     a_f,
     b_f,
-    a_es,
-    b_es,
     mesh_file,
     output_folder,
     experiment,
@@ -98,8 +94,6 @@ material_params = {
     "b_e": b_e,
     "a_if": a_f,
     "b_if": b_f,
-    "a_esn": a_es,
-    "b_esn": b_es,
 }
 
 model = EMIModel(
