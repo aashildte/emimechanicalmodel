@@ -295,36 +295,6 @@ class CardiacModel(ABC):
     def evaluate_shear_load(self):
         return self.exp.evaluate_shear_load(self.F, self.sigma)
 
-    def theoretical_cauchy(self):
-        F, p = self.F, self.p
-
-        e1 = df.as_vector([1.0, 0.0, 0.0])
-        e2 = df.as_vector([0.0, 1.0, 0.0])
-
-        B = F * F.T
-        C = F.T * F
-
-        I = df.Identity(3)
-        IIFx = df.tr(C)
-        I4e1 = df.inner(C * e1, e1)
-        I4e2 = df.inner(C * e2, e2)
-        I8e1e2 = df.inner(C * e1, e2)
-
-        a, b, a_f, b_f, a_s, b_s, a_fs, b_fs = \
-            self.mat_model.a, self.mat_model.b, self.mat_model.a_f, self.mat_model.b_f, \
-            self.mat_model.a_s, self.mat_model.b_s, self.mat_model.a_fs, self.mat_model.b_fs
-
-        fxf = df.as_tensor(np.array(((1.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0))))
-        fxs_sxf = df.as_tensor(np.array(((0.0, 1.0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 0.0))))
-        sxs = df.as_tensor(np.array(((0.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 0.0))))
-        
-        cond = lambda a: ufl.conditional(a > 0, a, 0)
-
-        cauchy_stress = a*df.exp(b*(IIFx - 3))*B - p*I + + 2*a_f*(I4e1 - 1)*df.exp(b_f*cond(I4e1 - 1)**2)*fxf + \
-                        2*a_s*(I4e2 - 1)*df.exp(b_s*cond(I4e2 - 1)**2)*sxs + a_fs*I8e1e2*df.exp(b_fs*I8e1e2**2)*fxs_sxf
-
-        return cauchy_stress
-
     def evaluate_subdomain_stress_fibre_dir(self, subdomain_id):
         unit_vector = self.fiber_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_id)

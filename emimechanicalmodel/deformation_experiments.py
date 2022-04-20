@@ -122,6 +122,21 @@ class Contraction(DeformationExperiment):
 
 
 class StretchFF(DeformationExperiment):
+    def __init__(self, mesh, V_CG):
+        super().__init__(mesh, V_CG)
+        min_v, max_v = self.dimensions[0]
+        L = max_v - min_v
+        
+        self.bcsfun = df.Expression(
+            ("k*L", 0, 0), 
+            L=L, 
+            k=0, 
+            degree=2
+        )
+
+    def assign_stretch(self, stretch_value):
+        self.bcsfun.k = stretch_value
+
     def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([1.0, 0.0, 0.0])
         wall_idt = self.boundaries["x_max"]["idt"]
@@ -137,22 +152,33 @@ class StretchFF(DeformationExperiment):
     def bcs(self):
         boundaries, V_CG2, stretch = self.boundaries, self.V_CG2, self.stretch
 
-        bnd_xmin = boundaries["x_min"]["subdomain"]
-        bnd_ymin = boundaries["y_min"]["subdomain"]
-        bnd_zmin = boundaries["z_min"]["subdomain"]
-        bnd_xmax = boundaries["x_max"]["subdomain"]
+        xmin = boundaries["x_min"]["subdomain"]
+        xmax = boundaries["x_max"]["subdomain"]
 
         bcs = [
-            df.DirichletBC(V_CG2.sub(0), df.Constant(0), bnd_xmin),
-            df.DirichletBC(V_CG2.sub(1), df.Constant(0), bnd_ymin),
-            df.DirichletBC(V_CG2.sub(2), df.Constant(0), bnd_zmin),
-            df.DirichletBC(V_CG2.sub(0), stretch, bnd_xmax),
+            df.DirichletBC(V_CG2, df.Constant((0., 0., 0.)), xmin),
+            df.DirichletBC(V_CG2, self.bcsfun, xmax),
         ]
 
         return bcs
 
 
 class StretchSS(DeformationExperiment):
+    def __init__(self, mesh, V_CG):
+        super().__init__(mesh, V_CG)
+        min_v, max_v = self.dimensions[1]
+        L = max_v - min_v
+        
+        self.bcsfun = df.Expression(
+            (0, "k*L", 0), 
+            L=L, 
+            k=0, 
+            degree=2
+        )
+
+    def assign_stretch(self, stretch_value):
+        self.bcsfun.k = stretch_value
+
     def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([0.0, 1.0, 0.0])
         wall_idt = self.boundaries["y_max"]["idt"]
@@ -168,22 +194,33 @@ class StretchSS(DeformationExperiment):
     def bcs(self):
         boundaries, V_CG2, stretch = self.boundaries, self.V_CG2, self.stretch
 
-        bnd_xmin = boundaries["x_min"]["subdomain"]
-        bnd_ymin = boundaries["y_min"]["subdomain"]
-        bnd_zmin = boundaries["z_min"]["subdomain"]
-        bnd_ymax = boundaries["y_max"]["subdomain"]
-
+        ymin = boundaries["y_min"]["subdomain"]
+        ymax = boundaries["y_max"]["subdomain"]
+        
         bcs = [
-            df.DirichletBC(V_CG2.sub(0), df.Constant(0), bnd_xmin),
-            df.DirichletBC(V_CG2.sub(1), df.Constant(0), bnd_ymin),
-            df.DirichletBC(V_CG2.sub(2), df.Constant(0), bnd_zmin),
-            df.DirichletBC(V_CG2.sub(1), stretch, bnd_ymax),
+            df.DirichletBC(V_CG2, df.Constant((0., 0., 0.)), ymin),
+            df.DirichletBC(V_CG2, self.bcsfun, ymax),
         ]
 
         return bcs
 
 
 class StretchNN(DeformationExperiment):
+    def __init__(self, mesh, V_CG):
+        super().__init__(mesh, V_CG)
+        min_v, max_v = self.dimensions[2]
+        L = max_v - min_v
+        
+        self.bcsfun = df.Expression(
+            (0, 0, "k*L"), 
+            L=L, 
+            k=0, 
+            degree=2
+        )
+
+    def assign_stretch(self, stretch_value):
+        self.bcsfun.k = stretch_value
+
     def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([0.0, 0.0, 1.0])
         wall_idt = self.boundaries["z_max"]["idt"]
@@ -199,17 +236,14 @@ class StretchNN(DeformationExperiment):
     def bcs(self):
         boundaries, V_CG2, stretch = self.boundaries, self.V_CG2, self.stretch
 
-        bnd_xmin = boundaries["x_min"]["subdomain"]
-        bnd_ymin = boundaries["y_min"]["subdomain"]
-        bnd_zmin = boundaries["z_min"]["subdomain"]
-        bnd_zmax = boundaries["z_max"]["subdomain"]
-
+        zmin = boundaries["z_min"]["subdomain"]
+        zmax = boundaries["z_max"]["subdomain"]
+        
         bcs = [
-            df.DirichletBC(V_CG2.sub(0), df.Constant(0), bnd_xmin),
-            df.DirichletBC(V_CG2.sub(1), df.Constant(0), bnd_ymin),
-            df.DirichletBC(V_CG2.sub(2), df.Constant(0), bnd_zmin),
-            df.DirichletBC(V_CG2.sub(2), stretch, bnd_zmax),
+            df.DirichletBC(V_CG2, df.Constant((0., 0., 0.)), zmin),
+            df.DirichletBC(V_CG2, self.bcsfun, zmax),
         ]
+
 
         return bcs
 
@@ -251,8 +285,8 @@ class ShearNS(DeformationExperiment):
         zmin = boundaries["z_min"]["subdomain"]
         zmax = boundaries["z_max"]["subdomain"]
 
-        #boundaries = [zmin, zmax]
-        boundaries = [ymin, ymax, zmin, zmax]
+        boundaries = [zmin, zmax]
+        #boundaries = [ymin, ymax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
@@ -294,8 +328,8 @@ class ShearNF(DeformationExperiment):
         zmin = boundaries["z_min"]["subdomain"]
         zmax = boundaries["z_max"]["subdomain"]
 
-        #boundaries = [zmin, zmax]
-        boundaries = [xmin, xmax, zmin, zmax]
+        boundaries = [zmin, zmax]
+        #boundaries = [xmin, xmax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
@@ -337,8 +371,8 @@ class ShearFN(DeformationExperiment):
         zmin = boundaries["z_min"]["subdomain"]
         zmax = boundaries["z_max"]["subdomain"]
 
-        #boundaries = [xmin, xmax]
-        boundaries = [xmin, xmax, zmin, zmax]
+        boundaries = [xmin, xmax]
+        #boundaries = [xmin, xmax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
@@ -380,13 +414,11 @@ class ShearFS(DeformationExperiment):
         zmin = boundaries["z_min"]["subdomain"]
         zmax = boundaries["z_max"]["subdomain"]
 
-        #boundaries = [xmin, xmax]
-        boundaries = [xmin, xmax, zmin, zmax]
+        boundaries = [xmin, xmax]
+        #boundaries = [xmin, xmax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
-
-#(0, "H*k*(x[0] - min_v)/L", 0), 
 
 class ShearSF(DeformationExperiment):
     def __init__(self, mesh, V_CG):
@@ -424,8 +456,8 @@ class ShearSF(DeformationExperiment):
         zmin = boundaries["z_min"]["subdomain"]
         zmax = boundaries["z_max"]["subdomain"]
 
-        #boundaries = [ymin, ymax]
-        boundaries = [ymin, ymax, zmin, zmax]
+        boundaries = [ymin, ymax]
+        #boundaries = [ymin, ymax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
@@ -467,8 +499,8 @@ class ShearSN(DeformationExperiment):
         zmin = boundaries["z_min"]["subdomain"]
         zmax = boundaries["z_max"]["subdomain"]
 
-        #boundaries = [ymin, ymax]
-        boundaries = [ymin, ymax, zmin, zmax]
+        boundaries = [ymin, ymax]
+        #boundaries = [ymin, ymax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
