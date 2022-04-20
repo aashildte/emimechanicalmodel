@@ -64,6 +64,9 @@ def get_dimensions(fin):
         areas["NF"] = data[6]*data[8]
         areas["NN"] = data[6]*data[7]
 
+    print(dimensions)
+    print(areas)
+
     return dimensions, areas
 
 def load_experimental_data_stretch(fin, width, area):
@@ -84,14 +87,16 @@ def load_experimental_data_stretch(fin, width, area):
     while displacement[i] < 0:
         i+=1
     
+    print("num steps: ", len(stretch[i:]))
+
     return stretch[i:], load[i:]
 
 def load_experimental_data_shear(fin, width, area):
     data = np.loadtxt(fin, delimiter=",", skiprows=1)
 
     displacement = data[:,0] * 1E-3 # m
-    shear_force = data[:,1]               # N
     normal_force = data[:,2]               # N
+    shear_force = data[:,1]               # N
 
     # approximately right
     width *= 1E-3             # m
@@ -106,6 +111,8 @@ def load_experimental_data_shear(fin, width, area):
     while displacement[i] < 0:
         i+=1
     
+    print("num steps: ", len(stretch[i:]))
+
     return stretch[i:], normal_load[i:], shear_load[i:]
 
 
@@ -134,10 +141,9 @@ def initiate_tissue_model(mesh, tissue_params, experiment):
     return model
 
 
-def initiate_emi_model(mesh, volumes, emi_params, experiment):
-    model = EMIModel(
+def initiate_emi_model(mesh, emi_params, experiment):
+    model = TissueModel(
         mesh,
-        volumes,
         experiment=experiment,
         material_parameters=emi_params,
     )
@@ -162,53 +168,75 @@ def values_to_states(targets, experiments, models, original_states):
             state_values = original_states[target_stretch][experiment]
             model.state.vector()[:] = state_values
 
-def cost_function(params, experiments, experimental_data, models, i):
-    a_i, b_i, a_e, b_e, a_if, b_if, a_esn, b_esn = params
+def cost_function(params, experiments, experimental_data, models, norm):
+    a, b, a_f, b_f, a_s, b_s, a_fs, b_fs = params
     cf = 0
 
-    print(f"Current mat param values: a_i = {a_i}, b_i = {b_i}, a_e = {a_e}, b_e = {b_e}, a_if = {a_if}, b_if = {b_if}, a_esn = {a_esn}, b_esn = {b_esn}", flush=True)
+    print(f"Current mat param values: a {a}, b {b}, a_f {a_f}, b_f {b_f}, a_s {a_s}, b_s {b_s}, a_fs {a_fs}, b_fs {b_fs}", flush=True)
 
     for experiment in experiments:
-        print("experiment: ", experiment)
+        #print("experiment: ", experiment)
         model = models[experiment]
         model.state.vector()[:] = 0       # reset
     
-        model.mat_model.a_i.assign(a_i)
-        model.mat_model.b_i.assign(b_i)
-        model.mat_model.a_e.assign(a_e)
-        model.mat_model.b_e.assign(b_e)
-        model.mat_model.a_if.assign(a_if)
-        model.mat_model.b_if.assign(b_if)
-        model.mat_model.a_esn.assign(a_esn)
-        model.mat_model.b_esn.assign(b_esn)
+        model.mat_model.a.assign(a)
+        model.mat_model.b.assign(b)
+        model.mat_model.a_f.assign(a_f)
+        model.mat_model.b_f.assign(b_f)
+        model.mat_model.a_s.assign(a_s)
+        model.mat_model.b_s.assign(b_s)
+        model.mat_model.a_fs.assign(a_fs)
+        model.mat_model.b_fs.assign(b_fs)
 
-        stretch_values = experimental_data[experiment]["stretch_values"][:i]
+        stretch_values = experimental_data[experiment]["stretch_values"]
         try:
             normal_load, shear_load = go_to_stretch(model, stretch_values, experiment)
-        except RuntimeError:
-            cf += 500 + 10*np.random.random()  # just a high number
+        except IndentationError:
+            print("crashed; adding + 500")
+            print(cf)
+            cf += 500      # just a high value
             continue
 
-        target_normal_load = experimental_data[experiment]["normal_values"][:i]
-        cf += (np.linalg.norm(normal_load - target_normal_load)**2)
+        target_normal_load = experimental_data[experiment]["normal_values"]
+
+        if norm == "L1":
+            cf += np.sum(np.abs(normal_load - target_normal_load))
+        elif norm == "L2":
+            cf += np.linalg.norm(normal_load - target_normal_load)
+        elif norm == "L2sq":
+            cf += np.linalg.norm(normal_load - target_normal_load)**2
         
-        target_shear_load = experimental_data[experiment]["shear_values"][:i]
-        cf += (np.linalg.norm(shear_load - target_shear_load)**2)
+        target_shear_load = experimental_data[experiment]["shear_values"]
+        
+        if norm == "L1":
+            cf += np.sum(np.abs(shear_load - target_shear_load))
+        elif norm == "L2":
+            cf += np.linalg.norm(shear_load - target_shear_load)
+        elif norm == "L2sq":
+            cf += np.linalg.norm(shear_load - target_shear_load)**2
 
-    print(f"Current cost fun value: {cf**0.5}", flush=True)
 
-    return cf**2
+    if norm == "L2sq":
+        print("check: ")
+        print(cf)
+        print(cf**0.5)
+
+        print(f"Current cost fun value: {cf**0.5}", flush=True)
+        return cf**0.5
+    else:
+        print(f"Current cost fun value: {cf}", flush=True)
+        return cf
+
 
 fname_dims = "Data/LeftVentricle_MechanicalTesting/LeftVentricle_Dimensions_mm.csv"
 dimensions, areas = get_dimensions(fname_dims)
 
-sample = sys.argv[1] #"Sample1"
+sample = "Sample" + sys.argv[1]
 print(f"Running experiments for sample {sample}", flush=True)
 
-#mesh_file = f"meshes/tile_5.0.h5"
-mesh_file = f"meshes/tile_connected.h5"
+norm = sys.argv[2]
 
-mesh, volumes = load_mesh(mesh_file)
+mesh = df.UnitCubeMesh(3, 3, 3)
 
 experimental_data = defaultdict(dict)
 
@@ -216,54 +244,56 @@ experiments = ["stretch_ff", "stretch_ss", "stretch_nn", "shear_fs", "shear_sf",
 
 for experiment in experiments:
     mode = experiment.split("_")[1].upper()
-    
+
+    width = dimensions[mode]
+    area = areas[mode]
+
     fin = f"Data/LeftVentricle_MechanicalTesting/LeftVentricle_ForceDisplacement/LeftVentricle_{sample}/LeftVentricle_{sample}_{mode}.csv"
 
     if "stretch" in experiment:
-        stretch_values, normal_values = load_experimental_data_stretch(fin, dimensions[mode], areas[mode])
+        stretch_values, normal_values = load_experimental_data_stretch(fin, width, area)
         shear_values = -1*np.ones_like(normal_values)
     else:
-        stretch_values, normal_values, shear_values = load_experimental_data_shear(fin, dimensions[mode], areas[mode])
-
+        stretch_values, normal_values, shear_values = load_experimental_data_shear(fin, width, area)
 
     experimental_data[experiment]["stretch_values"] = stretch_values
     experimental_data[experiment]["normal_values"] = normal_values
     experimental_data[experiment]["shear_values"] = shear_values
 
-a_i = 1.0
-b_i = 15.0
-a_e = 1.0
-b_e = 15.0
-a_if = 1.0
-b_if = 15.0
-a_esn = 1.0
-b_esn = 15.0
+a = 1.0
+b = 5.0
+a_f = 15.0
+b_f = 15.0
+a_s = 1.0
+b_s = 5.0
+a_fs = 1.0
+b_fs = 5.0
 
 emi_params = {
-    "a_i": df.Constant(a_i),
-    "b_i": df.Constant(b_i),
-    "a_e": df.Constant(a_e),
-    "b_e": df.Constant(b_e),
-    "a_if": df.Constant(a_if),
-    "b_if": df.Constant(b_if),
-    "a_esn": df.Constant(a_esn),
-    "b_esn": df.Constant(b_esn),
+    "a": df.Constant(a),
+    "b": df.Constant(b),
+    "a_f": df.Constant(a_f),
+    "b_f": df.Constant(b_f),
+    "a_s": df.Constant(a_s),
+    "b_s": df.Constant(b_s),
+    "a_fs": df.Constant(a_fs),
+    "b_fs": df.Constant(b_fs),
 }
 
 emi_models = {}
 
 for experiment in experiments:
-    model = initiate_emi_model(mesh, volumes, emi_params, experiment)
+    model = initiate_emi_model(mesh, emi_params, experiment)
     emi_models[experiment] = model
 
-params = [a_i, b_i, a_e, b_e, a_if, b_if, a_esn, b_esn]
+params = [a, b, a_f, b_f, a_s, b_s, a_fs, b_fs]
 
-bounds = [(0.01, 20), (0.01, 20), (0.01, 20), (0.01, 20), (0.0, 20), (0.01, 20), (0.0, 15), (0.01, 20)]
+bounds = [(0.0001, 100), (0.0001, 100), (0.0, 100), (0.0001, 100), (0.0, 100), (0.0001, 100), (0.0, 100), (0.0001, 100)]
 
 opt = minimize(
         cost_function,
         np.array(params),
-        (experiments, experimental_data, emi_models, 51),
+        (experiments, experimental_data, emi_models, norm),
         bounds=bounds,
         )
 params = opt.x

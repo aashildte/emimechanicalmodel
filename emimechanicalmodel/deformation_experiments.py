@@ -251,8 +251,8 @@ class ShearNS(DeformationExperiment):
         zmin = boundaries["z_min"]["subdomain"]
         zmax = boundaries["z_max"]["subdomain"]
 
-        boundaries = [zmin, zmax]  # [ymin, ymax, zmin, zmax]
-        #boundaries = [ymin, ymax, zmin, zmax]
+        #boundaries = [zmin, zmax]
+        boundaries = [ymin, ymax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
@@ -294,8 +294,8 @@ class ShearNF(DeformationExperiment):
         zmin = boundaries["z_min"]["subdomain"]
         zmax = boundaries["z_max"]["subdomain"]
 
-        boundaries = [zmin, zmax]  # [xmin, xmax, zmin, zmax]
-        #boundaries = [xmin, xmax, zmin, zmax]
+        #boundaries = [zmin, zmax]
+        boundaries = [xmin, xmax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
@@ -337,8 +337,8 @@ class ShearFN(DeformationExperiment):
         zmin = boundaries["z_min"]["subdomain"]
         zmax = boundaries["z_max"]["subdomain"]
 
-        boundaries = [xmin, xmax]  # [xmin, xmax, zmin, zmax]
-        #boundaries = [xmin, xmax, zmin, zmax]
+        #boundaries = [xmin, xmax]
+        boundaries = [xmin, xmax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
@@ -380,8 +380,8 @@ class ShearFS(DeformationExperiment):
         zmin = boundaries["z_min"]["subdomain"]
         zmax = boundaries["z_max"]["subdomain"]
 
-        boundaries = [xmin, xmax]  # [xmin, xmax, zmin, zmax]
-        #boundaries = [xmin, xmax, zmin, zmax]
+        #boundaries = [xmin, xmax]
+        boundaries = [xmin, xmax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
@@ -424,8 +424,8 @@ class ShearSF(DeformationExperiment):
         zmin = boundaries["z_min"]["subdomain"]
         zmax = boundaries["z_max"]["subdomain"]
 
-        boundaries = [ymin, ymax]  # [ymin, ymax, zmin, zmax]
-        #boundaries = [ymin, ymax, zmin, zmax]
+        #boundaries = [ymin, ymax]
+        boundaries = [ymin, ymax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
@@ -467,8 +467,8 @@ class ShearSN(DeformationExperiment):
         zmin = boundaries["z_min"]["subdomain"]
         zmax = boundaries["z_max"]["subdomain"]
 
-        boundaries = [ymin, ymax]  # [ymin, ymax, zmin, zmax]
-        #boundaries = [ymin, ymax, zmin, zmax]
+        #boundaries = [ymin, ymax]
+        boundaries = [ymin, ymax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
