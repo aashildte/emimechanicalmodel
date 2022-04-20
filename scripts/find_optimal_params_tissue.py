@@ -191,7 +191,7 @@ def cost_function(params, experiments, experimental_data, models, norm):
         stretch_values = experimental_data[experiment]["stretch_values"]
         try:
             normal_load, shear_load = go_to_stretch(model, stretch_values, experiment)
-        except IndentationError:
+        except RuntimeError:
             print("crashed; adding + 500")
             print(cf)
             cf += 500      # just a high value
