@@ -19,7 +19,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-ai",
         "--a_i",
-        default=0.01,
+        default=1,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
@@ -27,7 +27,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-bi",
         "--b_i",
-        default=0.74,
+        default=10,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
@@ -35,7 +35,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-ae",
         "--a_e",
-        default=4.74,
+        default=1,
         type=float,
         help="Stress/strain scaling parameter for the extracellular domain",
     )
@@ -43,7 +43,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-be",
         "--b_e",
-        default=1.98,
+        default=10,
         type=float,
         help="Stress/strain scaling parameter for the extracellular domain",
     )
@@ -51,7 +51,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-af",
         "--a_f",
-        default=30.00,
+        default=5,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
@@ -59,7 +59,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-bf",
         "--b_f",
-        default=43.17,
+        default=15,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
@@ -76,7 +76,7 @@ def add_default_arguments(parser):
     parser.add_argument(
         "-m",
         "--mesh_file",
-        default="meshes/tile_5.0.h5",
+        default="meshes/tile_connected.h5",
         type=str,
         help="Mesh file (h5 format)",
     )
@@ -126,7 +126,8 @@ def add_stretching_arguments(parser):
         "--dir_stretch",
         default="stretch_ff",
         type=str,
-        help="Direction for stretch; ... ",
+        help="Direction for stretch; can be 'stretch_ff', 'stretch_ss', 'stretch_nn', " + \
+              "'shear_fn', 'shear_nf', 'shear_fs', 'shear_sf', 'shear_ns', or 'shear_sn'.",
     )
 
     parser.add_argument(

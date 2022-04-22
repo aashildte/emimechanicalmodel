@@ -84,35 +84,19 @@ def cost_function(params, experiments, experimental_data, models, norm):
         stretch_values = experimental_data[experiment]["stretch_values"]
         try:
             normal_load, shear_load = go_to_stretch(model, stretch_values, experiment)
-        except RuntimeError:
+        except IndentationError:
             print("crashed; adding + 500", cf)
             cf += 500      # just a high value
             continue
 
         target_normal_load = experimental_data[experiment]["normal_values"]
-
-        if norm == "L1":
-            cf += np.sum(np.abs(normal_load - target_normal_load))
-        elif norm == "L2":
-            cf += np.linalg.norm(normal_load - target_normal_load)
-        elif norm == "L2sq":
-            cf += np.linalg.norm(normal_load - target_normal_load)**2
+        cf += np.linalg.norm(normal_load - target_normal_load)
         
-        target_shear_load = experimental_data[experiment]["shear_values"]
-        
-        if norm == "L1":
-            cf += np.sum(np.abs(shear_load - target_shear_load))
-        elif norm == "L2":
-            cf += np.linalg.norm(shear_load - target_shear_load)
-        elif norm == "L2sq":
-            cf += np.linalg.norm(shear_load - target_shear_load)**2
+        target_shear_load = experimental_data[experiment]["shear_values"]        
+        cf += np.linalg.norm(shear_load - target_shear_load)
 
-    if norm == "L2sq":
-        print(f"Current cost fun value: {cf**0.5}", flush=True)
-        return cf**0.5
-    else:
-        print(f"Current cost fun value: {cf}", flush=True)
-        return cf
+    print(f"Current cost fun value: {cf}", flush=True)
+    return cf
 
 
 fname_dims = "Data/LeftVentricle_MechanicalTesting/LeftVentricle_Dimensions_mm.csv"
@@ -123,7 +107,7 @@ print(f"Running experiments for sample {sample}", flush=True)
 
 norm = sys.argv[2]
 
-mesh = df.UnitCubeMesh(3, 3, 3)
+mesh = df.UnitCubeMesh(1, 1, 1)
 
 experimental_data = defaultdict(dict)
 
@@ -170,7 +154,7 @@ emi_params = {
 emi_models = {}
 
 for experiment in experiments:
-    model = initiate_emi_model(mesh, emi_params, experiment)
+    model = initiate_tissue_model(mesh, emi_params, experiment)
     emi_models[experiment] = model
 
 params = [a, b, a_f, b_f, a_s, b_s, a_fs, b_fs]

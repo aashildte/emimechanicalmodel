@@ -150,7 +150,7 @@ for experiment in experiments:
     model = initiate_emi_model(mesh, volumes, emi_params, experiment)
     emi_models[experiment] = model
 
-params = [a_i, b_i, a_e, b_e, a_if, b_if, a_esn, b_esn]
+params = [a_i, b_i, a_e, b_e, a_if, b_if]
 
 bounds = [(0.01, 100), (0.01, 100), (0.01, 100), (0.01, 100), (0.0, 100), (0.01, 100)]
 
