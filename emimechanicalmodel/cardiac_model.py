@@ -178,7 +178,7 @@ class CardiacModel(ABC):
         #P_proj = ProjectionFunction(self.P, P_DG)
 
         #self.projections = [u_proj_DG, u_proj_CG, E_proj, sigma_proj, P_proj]
-        self.projections = [u_proj_CG, E_proj] #, sigma_proj, P_proj]
+        self.projections = [u_proj_CG] #, sigma_proj, P_proj]
 
         #self.u_DG, self.u_CG, self.E_DG, self.sigma_DG, self.P_DG = (
         #    u_DG,
@@ -191,7 +191,7 @@ class CardiacModel(ABC):
         # gather tracked functions into a list for easy access
 
         #self.tracked_variables = [u_DG, u_CG, E_DG, sigma_DG, P_DG]
-        self.tracked_variables = [u_CG, E_CG]
+        self.tracked_variables = [u_CG]
 
     def _define_kinematic_variables(self, experiment):
         state_space = self.state_space
