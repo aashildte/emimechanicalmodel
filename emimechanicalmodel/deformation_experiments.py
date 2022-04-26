@@ -6,10 +6,9 @@
 
 import dolfin as df
 from mpi4py import MPI
-from abc import ABC, abstractmethod
 
 
-class DeformationExperiment(ABC):
+class DeformationExperiment:
     """
 
     Class for handling setup for different deformation experiments
@@ -34,11 +33,11 @@ class DeformationExperiment(ABC):
         self.boundaries, self.ds = self.get_boundary_markers(mesh, self.dimensions)
         self.normal_vector = df.FacetNormal(mesh)
 
-    @abstractmethod 
+    # redefine this
     def evaluate_normal_load(self, F, P):
         ...
    
-    # partly abstract method ...
+    # redefine this
     def evaluate_shear_load(self, F, P):
         ...
 
