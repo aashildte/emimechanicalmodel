@@ -138,7 +138,7 @@ for (i, st_val) in enumerate(stretch):
         monitor.update_scalar_functions(st_val)
 
         if plot_all_steps or (plot_at_peak and i == peak_index):
-            monitor.update_xdmf_files(st_val)
+            monitor.update_xdmf_files(i)
 
 if enable_monitor:
     monitor.save_and_close()

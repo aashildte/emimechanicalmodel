@@ -86,7 +86,7 @@ class Monitor:
             functions[name] = state
             xdmf_files[name] = df.XDMFFile(MPI.COMM_WORLD, filename_xdmf)
 
-        (self.functions, self.xdmf_files,) = (
+        (self.functions, self.xdmf_files) = (
             functions,
             xdmf_files,
         )
@@ -97,12 +97,13 @@ class Monitor:
             f_subdomains.write(self.cardiac_model.volumes)
             f_subdomains.close()
 
-    def update_xdmf_files(self, state_pt):
+    def update_xdmf_files(self, it_number):
         """
 
         Write checkpoint for all xdmf files.
 
         """
+
         functions, xdmf_files = (
             self.functions,
             self.xdmf_files,
@@ -111,8 +112,9 @@ class Monitor:
         # save to paraview files
         for name in xdmf_files.keys():
             xdmf_files[name].write_checkpoint(
-                functions[name], name, state_pt, append=True
+                functions[name], name, it_number, append=True
             )
+
 
     def _init_tracked_scalar_functions(self):
         model = self.cardiac_model

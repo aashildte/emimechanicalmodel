@@ -159,8 +159,8 @@ class CardiacModel(ABC):
 
         # define functions
 
-        u_DG = df.Function(V_DG, name="Displacement ($\mu$m)")
-        u_CG = df.Function(V_CG, name="Displacement ($\mu$m)")
+        u_DG = df.Function(V_DG, name=r"Displacement ($\mu$m)")
+        u_CG = df.Function(V_CG, name=r"Displacement ($\mu$m)")
         E_DG = df.Function(T_DG, name="Strain")
         sigma_DG = df.Function(T_DG, name="Cauchy stress (kPa)")
         P_DG = df.Function(T_DG, name="Piola-Kirchhoff stress (kPa)")

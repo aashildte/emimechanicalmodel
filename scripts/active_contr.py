@@ -137,7 +137,7 @@ for i in range(num_time_steps):
         monitor.update_scalar_functions(time_pt)
 
         if plot_all_steps or (plot_at_peak and i == peak_index):
-            monitor.update_xdmf_files(time_pt)
+            monitor.update_xdmf_files(i)
 
 if enable_monitor:
     monitor.save_and_close()
