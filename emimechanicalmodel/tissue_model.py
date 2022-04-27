@@ -79,5 +79,4 @@ class TissueModel(CardiacModel):
         self.projections = [u_proj, E_proj, sigma_proj, P_proj]
 
         # gather tracked functions into a list for easy access
-
         self.tracked_variables = [u, E, sigma, P]
