@@ -6,9 +6,10 @@
 
 import dolfin as df
 from mpi4py import MPI
+from abc import ABC, abstractmethod
 
 
-class DeformationExperiment:
+class DeformationExperiment(ABC):
     """
 
     Class for handling setup for different deformation experiments
