@@ -132,12 +132,13 @@ for (i, st_val) in enumerate(stretch):
         print(f"Step {i+1} / {num_steps}", flush=True)
 
     model.assign_stretch(st_val)
-    model.solve(project=enable_monitor)
+
+    project = (plot_all_steps) or (plot_at_peak and i == peak_index)
+    model.solve(project=project)
 
     if enable_monitor:
         monitor.update_scalar_functions(st_val)
-
-        if plot_all_steps or (plot_at_peak and i == peak_index):
+        if project:
             monitor.update_xdmf_files(i)
 
 if enable_monitor:

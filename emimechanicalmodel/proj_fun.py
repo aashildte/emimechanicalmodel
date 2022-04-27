@@ -50,6 +50,7 @@ class ProjectionFunction:
         the weak form.
 
         """
+
         v = self.org_fun
         V = self.proj_space
 

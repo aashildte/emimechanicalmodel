@@ -129,14 +129,16 @@ for i in range(num_time_steps):
 
     if verbose >= 1 and MPI.COMM_WORLD.Get_rank() == 0:
         print(f"Time step {i+1} / {num_time_steps}", flush=True)
+    
+    project = plot_all_steps or (plot_at_peak and i == peak_index)
 
     model.update_active_fn(a_str)
-    model.solve(project=enable_monitor)
+    model.solve(project=project)
 
     if enable_monitor:
         monitor.update_scalar_functions(time_pt)
 
-        if plot_all_steps or (plot_at_peak and i == peak_index):
+        if project:
             monitor.update_xdmf_files(i)
 
 if enable_monitor:

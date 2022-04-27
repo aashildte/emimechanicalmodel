@@ -10,7 +10,8 @@ from mpi4py import MPI
 from emimechanicalmodel.cardiac_model import CardiacModel
 from emimechanicalmodel.mesh_setup import assign_discrete_values
 from emimechanicalmodel.emi_holzapfelmaterial import EMIHolzapfelMaterial
-#from emimechanicalmodel.mooneyrivlin import EMIMooneyRivlin
+from emimechanicalmodel.proj_fun import ProjectionFunction
+
 
 class EMIModel(CardiacModel):
     """
@@ -50,7 +51,7 @@ class EMIModel(CardiacModel):
 
         U = df.FunctionSpace(mesh, "DG", 0)
         subdomain_map = volumes.array()  # only works for DG-0
-  
+
         mat_model = EMIHolzapfelMaterial(U, subdomain_map, **material_parameters)
 
         self.U, self.subdomain_map, self.mat_model = U, subdomain_map, mat_model
@@ -67,3 +68,94 @@ class EMIModel(CardiacModel):
 
     def update_active_fn(self, value):
         assign_discrete_values(self.active_fn, self.subdomain_map, value, 0)
+
+    def _get_subdomains(self):
+        num_subdomains = (
+            self.num_subdomains
+        )  # TODO try if local value makes more sense (dictionary approach)
+        
+        subdomains = [
+            df.SubMesh(self.mesh, self.volumes, i) for i in range(num_subdomains)
+        ]
+
+        return subdomains
+ 
+
+
+    def _define_projections(self):
+        mesh = self.mesh
+        
+        subdomains = self._get_subdomains()
+        num_subdomains = self.num_subdomains
+
+        # define function spaces
+
+        V_DG = df.VectorFunctionSpace(mesh, "DG", 2)
+        T_DG = df.TensorFunctionSpace(mesh, "DG", 2)
+
+        V_CG_subdomains = [df.VectorFunctionSpace(sd, "CG", 2) for sd in subdomains]
+        T_CG_subdomains = [df.TensorFunctionSpace(sd, "CG", 2) for sd in subdomains]
+        
+        u_DG = df.Function(V_DG, name="Displacement (µm)")
+
+        u_subdomains = [
+            df.Function(V_CG_subdomains[i], name=f"Displacement subdomain {i} (µm)")
+            for i in range(num_subdomains)
+        ]
+
+        E_DG = df.Function(T_DG, name="Strain")
+
+        E_subdomains = [
+            df.Function(T_CG_subdomains[i], name=f"Strain subdomain {i} (-)")
+            for i in range(num_subdomains)
+        ]
+
+        sigma_DG = df.Function(T_DG, name="Cauchy stress (kPa)")
+
+        sigma_subdomains = [
+            df.Function(T_CG_subdomains[i], name=f"Cauchy stress subdomain {i} (kPa)")
+            for i in range(num_subdomains)
+        ]
+
+        P_DG = df.Function(T_DG, name="Piola-Kirchhoff stress (kPa)")
+
+        P_subdomains = [
+            df.Function(
+                T_CG_subdomains[i], name=f"Piola-Kirchhoff stress subdomain {i} (kPa)"
+            )
+            for i in range(num_subdomains)
+        ]
+
+        # then projection objects
+
+        u_proj = ProjectionFunction(self.u, u_DG)
+        u_proj_subdomains = [ProjectionFunction(u_DG, u_sub) for u_sub in u_subdomains]
+
+        # u_proj_DG = ProjectionFunction(self.u, u_DG)
+        E_proj = ProjectionFunction(self.E, E_DG)
+        E_proj_subdomains = [ProjectionFunction(E_DG, E_sub) for E_sub in E_subdomains]
+
+        sigma_proj = ProjectionFunction(self.sigma, sigma_DG)
+        sigma_proj_subdomains = [
+            ProjectionFunction(sigma_DG, sigma_sub) for sigma_sub in sigma_subdomains
+        ]
+
+        P_proj = ProjectionFunction(self.P, P_DG)
+        P_proj_subdomains = [ProjectionFunction(P_DG, P_sub) for P_sub in P_subdomains]
+
+        # gather tracked functions into a list for easy access
+        self.tracked_variables = (
+            [u_DG, E_DG, sigma_DG, P_DG]
+            + u_subdomains
+            + E_subdomains
+            + sigma_subdomains
+            + P_subdomains
+        )
+
+        self.projections = (
+            [u_proj, E_proj, sigma_proj, P_proj]
+            + u_proj_subdomains
+            + E_proj_subdomains
+            + sigma_proj_subdomains
+            + P_proj_subdomains
+        )

@@ -21,7 +21,7 @@ from emimechanicalmodel.deformation_experiments import (
     ShearSF,
     ShearSN,
 )
-from emimechanicalmodel.proj_fun import ProjectionFunction
+
 from emimechanicalmodel.nonlinear_problem import NewtonSolver, NonlinearProblem
 
 
@@ -146,52 +146,9 @@ class CardiacModel(ABC):
 
         return P
 
+    @abstractmethod
     def _define_projections(self):
-        mesh = self.mesh
-        mat_model = self.mat_model
-
-        submesh = df.SubMesh(self.mesh, self.volumes, 1)
-        mesh = submesh
-
-        # define function spaces
-
-        #U_DG = df.FunctionSpace(mesh, "DG", 2)
-        #V_DG = df.VectorFunctionSpace(mesh, "DG", 2)
-        V_CG = df.VectorFunctionSpace(mesh, "CG", 2)
-        #T_DG = df.TensorFunctionSpace(mesh, "DG", 2)
-        T_CG = df.TensorFunctionSpace(mesh, "CG", 2)
-
-        # define functions
-
-        #u_DG = df.Function(V_DG, name=r"Displacement ($\mu$m)")
-        u_CG = df.Function(V_CG, name=r"Displacement ($\mu$m)")
-        E_CG = df.Function(T_CG, name="Strain")
-        #sigma_CG = df.Function(T_CG, name="Cauchy stress (kPa)")
-        #P_CG = df.Function(T_CG, name="Piola-Kirchhoff stress (kPa)")
-
-        # then projection objects
-
-        #u_proj_DG = ProjectionFunction(self.u, u_DG)
-        u_proj_CG = ProjectionFunction(self.u, u_CG)
-        E_proj = ProjectionFunction(self.E, E_CG)
-        #sigma_proj = ProjectionFunction(self.sigma, sigma_DG)
-        #P_proj = ProjectionFunction(self.P, P_DG)
-
-        #self.projections = [u_proj_DG, u_proj_CG, E_proj, sigma_proj, P_proj]
-        self.projections = [u_proj_CG] #, sigma_proj, P_proj]
-
-        #self.u_DG, self.u_CG, self.E_DG, self.sigma_DG, self.P_DG = (
-        #    u_DG,
-        #    u_CG,
-        #    E_DG,
-        #    sigma_DG,
-        #    P_DG,
-        #)
-
-        # gather tracked functions into a list for easy access
-
-        #self.tracked_variables = [u_DG, u_CG, E_DG, sigma_DG, P_DG]
-        self.tracked_variables = [u_CG]
+        pass
 
     def _define_kinematic_variables(self, experiment):
         state_space = self.state_space
