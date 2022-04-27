@@ -52,6 +52,7 @@ def read_cl_args():
         pp.num_steps,
         pp.plot_at_peak,
         pp.plot_all_steps,
+        pp.project_to_subspaces,
         pp.verbose,
     )
 
@@ -72,6 +73,7 @@ def read_cl_args():
     num_steps,
     plot_at_peak,
     plot_all_steps,
+    project_to_subspaces,
     verbose,
 ) = read_cl_args()
 
@@ -102,6 +104,7 @@ model = EMIModel(
     material_parameters=material_params,
     experiment=experiment,
     verbose=verbose,
+    project_to_subspaces=project_to_subspaces,
 )
 
 # setup parameters - define the parameter space to explore
@@ -132,12 +135,13 @@ for (i, st_val) in enumerate(stretch):
         print(f"Step {i+1} / {num_steps}", flush=True)
 
     model.assign_stretch(st_val)
-    model.solve(project=enable_monitor)
+
+    project = (plot_all_steps) or (plot_at_peak and i == peak_index)
+    model.solve(project=project)
 
     if enable_monitor:
         monitor.update_scalar_functions(st_val)
-
-        if plot_all_steps or (plot_at_peak and i == peak_index):
+        if project:
             monitor.update_xdmf_files(i)
 
 if enable_monitor:

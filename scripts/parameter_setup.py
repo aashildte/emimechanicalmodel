@@ -94,7 +94,14 @@ def add_default_arguments(parser):
         "--plot_all_steps",
         default=False,
         action="store_true",
-        help="Do spatial plots at all time steps",
+        help="Save spatial quantities for all time steps",
+    )
+    
+    parser.add_argument(
+        "--project_to_subspaces",
+        default=False,
+        action="store_true",
+        help="Save spatial quantities for each subdomain",
     )
 
     parser.add_argument(
@@ -102,7 +109,7 @@ def add_default_arguments(parser):
         "--plot_at_peak",
         default=False,
         action="store_true",
-        help="Do spatial plots at peak (max value)",
+        help="Save spatial quantities at peak (max value)",
     )
 
     parser.add_argument(
