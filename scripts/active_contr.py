@@ -53,6 +53,7 @@ def read_cl_args():
         pp.num_time_steps,
         pp.plot_at_peak,
         pp.plot_all_steps,
+        pp.project_to_subspaces,
         pp.verbose,
     )
 
@@ -72,6 +73,7 @@ def read_cl_args():
     num_time_steps,
     plot_at_peak,
     plot_all_steps,
+    project_to_subspaces,
     verbose,
 ) = read_cl_args()
 
@@ -103,6 +105,7 @@ model = EMIModel(
     material_parameters=material_params,
     experiment="contr",
     verbose=verbose,
+    project_to_subspaces=project_to_subspaces,
 )
 
 enable_monitor = bool(output_folder)  # save output if != None

@@ -34,14 +34,6 @@ class DeformationExperiment(ABC):
         self.boundaries, self.ds = self.get_boundary_markers(mesh, self.dimensions)
         self.normal_vector = df.FacetNormal(mesh)
 
-    @abstractmethod 
-    def evaluate_normal_load(self, F, P):
-        ...
-   
-    # partly abstract method ...
-    def evaluate_shear_load(self, F, P):
-        ...
-
     def _evaluate_load(self, F, P, wall_idt, unit_vector):
         load = df.inner(P*self.normal_vector, unit_vector)
         total_load = df.assemble(load * self.ds(wall_idt))
@@ -115,6 +107,22 @@ class DeformationExperiment(ABC):
         """
 
         self.stretch.assign(stretch_value * self.stretch_length)
+    
+
+class StretchingExperiment(DeformationExperiment):
+    @abstractmethod 
+    def evaluate_normal_load(self, F, P):
+        pass
+   
+
+class ShearExperiment(DeformationExperiment):
+    @abstractmethod 
+    def evaluate_normal_load(self, F, P):
+        pass
+    
+    @abstractmethod 
+    def evaluate_shear_load(self, F, P):
+        pass
 
 
 class Contraction(DeformationExperiment):
@@ -123,7 +131,7 @@ class Contraction(DeformationExperiment):
         return []
 
 
-class StretchFF(DeformationExperiment):
+class StretchFF(StretchingExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[0]
@@ -165,7 +173,7 @@ class StretchFF(DeformationExperiment):
         return bcs
 
 
-class StretchSS(DeformationExperiment):
+class StretchSS(StretchingExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[1]
@@ -207,7 +215,7 @@ class StretchSS(DeformationExperiment):
         return bcs
 
 
-class StretchNN(DeformationExperiment):
+class StretchNN(StretchingExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[2]
@@ -250,7 +258,7 @@ class StretchNN(DeformationExperiment):
         return bcs
 
 
-class ShearNS(DeformationExperiment):
+class ShearNS(ShearExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[2]
@@ -294,7 +302,7 @@ class ShearNS(DeformationExperiment):
         return bcs
 
 
-class ShearNF(DeformationExperiment):
+class ShearNF(ShearExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[2]
@@ -337,7 +345,7 @@ class ShearNF(DeformationExperiment):
         return bcs
 
 
-class ShearFN(DeformationExperiment):
+class ShearFN(ShearExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[0]
@@ -380,7 +388,7 @@ class ShearFN(DeformationExperiment):
         return bcs
 
 
-class ShearFS(DeformationExperiment):
+class ShearFS(ShearExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[0] 
@@ -422,7 +430,7 @@ class ShearFS(DeformationExperiment):
 
         return bcs
 
-class ShearSF(DeformationExperiment):
+class ShearSF(ShearExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[1]
@@ -465,7 +473,7 @@ class ShearSF(DeformationExperiment):
         return bcs
 
 
-class ShearSN(DeformationExperiment):
+class ShearSN(ShearExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[1]
