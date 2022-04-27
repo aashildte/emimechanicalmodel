@@ -71,10 +71,10 @@ class TissueModel(CardiacModel):
 
         # then projection objects
 
-        u_proj = ProjectionFunction(self.u, u_CG)
-        E_proj = ProjectionFunction(self.E, E_CG) 
-        sigma_proj = ProjectionFunction(self.sigma, sigma_CG)
-        P_proj = ProjectionFunction(self.P, P_CG)
+        u_proj = ProjectionFunction(self.u, u)
+        E_proj = ProjectionFunction(self.E, E) 
+        sigma_proj = ProjectionFunction(self.sigma, sigma)
+        P_proj = ProjectionFunction(self.P, P)
 
         self.projections = [u_proj, E_proj, sigma_proj, P_proj]
 
