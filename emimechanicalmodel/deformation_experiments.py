@@ -6,10 +6,9 @@
 
 import dolfin as df
 from mpi4py import MPI
-from abc import ABC, abstractmethod
 
 
-class DeformationExperiment(ABC):
+class DeformationExperiment():
     """
 
     Class for handling setup for different deformation experiments
@@ -44,6 +43,12 @@ class DeformationExperiment(ABC):
         )
 
         return total_load / area
+    
+    def evaluate_normal_load(self, F, P):
+        return -1
+    
+    def evaluate_shear_load(self, F, P):
+        return -1
 
     def get_dimensions(self, mesh):
         mpi_comm = mesh.mpi_comm()
@@ -109,29 +114,13 @@ class DeformationExperiment(ABC):
         self.stretch.assign(stretch_value * self.stretch_length)
     
 
-class StretchingExperiment(DeformationExperiment):
-    @abstractmethod 
-    def evaluate_normal_load(self, F, P):
-        pass
-   
-
-class ShearExperiment(DeformationExperiment):
-    @abstractmethod 
-    def evaluate_normal_load(self, F, P):
-        pass
-    
-    @abstractmethod 
-    def evaluate_shear_load(self, F, P):
-        pass
-
-
 class Contraction(DeformationExperiment):
     @property
     def bcs(self):
         return []
 
 
-class StretchFF(StretchingExperiment):
+class StretchFF(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[0]
@@ -173,7 +162,7 @@ class StretchFF(StretchingExperiment):
         return bcs
 
 
-class StretchSS(StretchingExperiment):
+class StretchSS(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[1]
@@ -215,7 +204,7 @@ class StretchSS(StretchingExperiment):
         return bcs
 
 
-class StretchNN(StretchingExperiment):
+class StretchNN(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[2]
@@ -258,7 +247,7 @@ class StretchNN(StretchingExperiment):
         return bcs
 
 
-class ShearNS(ShearExperiment):
+class ShearNS(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[2]
@@ -302,7 +291,7 @@ class ShearNS(ShearExperiment):
         return bcs
 
 
-class ShearNF(ShearExperiment):
+class ShearNF(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[2]
@@ -345,7 +334,7 @@ class ShearNF(ShearExperiment):
         return bcs
 
 
-class ShearFN(ShearExperiment):
+class ShearFN(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[0]
@@ -388,7 +377,7 @@ class ShearFN(ShearExperiment):
         return bcs
 
 
-class ShearFS(ShearExperiment):
+class ShearFS(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[0] 
@@ -430,7 +419,7 @@ class ShearFS(ShearExperiment):
 
         return bcs
 
-class ShearSF(ShearExperiment):
+class ShearSF(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[1]
@@ -473,7 +462,7 @@ class ShearSF(ShearExperiment):
         return bcs
 
 
-class ShearSN(ShearExperiment):
+class ShearSN(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[1]
