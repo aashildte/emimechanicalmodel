@@ -19,7 +19,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-ai",
         "--a_i",
-        default=1,
+        default=5.70,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
@@ -27,7 +27,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-bi",
         "--b_i",
-        default=10,
+        default=11.67,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
@@ -35,7 +35,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-ae",
         "--a_e",
-        default=1,
+        default=1.52,
         type=float,
         help="Stress/strain scaling parameter for the extracellular domain",
     )
@@ -43,7 +43,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-be",
         "--b_e",
-        default=10,
+        default=16.31,
         type=float,
         help="Stress/strain scaling parameter for the extracellular domain",
     )
@@ -51,7 +51,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-af",
         "--a_f",
-        default=5,
+        default=19.83,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
@@ -59,7 +59,7 @@ def add_emi_holzapfel_arguments(parser):
     parser.add_argument(
         "-bf",
         "--b_f",
-        default=15,
+        default=24.72,
         type=float,
         help="Stress/strain scaling parameter for the intracellular domain",
     )
