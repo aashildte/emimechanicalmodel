@@ -140,7 +140,7 @@ def add_stretching_arguments(parser):
     parser.add_argument(
         "-str",
         "--strain",
-        default=0.2,
+        default=0.15,
         type=float,
         help="Strain we want to reach; typically in range 0.1-0.3",
     )
