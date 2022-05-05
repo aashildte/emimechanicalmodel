@@ -216,7 +216,7 @@ class CardiacModel(ABC):
 
     def solve(self, project=True):
         # just keep the simple version here for easy comparison:
-        """  
+        """          
         df.solve(
             self.weak_form == 0,
             self.state,
@@ -236,7 +236,8 @@ class CardiacModel(ABC):
         if project:
             for proj_fun in self.projections:
                 proj_fun.project()
-        
+
+
     def calculate_volume(self, subdomain_id):
         return self.integrate_subdomain(1, subdomain_id)
 

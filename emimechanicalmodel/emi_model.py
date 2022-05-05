@@ -73,16 +73,13 @@ class EMIModel(CardiacModel):
         assign_discrete_values(self.active_fn, self.subdomain_map, value, 0)
 
     def _get_subdomains(self):
-        num_subdomains = (
-            self.num_subdomains
-        )
-
-        subdomains = [
-            df.SubMesh(self.mesh, self.volumes, i) for i in range(num_subdomains)
-        ]
-
+        num_subdomains = self.num_subdomains
+        
+        # works with master branch of FEniCS:
+        #subdomains = [df.MeshView(self.volumes, i) for i in range(num_subdomains)]
+        
+        subdomains = [df.SubMesh(self.mesh, self.volumes, i) for i in range(num_subdomains)]
         return subdomains
- 
 
     def _define_projections(self):
         mesh = self.mesh
@@ -108,8 +105,8 @@ class EMIModel(CardiacModel):
         if self.project_to_subspaces:
             subspaces_variables, subspaces_projections = \
                     self._define_submesh_projections(u_DG, E_DG, sigma_DG, P_DG)
-            self.tracked_variables += subspace_variables
-            self.projections += subspace_projections
+            self.tracked_variables += subspaces_variables
+            self.projections += subspaces_projections
 
 
     def _define_submesh_projections(self, u_DG, E_DG, sigma_DG, P_DG):
