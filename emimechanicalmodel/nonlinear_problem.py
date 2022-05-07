@@ -92,6 +92,9 @@ class NewtonSolver(df.NewtonSolver):
             df.PETScOptions.set("pc_view")
 
         PETScOptions_params = {
+            "ksp_type": "preonly",
+            "ksp_norm_type": "unpreconditioned",
+            "ksp_error_if_not_converged": False,
             "pc_type": "lu",
             "pc_factor_mat_solver_type": "superlu_dist",
             "mat_superlu_dist_equil": True,
@@ -101,10 +104,7 @@ class NewtonSolver(df.NewtonSolver):
             "mat_superlu_dist_replacetinypivot": True,
             "mat_superlu_dist_fact": "DOFACT",
             "mat_superlu_dist_iterrefine": True,
-            "mat_superlu_dist_statprint": False,
-            "pc_hypre_type": "boomerang",
-            "ksp_norm_type": "preconditioned",
-            "ksp_error_if_not_converged": False,
+            "mat_superlu_dist_statprint": True,
         }
 
         for (key, value) in PETScOptions_params.items():
