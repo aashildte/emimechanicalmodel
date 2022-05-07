@@ -82,6 +82,13 @@ def add_default_arguments(parser):
     )
 
     parser.add_argument(
+        "--timings_file",
+        default=None,
+        type=str,
+        help="DOLFIN timings file",
+    )
+
+    parser.add_argument(
         "-o",
         "--output_folder",
         default=None,

@@ -54,6 +54,7 @@ def read_cl_args():
         pp.plot_all_steps,
         pp.project_to_subspaces,
         pp.verbose,
+        pp.timings_file,
     )
 
 
@@ -75,6 +76,7 @@ def read_cl_args():
     plot_all_steps,
     project_to_subspaces,
     verbose,
+    timings_file
 ) = read_cl_args()
 
 
@@ -146,3 +148,6 @@ for (i, st_val) in enumerate(stretch):
 
 if enable_monitor:
     monitor.save_and_close()
+
+if timings_file:
+    df.dump_timings_to_xml(timings_file, df.TimingClear.clear)
