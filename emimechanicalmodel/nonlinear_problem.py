@@ -79,7 +79,7 @@ class NewtonSolver(df.NewtonSolver):
             {
                 "error_on_nonconvergence": False,
                 "relative_tolerance": 1e-5,
-                "absolute_tolerance": 1e-6,
+                "absolute_tolerance": 1e-5,
                 "maximum_iterations": 50,
                 "relaxation_parameter": 1.0,
             }
