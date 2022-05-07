@@ -1,7 +1,7 @@
 #!/bin/bash
 # EMI Mechanical model
 #
-# Copyright (C) 2021 Simula Research Laboratory
+# Copyright (C) 2022 Simula Research Laboratory
 # Authors: James D. Trotter <james@simula.no>
 #
 # This script launches a series of scaling experiments based on the
@@ -14,14 +14,14 @@
 #
 
 # Set up the environment
-. slurm/saga/envsetup.sh
+# . slurm/saga/envsetup.sh
 
 account=nn2849k
 partition=normal
-mesh_dir=/cluster/projects/nn9249k/aashild/meshes_emi_labels
+mesh_dir=/cluster/projects/nn9249k/aashild/tiled_meshes
 
 # Stretching experiments
-function emimm_stretch_holzapfel()
+function emimm_stretching()
 {
     local nodes="${1}"
     local ntasks_per_node="${2}"
@@ -39,57 +39,73 @@ function emimm_stretch_holzapfel()
     --mem="${mem}" \
     --nodes=${nodes} \
     --ntasks-per-node=${ntasks_per_node} \
-    --job-name="emimm_stretch_holzapfel_${dir}_${mesh_name}_$(printf "%02d" "${num_steps}")_steps_superlu_dist_$(printf "%02d" "${nodes}")_nodes_${ntasks_per_node}_tasks_per_node" \
-    slurm/saga/normal/emimm_stretch_holzapfel.sbatch \
+    --job-name="emimm_stretching_${dir}_${mesh_name}_$(printf "%02d" "${num_steps}")_steps_superlu_dist_$(printf "%02d" "${nodes}")_nodes_${ntasks_per_node}_tasks_per_node" \
+    slurm/saga/normal/emimm_stretching.sbatch \
     --mesh_file ${mesh} \
     --num_steps=${num_steps} \
-    --mat_superlu_dist_rowperm LargeDiag_MC64 \
-    --mat_superlu_dist_statprint \
     -d ${dir} --verbose=3;
 }
 
 # Stretching experiments in the x-direction on a 5x5x5 mesh
-function emimm_stretch_holzapfel_xdir_tile_pad1p0_0p5_5_5_5()
+function emimm_stretching_stretch_ff_tile_pad1p0_0p5_5_5_5()
 {
     local mesh_dir=/cluster/projects/nn9249k/aashild/meshes_emi_labels
     local mesh=${mesh_dir}/tile_pad1p0_0p5_5_5_5.h5
     local num_steps=10
     for nodes in 6; do
     for ntasks_per_node in 32; do
-        emimm_stretch_holzapfel ${nodes} ${ntasks_per_node} 0-02:00:00 148GB ${num_steps} ${mesh} xdir
+        emimm_stretching ${nodes} ${ntasks_per_node} 0-02:00:00 148GB ${num_steps} ${mesh} stretch_ff
 	 done
     done
 }
 
 # Stretching experiments in the y-direction on a 5x5x5 mesh
-function emimm_stretch_holzapfel_ydir_tile_pad1p0_0p5_5_5_5()
+function emimm_stretching_ydir_tile_pad1p0_0p5_5_5_5()
 {
     local mesh_dir=/cluster/projects/nn9249k/aashild/meshes_emi_labels
     local mesh=${mesh_dir}/tile_pad1p0_0p5_5_5_5.h5
     local num_steps=10
     for nodes in 6; do
     for ntasks_per_node in 1 2 4 8 16 32; do
-        emimm_stretch_holzapfel ${nodes} ${ntasks_per_node} 0-06:00:00 0 ${num_steps} ${mesh} ydir
+        emimm_stretching ${nodes} ${ntasks_per_node} 0-06:00:00 0 ${num_steps} ${mesh} ydir
 	 done
     done
 }
 
 # Weak scaling experiments for stretching in the x-direction
-function emimm_stretch_holzapfel_xdir_weak_scaling()
+function emimm_stretching_stretch_ff_weak_scaling()
 {
-    # emimm_stretch_holzapfel 1  1 0-00:05:00 4G 10 ${mesh_dir}/tile_pad1p0_0p5_1_1_1.h5 xdir
-    # emimm_stretch_holzapfel 2  1 0-00:05:00 4G 10 ${mesh_dir}/tile_pad1p0_0p5_2_1_1.h5 xdir
-    # emimm_stretch_holzapfel 4  1 0-00:10:00 4G 10 ${mesh_dir}/tile_pad1p0_0p5_2_2_1.h5 xdir
-    # emimm_stretch_holzapfel 8  1 0-00:20:00 4G 10 ${mesh_dir}/tile_pad1p0_0p5_2_2_2.h5 xdir
-    # emimm_stretch_holzapfel 16 1 0-01:00:00 4G 10 ${mesh_dir}/tile_pad1p0_0p5_4_2_2.h5 xdir
-    # emimm_stretch_holzapfel 32 1 0-02:00:00 4G 10 ${mesh_dir}/tile_pad1p0_0p5_4_4_2.h5 xdir
-    emimm_stretch_holzapfel 64 1 0-04:00:00 8G 10 ${mesh_dir}/tile_pad1p0_0p5_4_4_4.h5 xdir
+    # 2 cardiac cells per node
+    # emimm_stretching 1  1 0-00:20:00 8G 10 ${mesh_dir}/tile_connected_5p0_1_1_2.h5 stretch_ff
+    # emimm_stretching 2  1 0-00:30:00 8G 10 ${mesh_dir}/tile_connected_5p0_2_1_2.h5 stretch_ff
+    # emimm_stretching 4  1 0-00:45:00 8G 10 ${mesh_dir}/tile_connected_5p0_2_2_2.h5 stretch_ff
+    # emimm_stretching 8  1 0-01:30:00 8G 10 ${mesh_dir}/tile_connected_5p0_2_2_4.h5 stretch_ff
+    # emimm_stretching 16 1 0-02:00:00 8G 10 ${mesh_dir}/tile_connected_5p0_4_2_4.h5 stretch_ff
+    # emimm_stretching 32 1 0-04:00:00 16G 10 ${mesh_dir}/tile_connected_5p0_4_4_4.h5 stretch_ff
+    emimm_stretching 64 1 0-04:00:00 15G 10 ${mesh_dir}/tile_connected_5p0_4_4_8.h5 stretch_ff
+
+    # 1 cardiac cell per node
+    # emimm_stretching 1  1 0-00:05:00 4G 10 ${mesh_dir}/tile_connected_5p0.h5 stretch_ff
+    # emimm_stretching 2  1 0-00:05:00 4G 10 ${mesh_dir}/tile_connected_5p0_1_1_2.h5 stretch_ff
+    # emimm_stretching 4  1 0-00:10:00 4G 10 ${mesh_dir}/tile_connected_5p0_2_1_2.h5 stretch_ff
+    # emimm_stretching 8  1 0-00:20:00 4G 10 ${mesh_dir}/tile_connected_5p0_2_2_2.h5 stretch_ff
+    # emimm_stretching 16 1 0-01:00:00 4G 10 ${mesh_dir}/tile_connected_5p0_2_2_4.h5 stretch_ff
+    # emimm_stretching 32 1 0-02:00:00 8G 10 ${mesh_dir}/tile_connected_5p0_4_2_4.h5 stretch_ff
+    # emimm_stretching 64 1 0-04:00:00 8G 10 ${mesh_dir}/tile_connected_5p0_4_4_4.h5 stretch_ff
+
+    # emimm_stretching 1  1 0-00:05:00 4G 10 ${mesh_dir}/tile_pad1p0_0p5_1_1_1.h5 stretch_ff
+    # emimm_stretching 2  1 0-00:05:00 4G 10 ${mesh_dir}/tile_pad1p0_0p5_2_1_1.h5 stretch_ff
+    # emimm_stretching 4  1 0-00:10:00 4G 10 ${mesh_dir}/tile_pad1p0_0p5_2_2_1.h5 stretch_ff
+    # emimm_stretching 8  1 0-00:20:00 4G 10 ${mesh_dir}/tile_pad1p0_0p5_2_2_2.h5 stretch_ff
+    # emimm_stretching 16 1 0-01:00:00 4G 10 ${mesh_dir}/tile_pad1p0_0p5_4_2_2.h5 stretch_ff
+    # emimm_stretching 32 1 0-02:00:00 4G 10 ${mesh_dir}/tile_pad1p0_0p5_4_4_2.h5 stretch_ff
+    # emimm_stretching 64 1 0-04:00:00 8G 10 ${mesh_dir}/tile_pad1p0_0p5_4_4_4.h5 stretch_ff
 }
 
 # Run experiments
-emimm_stretch_holzapfel_xdir_tile_pad1p0_0p5_5_5_5
-# emimm_stretch_holzapfel_xdir_weak_scaling
-# emimm_stretch_holzapfel 6 1 0-00:30:00 0 10 ${mesh_dir}/tile_pad1p0_0p5_10_10_10.h5 xdir
+# emimm_stretching_stretch_ff_tile_pad1p0_0p5_5_5_5
+emimm_stretching_stretch_ff_weak_scaling
+# emimm_stretching 6 1 0-00:30:00 0 10 ${mesh_dir}/tile_pad1p0_0p5_10_10_10.h5 stretch_ff
 
 #
 # Active contraction experiments
