@@ -1,7 +1,7 @@
 #!/bin/bash
 # EMI Mechanical model
 #
-# Copyright (C) 2021 Simula Research Laboratory
+# Copyright (C) 2022 Simula Research Laboratory
 # Authors: James D. Trotter <james@simula.no>
 #
 # This script reads the output from a series of scaling experiments
@@ -63,7 +63,7 @@ BEGIN { max_dofs=0 }
   if (max_dofs < process_dofs) max_dofs = process_dofs
 }
 END {
-  printf "%8d\n",process_dofs
+  printf "%8d\n",max_dofs
 }' ${fout})
 
     newton_its=$(awk '
