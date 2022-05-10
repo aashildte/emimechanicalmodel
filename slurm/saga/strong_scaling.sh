@@ -46,18 +46,25 @@ function emimm_stretching()
 function emimm_stretching_stretch_ff_strong_scaling()
 {
     local mesh_dir=/cluster/projects/nn9249k/aashild/tiled_meshes
-    local mesh=${mesh_dir}/tile_connected_5p0_5_5_5.h5
-    emimm_stretching 1  1 0-02:00:00 148GB 10 ${mesh} stretch_ff
-    emimm_stretching 1  2 0-02:00:00 148GB 10 ${mesh} stretch_ff
-    emimm_stretching 1  4 0-02:00:00 148GB 10 ${mesh} stretch_ff
-    emimm_stretching 1  8 0-02:00:00 148GB 10 ${mesh} stretch_ff
-    emimm_stretching 1 16 0-02:00:00 148GB 10 ${mesh} stretch_ff
-    emimm_stretching 1 32 0-02:00:00 148GB 10 ${mesh} stretch_ff
-    emimm_stretching 2 32 0-02:00:00 148GB 10 ${mesh} stretch_ff
-    emimm_stretching 3 32 0-02:00:00 148GB 10 ${mesh} stretch_ff
-    emimm_stretching 4 32 0-02:00:00 148GB 10 ${mesh} stretch_ff
-    emimm_stretching 5 32 0-02:00:00 148GB 10 ${mesh} stretch_ff
-    emimm_stretching 6 32 0-02:00:00 148GB 10 ${mesh} stretch_ff
+    local mesh=${mesh_dir}/tile_connected_5p0_4_4_4.h5
+    emimm_stretching 6  1 0-07:00:00 60G 10 ${mesh} stretch_ff
+    emimm_stretching 6  2 0-08:00:00 120G 10 ${mesh} stretch_ff
+    emimm_stretching 6  4 0-05:00:00 148G 10 ${mesh} stretch_ff
+    emimm_stretching 6  8 0-04:00:00 148G 10 ${mesh} stretch_ff
+    emimm_stretching 6  16 0-04:00:00 148G 10 ${mesh} stretch_ff
+    emimm_stretching 6  32 0-02:00:00 160G 10 ${mesh} stretch_ff
+
+    # emimm_stretching 1  1 0-02:00:00 0 10 ${mesh} stretch_ff
+    # emimm_stretching 1  2 0-02:00:00 0 10 ${mesh} stretch_ff
+    # emimm_stretching 1  4 0-02:00:00 0 10 ${mesh} stretch_ff
+    # emimm_stretching 1  8 0-02:00:00 0 10 ${mesh} stretch_ff
+    # emimm_stretching 1 16 0-02:00:00 0 10 ${mesh} stretch_ff
+    # emimm_stretching 1 32 0-02:00:00 0 10 ${mesh} stretch_ff
+    # emimm_stretching 2 32 0-02:00:00 0 10 ${mesh} stretch_ff
+    # emimm_stretching 3 32 0-02:00:00 0 10 ${mesh} stretch_ff
+    # emimm_stretching 4 32 0-02:00:00 0 10 ${mesh} stretch_ff
+    # emimm_stretching 5 32 0-02:00:00 0 10 ${mesh} stretch_ff
+    # emimm_stretching 6 32 0-02:00:00 0 10 ${mesh} stretch_ff
 }
 
 # run experiments
