@@ -9,7 +9,6 @@ Material model; the Holzapfel-Odgen model adapted to the EMI framework.
 import dolfin as df
 import ufl
 
-from .holzapfelmaterial import HolzapfelMaterial
 from .mesh_setup import assign_discrete_values
 
 
@@ -22,7 +21,7 @@ class EMIHolzapfelMaterial:
     Args:
         U - function space for discrete function; DG-0 is a good choice
         subdomain_map - mapping from volume array to U; for DG-0 this is trivial
-        a_i ... b_if - material properties; see paper    
+        a_i ... b_if - material properties; see paper
 
     """
     def __init__(
@@ -43,7 +42,7 @@ class EMIHolzapfelMaterial:
         # assign material paramters via characteristic functions
         xi_i = df.Function(U)
         assign_discrete_values(xi_i, subdomain_map, 1, 0)
-        
+
         xi_e = df.Function(U)
         assign_discrete_values(xi_e, subdomain_map, 0, 1)
 
@@ -57,14 +56,14 @@ class EMIHolzapfelMaterial:
 
 
     def passive_component(self, F):
-        
+
         a, b, a_f, b_f = (
             self._a,
             self._b,
             self._a_f,
             self._b_f,
         )
-        
+
         e1 = df.as_vector([1.0, 0.0, 0.0])
 
         J = df.det(F)
