@@ -1,10 +1,8 @@
 """
 
-Åshild Telle / Simula Research Labratory / 2021
+Åshild Telle / Simula Research Labratory / 2022
 
-Script for simulating uniaxial stretching, in both directions.
-
-This is used in Fig. 7, 8, 10, 11 and 14 in the paper.
+Script for simulating passive deformation, i.e. stretch and shear experiments.
 
 """
 
@@ -113,7 +111,7 @@ enable_monitor = bool(output_folder)  # save output if != None
 
 if enable_monitor:
     monitor = setup_monitor(
-        f"stretch_emi_{experiment}",
+        f"passive_{experiment}",
         output_folder,
         model,
         mesh_file,

@@ -1,13 +1,8 @@
-#!/usr/bin/env python3
-
-
 """
 
-Åshild Telle / Simula Research Labratory / 2020
+Åshild Telle / Simula Research Labratory / 2022
 
 Script for simulating active contraction; over (parts of) one cardiac cycle.
-
-This is used for all experiments involving active contraction in the paper.
 
 """
 
@@ -112,7 +107,7 @@ enable_monitor = bool(output_folder)  # save output if != None
 
 if enable_monitor:
     monitor = setup_monitor(
-        "active_emi",
+        "active_contraction",
         output_folder,
         model,
         mesh_file,

@@ -1,6 +1,11 @@
 """
 
-Åshild Telle, James D. Trotter / Simula Research Laboratory / 2021
+Åshild Telle, James D. Trotter / Simula Research Laboratory / 2022
+
+This is the main implementation; all continuum mechanics is defined through this code.
+We employ an active strain formulation, through an active function, and  express the
+stress-strain relationship through a strain energy function. These both need to be
+specified in classes implementing CardiacModel through heritage.
 
 """
 
@@ -216,7 +221,7 @@ class CardiacModel(ABC):
 
     def solve(self, project=True):
         # just keep the simple version here for easy comparison:
-        """          
+        """
         df.solve(
             self.weak_form == 0,
             self.state,

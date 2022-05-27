@@ -1,6 +1,8 @@
 """
 
-Åshild Telle / Simula Research Laboratory / 2021
+Åshild Telle / Simula Research Laboratory / 2022
+
+Material model based on the Holzapfel-Odgen model (2009).
 
 """
 
@@ -14,7 +16,7 @@ class HolzapfelMaterial:
     Underlying material model, using Holzapfels strain energy function.
 
     Args:
-        a ... b_fs : Material properties, see paper
+        a ... b_fs : Material properties, see original paper
 
     """
 

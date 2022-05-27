@@ -2,6 +2,8 @@
 
 Åshild Telle / Simula Research Laboratiry / 2022
 
+Material model; the Holzapfel-Odgen model adapted to the EMI framework.
+
 """
 
 import dolfin as df

@@ -1,8 +1,9 @@
-#!/usr/bin/env python3
-
 """
 
-Åshild Telle / Simula Research Laboratory / 2021
+Åshild Telle / Simula Research Laboratory / 2022
+
+Script for loading precomputed active tension from a npy file;
+this precomputed transient is again taken from the Rice model.
 
 """
 

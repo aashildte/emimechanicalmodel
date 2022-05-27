@@ -1,6 +1,10 @@
 """
 
-Åshild Telle / Simula Research Laboratory / 2021
+Åshild Telle / Simula Research Laboratory / 2022
+
+Implementation of a general homogenized tissue model; mostly defined through heritage.
+Whatever is implemented here applies for a homogenized model; compare to the
+corresponding EMIModel.
 
 """
 

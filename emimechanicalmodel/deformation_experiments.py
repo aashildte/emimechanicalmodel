@@ -1,6 +1,8 @@
 """
 
-Åshild Telle / Simula Research Laboratory / 2021
+Åshild Telle / Simula Research Laboratory / 2022
+
+Implementation of boundary conditions ++ for different passive deformation modes.
 
 """
 

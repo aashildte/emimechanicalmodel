@@ -2,6 +2,10 @@
 
 Åshild Telle / Simula Research Laboratory / 2021
 
+Implementation of the EMI model; mostly defined through heritage.
+Whatever is implemented here is unique for EMI; compare to the corresponding
+TissueModel for homogenized version.
+
 """
 
 import dolfin as df
