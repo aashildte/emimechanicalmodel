@@ -75,7 +75,7 @@ class NonlinearProblem(df.NonlinearProblem):
                     for k in range(ai[i], ai[i+1]):
                         bytes_written += f.write('{} {} {}\n'.format(i+1, aj[k]+1, av[k]))
             t1 = time.clock_gettime_ns(time.CLOCK_MONOTONIC)
-            print('done ({:.2f} seconds, {:.2f} MB/s)'.format((t1-t0)*1e-9, 1e-6*bytes_written / ((t1-t0)*1e-9)))
+            print('done ({:.2f} seconds, {:.2f} MB/s)'.format((t1-t0)*1e-9, 1e-6*bytes_written / ((t1-t0)*1e-9)), file=sys.stderr)
             self.n = self.n+1
 
 
