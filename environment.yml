@@ -9,4 +9,4 @@ dependencies:
     - numpy
     - matplotlib
     - mpi4py
-    - SALib
+    - salib
