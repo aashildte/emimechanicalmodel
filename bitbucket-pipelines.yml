@@ -1,4 +1,4 @@
-image: continuumio/miniconda:latest
+image: continuumio/miniconda3:latest
 
 pipelines:
   default:
