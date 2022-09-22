@@ -13,10 +13,10 @@ from SALib.sample import saltelli
 from SALib.analyze import sobol
 from SALib.test_functions import Ishigami
 import numpy as np
-import matplotlib.pyplot as plt
 import dolfin as df
-import emimechanicalmodel as emi
 import argparse
+
+from emimechanicalmodel import load_mesh, EMIModel
 
 # Optimization options for the form compiler
 df.parameters["form_compiler"]["cpp_optimize"] = True
@@ -67,8 +67,8 @@ def evaluate_model(X, model, stretch_values, contr):
 
 
 def init_model():
-    mesh, volumes = emi.load_mesh("meshes/tile_connected_5p0.h5")
-    model = emi.EMIModel(
+    mesh, volumes = load_mesh("meshes/tile_connected_5p0.h5")
+    model = EMIModel(
         mesh,
         volumes,
         experiment=mode,
