@@ -147,9 +147,11 @@ class CardiacModel(ABC):
         F_e = df.variable(F * df.inv(F_a))
         psi = mat_model.passive_component(F_e)
 
-        P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T) + self.p * J * df.inv(F.T)
+        P1 = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T)
+        P2 = self.p * J * df.inv(F.T)
+        P = P1 + P2
 
-        return P
+        return P, P1, P2
 
     @abstractmethod
     def _define_projections(self):
@@ -177,13 +179,15 @@ class CardiacModel(ABC):
 
         F = df.variable(I + df.grad(u))  # Deformation gradient
         J = df.det(F)
-        P = self._calculate_P(F, J)
+        P, P1, P2 = self._calculate_P(F, J)
 
         C = F.T * F  # the right Cauchy-Green tensor
         E = 0.5 * (C - I)  # the Green-Lagrange strain tensor
 
         N = df.FacetNormal(self.mesh)
         sigma = (1 / df.det(F)) * P * F.T
+        sigma1 = (1 / df.det(F)) * P1 * F.T
+        sigma2 = (1 / df.det(F)) * P2 * F.T
 
         # weak form
         weak_form = df.inner(P, df.grad(v)) * df.dx
@@ -193,10 +197,12 @@ class CardiacModel(ABC):
 
         weak_form += q * (J - 1) * df.dx  # incompressible term
 
-        (self.F, self.E, self.sigma, self.P, self.u, self.weak_form,) = (
+        (self.F, self.E, self.sigma, self.sigma1, self.sigma2, self.P, self.u, self.weak_form,) = (
             F,
             E,
             sigma,
+            sigma1,
+            sigma2,
             P,
             u,
             weak_form,
@@ -221,7 +227,7 @@ class CardiacModel(ABC):
 
     def solve(self, project=True):
         # just keep the simple version here for easy comparison:
-        """
+        
         df.solve(
             self.weak_form == 0,
             self.state,
@@ -236,7 +242,7 @@ class CardiacModel(ABC):
         )
         """
         self._solver.solve(self.problem, self.state.vector())
-        
+        """
         # save stress and strain to fenics functions
         if project:
             for proj_fun in self.projections:

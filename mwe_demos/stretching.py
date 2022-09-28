@@ -90,70 +90,11 @@ def assign_discrete_values(
     )
 
 
-def discrete_material_params(fun_space, subdomain_map):
-    """
-
-    Defines material parameters based on subdomain partition; instead
-    of using two strain energy functions we define each material parameter
-    as a discontinous function.
-
-    Args:
-        fun_space (df.FunctionSpace): function space in which each
-            parameter will live in
-        subdomain_map_(df.MeshFunction): corresponding subdomain partition
-
-    """
-
-    a_i = 0.074
-    b_i = 4.878
-    a_e = 1
-    b_e = 10
-    a_if = 4.071
-    b_if = 5.433
-    a_is = 0.309
-    b_is = 2.634
-    a_ifs = 0.062
-    b_ifs = 3.476
-
-    a_fun = df.Function(fun_space, name="a")
-    assign_discrete_values(a_fun, subdomain_map, a_i, a_e)
-
-    b_fun = df.Function(fun_space, name="b")
-    assign_discrete_values(b_fun, subdomain_map, b_i, b_e)
-
-    a_f_fun = df.Function(fun_space, name="a_f")
-    assign_discrete_values(a_f_fun, subdomain_map, a_f, 0)
-
-    b_f_fun = df.Function(fun_space, name="b_f")
-    assign_discrete_values(b_f_fun, subdomain_map, b_f, b_f)
-
-    a_s_fun = df.Function(fun_space, name="a_s")
-    assign_discrete_values(a_s_fun, subdomain_map, a_s, 0)
-
-    b_s_fun = df.Function(fun_space, name="b_s")
-    assign_discrete_values(b_s_fun, subdomain_map, b_s, b_s)
-
-    a_fs_fun = df.Function(fun_space, name="a_fs")
-    assign_discrete_values(a_fs_fun, subdomain_map, a_fs, 0)
-
-    b_fs_fun = df.Function(fun_space, name="b_fs")
-    assign_discrete_values(b_fs_fun, subdomain_map, b_fs, b_fs)
-
-    return {
-        "a": a_fun,
-        "b": b_fun,
-        "a_f": a_f_fun,
-        "b_f": b_f_fun,
-        "a_s": a_s_fun,
-        "b_s": b_s_fun,
-        "a_fs": a_fs_fun,
-        "b_fs": b_fs_fun,
-    }
-
 
 def psi_holzapfel(
     F,
-    mat_params,
+    mesh,
+    subdomain_map,
 ):
     """
 
@@ -170,16 +111,28 @@ def psi_holzapfel(
         psi (ufl form)
 
     """
-    a, b, a_f, b_f, a_s, b_s, a_fs, b_fs = (
-        mat_params["a"],
-        mat_params["b"],
-        mat_params["a_f"],
-        mat_params["b_f"],
-        mat_params["a_s"],
-        mat_params["b_s"],
-        mat_params["a_fs"],
-        mat_params["b_fs"],
-    )
+    
+    a_i = 0.074
+    b_i = 4.878
+    a_e = 1
+    b_e = 10
+    a_if = 4.071
+    b_if = 5.433
+
+    fun_space = df.FunctionSpace(mesh, "DG", 0)
+    
+    a = df.Function(fun_space, name="a")
+    assign_discrete_values(a, subdomain_map, a_i, a_e)
+
+    b = df.Function(fun_space, name="b")
+    assign_discrete_values(b, subdomain_map, b_i, b_e)
+
+    a_f = df.Function(fun_space, name="a_if")
+    assign_discrete_values(a_f, subdomain_map, a_if, 0)
+
+    b_f = df.Function(fun_space, name="bi_f")
+    assign_discrete_values(b_f, subdomain_map, b_if, b_if)
+
 
     cond = lambda a: ufl.conditional(a > 0, a, 0)
 
@@ -196,14 +149,11 @@ def psi_holzapfel(
 
     W_hat = a / (2 * b) * (df.exp(b * (IIFx - 3)) - 1)
     W_f = a_f / (2 * b_f) * (df.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
-    W_s = a_s / (2 * b_s) * (df.exp(b_s * cond(I4e2 - 1) ** 2) - 1)
-    W_fs = a_fs / (2 * b_fs) * (df.exp(b_fs * I8e1e2 ** 2) - 1)
-    W_ani = W_f + W_s + W_fs
 
-    return W_hat + W_ani
+    return W_hat + W_f
 
 
-def define_weak_form(mesh, stretch_fun, mat_params):
+def define_weak_form(mesh, volumes, stretch_fun):
     """
 
     Defines function spaces (P1 x P2 x RM) and functions to solve for,
@@ -211,16 +161,16 @@ def define_weak_form(mesh, stretch_fun, mat_params):
 
     Args:
         mesh (df.Mesh): domain to solve equations over
+        volumes (...)
         stretch_fun (ufl form): function that assigns Dirichlet bcs
                 on wall to be stretched/extended
-        mat_params (dict): material parameters
 
     Returns:
         weak form (ufl form), state, displacement, boundary conditions
 
     """
 
-    P1 = df.FiniteElement("Lagrange", mesh.ufl_cell(), 1)
+    P1 = df.FiniteElement("DG", mesh.ufl_cell(), 1)
     P2 = df.VectorElement("Lagrange", mesh.ufl_cell(), 2)
 
     state_space = df.FunctionSpace(mesh, df.MixedElement([P1, P2]))
@@ -239,7 +189,7 @@ def define_weak_form(mesh, stretch_fun, mat_params):
 
     # Weak form
     weak_form = 0
-    weak_form += elasticity_term(F, J, p, v, mat_params)
+    weak_form += elasticity_term(F, J, p, v, mesh, volumes)
     weak_form += pressure_term(q, J)
 
     V = state_space.split()[1]
@@ -248,7 +198,7 @@ def define_weak_form(mesh, stretch_fun, mat_params):
     return weak_form, state, u, bcs
 
 
-def elasticity_term(F, J, p, v, mat_params):
+def elasticity_term(F, J, p, v, mesh, volumes):
     """
 
     First term of the weak form
@@ -266,7 +216,7 @@ def elasticity_term(F, J, p, v, mat_params):
 
     """
 
-    psi = psi_holzapfel(F, *mat_params)
+    psi = psi_holzapfel(F, mesh, volumes)
     P = df.diff(psi, F) + p * J * df.inv(F.T)
 
     return df.inner(P, df.grad(v)) * df.dx
@@ -327,27 +277,29 @@ def define_bcs(V, mesh, stretch_fun):
     return bcs
 
 
-mesh, volumes = load_mesh("cell_3D.h5")
-stretch = np.linspace(0, 0.2, 21)
+#mesh, volumes = load_mesh("cell_3D.h5")
+mesh, volumes = load_mesh("meshes/tile_connected_5p0.h5")
+
+stretch = np.linspace(0, 0.1, 11)
 stretch_fun = df.Constant(0)
 
-U_DG0 = df.FunctionSpace(mesh, "DG", 0)
-mat_params = discrete_material_params(U_DG0, volumes)
-
-weak_form, state, u, bcs = define_weak_form(mesh, stretch_fun, mat_params)
+weak_form, state, u, bcs = define_weak_form(mesh, volumes, stretch_fun)
 
 # just for plotting purposes
-disp_file = df.XDMFFile("stretching_example/u_emi.xdmf")
-V_CG2 = df.VectorFunctionSpace(mesh, "CG", 2)
-u_fun = df.Function(V_CG2, name="Displacement")
+#disp_file = df.XDMFFile("stretching_example/u_emi.xdmf")
+#V_CG2 = df.VectorFunctionSpace(mesh, "CG", 2)
+#u_fun = df.Function(V_CG2, name="Displacement")
+
+file = df.XDMFFile("pressure2.xdmf")
 
 for s in stretch:
     stretch_fun.assign(s)
     df.solve(weak_form == 0, state, bcs=bcs)
 
+    p_CG1 = state.split(deepcopy=True)[0]
+
     # plotting again
-    u_fun.assign(df.project(u, V_CG2))
 
-    disp_file.write_checkpoint(u_fun, "Displacement (µm)", s, append=True)
+    file.write_checkpoint(p_CG1, "Pressure (kPa)", s, append=True)
 
-disp_file.close()
+file.close()

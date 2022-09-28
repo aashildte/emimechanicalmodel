@@ -235,14 +235,15 @@ def define_weak_form(mesh, active_fun, mat_params):
     I = df.Identity(d)  # Identity tensor
     F = df.variable(I + df.grad(u))  # Deformation gradient
     J = df.det(F)
+    
+    R_e, sigma = elasticity_term(active_fun, F, J, p, v, mat_params)
 
     # Weak form
-    weak_form = 0
-    weak_form += elasticity_term(active_fun, F, J, p, v, mat_params)
+    weak_form = R_e
     weak_form += pressure_term(q, J)
     weak_form += rigid_motion_term(mesh, u, r, state, test_state)
 
-    return weak_form, state, u
+    return weak_form, state, u, sigma
 
 
 def elasticity_term(active_fun, F, J, p, v, mat_params):
@@ -271,7 +272,9 @@ def elasticity_term(active_fun, F, J, p, v, mat_params):
 
     P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T) + p * J * df.inv(F.T)
 
-    return df.inner(P, df.grad(v)) * df.dx
+    sigma = (1 / df.det(F)) * P * F.T
+
+    return df.inner(P, df.grad(v)) * df.dx, sigma
 
 
 def pressure_term(q, J):
@@ -324,7 +327,7 @@ def rigid_motion_term(mesh, u, r, state, test_state):
 
 
 if __name__ == "__main__":
-    mesh, volumes = load_mesh("cell_3D.h5")
+    mesh, volumes = load_mesh("meshes/tile_connected_5p0.h5")
     active_strain = np.linspace(0, 0.2, 20)
 
     U_DG0 = df.FunctionSpace(mesh, "DG", 0)
@@ -334,20 +337,36 @@ if __name__ == "__main__":
     active_fun = df.Function(U_DG0, name="Active strain")
     active_fun.vector()[:] = 0  # initial value
 
-    weak_form, state, u = define_weak_form(mesh, active_fun, mat_params)
+    weak_form, state, u, sigma = define_weak_form(mesh, active_fun, mat_params)
 
     # just for plotting purposes
     disp_file = df.XDMFFile("contraction_example/u_emi.xdmf")
     V_CG2 = df.VectorFunctionSpace(mesh, "CG", 2)
     u_fun = df.Function(V_CG2, name="Displacement")
 
+    file = df.XDMFFile("pressure_contr.xdmf")
+
+    e = df.as_vector([1., 0., 0.])
+
     for a in active_strain:
         assign_discrete_values(active_fun, volumes, a, 0)  # a in omega_i, 0 in omega_e
         df.solve(weak_form == 0, state)
+    
+        p_CG1 = state.split(deepcopy=True)[0]
 
         # plotting again
         u_fun.assign(df.project(u, V_CG2))
 
         disp_file.write_checkpoint(u_fun, "Displacement (µm)", a, append=True)
+        file.write_checkpoint(p_CG1, "Pressure (kPa)", a, append=True)
+
+        for i in range(1):
+            stress = df.assemble(df.inner(sigma*e, e)*df.dx(mesh))
+            print(f"stress org:, ", stress)
+            stress = df.assemble(df.inner(sigma*e, e)*df.dx(mesh), form_compiler_parameters = {"quadrature_degree": 4})
+            print(f"stress 4:, ", stress)
+
+        print("...")
 
     disp_file.close()
+    file.close()

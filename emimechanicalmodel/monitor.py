@@ -78,7 +78,7 @@ class Monitor:
             label = state.name()
             name = label.split(" (")[0].replace(" ", "_")
             name = name.replace(".", "p")
-
+            
             filename_xdmf = os.path.join(path_xdmf_files, f"{name}.xdmf")
 
             # save information in a dictionary
@@ -114,6 +114,7 @@ class Monitor:
             xdmf_files[name].write_checkpoint(
                 functions[name], name, it_number, append=True
             )
+        
 
 
     def _init_tracked_scalar_functions(self):

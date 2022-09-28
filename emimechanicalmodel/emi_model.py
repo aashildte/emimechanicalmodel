@@ -90,21 +90,28 @@ class EMIModel(CardiacModel):
         
         # define function spaces
 
+        U_DG = df.FunctionSpace(mesh, "DG", 2)
         V_DG = df.VectorFunctionSpace(mesh, "DG", 2)
         T_DG = df.TensorFunctionSpace(mesh, "DG", 2)
         
         u_DG = df.Function(V_DG, name="Displacement (µm)")
+        #p_DG = df.Function(U_DG, name="Pressure (kPa)")
         E_DG = df.Function(T_DG, name="Strain")
         sigma_DG = df.Function(T_DG, name="Cauchy stress (kPa)")
+        sigma1_DG = df.Function(T_DG, name="Cauchy stress first component (kPa)")
+        sigma2_DG = df.Function(T_DG, name="Cauchy stress second component (kPa)")
         P_DG = df.Function(T_DG, name="Piola-Kirchhoff stress (kPa)")
 
         u_proj = ProjectionFunction(self.u, u_DG)
+        #p_proj = ProjectionFunction(self.p, u_DG)
         E_proj = ProjectionFunction(self.E, E_DG)
         sigma_proj = ProjectionFunction(self.sigma, sigma_DG)
+        sigma1_proj = ProjectionFunction(self.sigma1, sigma1_DG)
+        sigma2_proj = ProjectionFunction(self.sigma2, sigma2_DG)
         P_proj = ProjectionFunction(self.P, P_DG)
         
-        self.tracked_variables = [u_DG, E_DG, sigma_DG, P_DG]
-        self.projections = [u_proj, E_proj, sigma_proj, P_proj]
+        self.tracked_variables = [u_DG, E_DG, sigma_DG, sigma1_DG, sigma2_DG, P_DG]
+        self.projections = [u_proj, E_proj, sigma_proj, sigma1_proj, sigma2_proj, P_proj]
 
         if self.project_to_subspaces:
             subspaces_variables, subspaces_projections = \
@@ -112,7 +119,7 @@ class EMIModel(CardiacModel):
             self.tracked_variables += subspaces_variables
             self.projections += subspaces_projections
 
-
+    """
     def _define_submesh_projections(self, u_DG, E_DG, sigma_DG, P_DG):
 
         subdomains = self._get_subdomains()
@@ -162,3 +169,4 @@ class EMIModel(CardiacModel):
         projections = u_proj_subdomains + E_proj_subdomains + sigma_proj_subdomains + P_proj_subdomains
 
         return tracked_variables, projections
+    """
