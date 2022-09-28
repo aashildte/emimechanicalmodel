@@ -102,16 +102,12 @@ def discrete_material_params(fun_space, subdomain_map):
 
     """
 
-    a_i = 0.074
-    b_i = 4.878
-    a_e = 1
-    b_e = 10
-    a_if = 4.071
-    b_if = 5.433
-    a_is = 0.309
-    b_is = 2.634
-    a_ifs = 0.062
-    b_ifs = 3.476
+    a_i = 5.7
+    b_i = 11.67
+    a_e = 1.52
+    b_e = 16.31
+    a_if = 19.83
+    b_if = 24.72
 
     a_fun = df.Function(fun_space, name="a")
     assign_discrete_values(a_fun, subdomain_map, a_i, a_e)
@@ -125,27 +121,12 @@ def discrete_material_params(fun_space, subdomain_map):
     b_f_fun = df.Function(fun_space, name="b_f")
     assign_discrete_values(b_f_fun, subdomain_map, b_if, 1)
 
-    a_s_fun = df.Function(fun_space, name="a_s")
-    assign_discrete_values(a_s_fun, subdomain_map, a_is, 0)
-
-    b_s_fun = df.Function(fun_space, name="b_s")
-    assign_discrete_values(b_s_fun, subdomain_map, b_is, 1)
-
-    a_fs_fun = df.Function(fun_space, name="a_fs")
-    assign_discrete_values(a_fs_fun, subdomain_map, a_ifs, 0)
-
-    b_fs_fun = df.Function(fun_space, name="b_fs")
-    assign_discrete_values(b_fs_fun, subdomain_map, b_ifs, b_ifs)
 
     return {
         "a": a_fun,
         "b": b_fun,
         "a_f": a_f_fun,
         "b_f": b_f_fun,
-        "a_s": a_s_fun,
-        "b_s": b_s_fun,
-        "a_fs": a_fs_fun,
-        "b_fs": b_fs_fun,
     }
 
 
@@ -174,33 +155,22 @@ def psi_holzapfel(
         mat_params["b"],
         mat_params["a_f"],
         mat_params["b_f"],
-        mat_params["a_s"],
-        mat_params["b_s"],
-        mat_params["a_fs"],
-        mat_params["b_fs"],
     )
 
     cond = lambda a: ufl.conditional(a > 0, a, 0)
 
     e1 = df.as_vector([1.0, 0.0, 0.0])
-    e2 = df.as_vector([0.0, 1.0, 0.0])
 
     J = df.det(F)
     C = pow(J, -float(2) / 3) * F.T * F
 
     IIFx = df.tr(C)
     I4e1 = df.inner(C * e1, e1)
-    I4e2 = df.inner(C * e2, e2)
-    I8e1e2 = df.inner(C * e1, e2)
 
     W_hat = a / (2 * b) * (df.exp(b * (IIFx - 3)) - 1)
     W_f = a_f / (2 * b_f) * (df.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
-    W_s = a_s / (2 * b_s) * (df.exp(b_s * cond(I4e2 - 1) ** 2) - 1)
-    W_fs = a_fs / (2 * b_fs) * (df.exp(b_fs * I8e1e2 ** 2) - 1)
-    W_ani = W_f + W_s + W_fs
 
-    return W_hat + W_ani
-
+    return W_hat + W_f
 
 def define_weak_form(mesh, active_fun, mat_params):
     """
