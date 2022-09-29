@@ -18,10 +18,6 @@ from emimechanicalmodel import (
     EMIModel,
 )
 
-df.parameters["form_compiler"]["cpp_optimize"] = True
-df.parameters["form_compiler"]["representation"] = "uflacs"
-df.parameters["form_compiler"]["quadrature_degree"] = 4
-
 
 def replace_cell_with_matrix(volumes, cell_idt):
 
@@ -65,6 +61,16 @@ model = EMIModel(
     experiment="contr",
 )
 
+# track stresses in the remaining cells
+
+cell_idts = set(volumes.array()[:])
+cell_idts.remove(0)
+
+stress_per_cell = {}
+
+for cell_idt in cell_its:
+    stress_per_cell[cell_idt] = np.zeros_like(time)
+
 # then run the simulation
 for i in range(num_time_steps):
     print(f"Time step {i+1} / {num_time_steps}", flush=True)
@@ -73,3 +79,15 @@ for i in range(num_time_steps):
 
     model.update_active_fn(a_str)
     model.solve()
+
+    for cell_idt in cell_its:
+        stress_per_cell[cell_idt][i] = model.evaluate_subdomain_stress_fibre_dir(cell_idt)
+
+for cell_idt in cell_its:
+    plt.plot(time, stress_per_cell[cell_idt])
+
+plt.legend([f"Cell nr. {c}" for c in cell_idts])
+plt.xlabel("Time (ms)")
+plt.ylabel("Stress (kPa)")
+
+plt.show()

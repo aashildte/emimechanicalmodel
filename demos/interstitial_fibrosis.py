@@ -18,9 +18,6 @@ from emimechanicalmodel import (
     EMIModel,
 )
 
-df.parameters["form_compiler"]["quadrature_degree"] = 4
-
-
 # simulate 500 ms with active contraction from the Rice model
 
 num_time_steps = 125
@@ -83,5 +80,7 @@ for i, scale in enumerate(stiffness_scaling):
 
     plt.plot(time, stress_fiber_dir)
 
+plt.xlabel("Time (ms)")
+plt.ylabel(f"Cardiomyocyte stress ($\overline{\sigma_{ff}, \Omega_i$)")
 plt.legend(stiffness_scaling)
 plt.show()
