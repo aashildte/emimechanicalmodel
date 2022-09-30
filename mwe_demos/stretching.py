@@ -123,7 +123,6 @@ def discrete_material_params(fun_space, subdomain_map):
     b_f_fun = df.Function(fun_space, name="b_f")
     assign_discrete_values(b_f_fun, subdomain_map, b_if, 1)
 
-
     return {
         "a": a_fun,
         "b": b_fun,
@@ -174,6 +173,7 @@ def psi_holzapfel(
 
     return W_hat + W_f
 
+
 def define_weak_form(mesh, stretch_fun, mat_params):
     """
 
@@ -194,13 +194,13 @@ def define_weak_form(mesh, stretch_fun, mat_params):
     P1 = df.FiniteElement("Lagrange", mesh.ufl_cell(), 1)
     P2 = df.VectorElement("Lagrange", mesh.ufl_cell(), 2)
 
-    state_space = df.FunctionSpace(mesh, df.MixedElement([P1, P2]))
+    state_space = df.FunctionSpace(mesh, df.MixedElement([P2, P1]))
 
     state = df.Function(state_space, name="state")
     test_state = df.TestFunction(state_space)
 
-    p, u = df.split(state)
-    q, v = df.split(test_state)
+    u, p = df.split(state)
+    v, q = df.split(test_state)
 
     # Kinematics
     d = len(u)

@@ -62,7 +62,7 @@ for mode in def_modes:
 
         load_values[i] = model.evaluate_normal_load()
 
-    plt.plot(100*stretch_values, load_values)
+    plt.plot(100 * stretch_values, load_values)
 
 plt.legend(["Fiber dir. stretch", "Sheet dir. stretch", "Normal dir. stretch"])
 plt.xlabel("Stretch (%)")

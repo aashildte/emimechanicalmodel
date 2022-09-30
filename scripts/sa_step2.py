@@ -31,11 +31,13 @@ def go_to_stretch(model, stretch):
         model.assign_stretch(st)
         model.solve()
 
+
 def go_to_contraction(model, active_values):
     for (step, st) in enumerate(active_values):
         print(step, st, flush=True)
         model.update_active_fn(st)
         model.solve()
+
 
 def evaluate_model(X, model, stretch_values, contr):
     a_i, b_i, a_e, b_e, a_if, b_if = X
@@ -47,23 +49,25 @@ def evaluate_model(X, model, stretch_values, contr):
     model.mat_model.a_if.assign(a_if)
     model.mat_model.b_if.assign(b_if)
 
-    model.state.vector()[:] = 0       # reset
+    model.state.vector()[:] = 0  # reset
 
     if contr:
         go_to_contraction(model, stretch_values)
     else:
         go_to_stretch(model, stretch_values)
 
-    return np.array([
-      model.evaluate_normal_load(),
-      model.evaluate_shear_load(),
-      model.evaluate_subdomain_stress_fibre_dir(1),
-      model.evaluate_subdomain_stress_transfibre_dir(1),
-      model.evaluate_subdomain_stress_normal_dir(1),
-      model.evaluate_subdomain_stress_fibre_dir(0),
-      model.evaluate_subdomain_stress_transfibre_dir(0),
-      model.evaluate_subdomain_stress_normal_dir(0),
-    ])
+    return np.array(
+        [
+            model.evaluate_normal_load(),
+            model.evaluate_shear_load(),
+            model.evaluate_subdomain_stress_fibre_dir(1),
+            model.evaluate_subdomain_stress_transfibre_dir(1),
+            model.evaluate_subdomain_stress_normal_dir(1),
+            model.evaluate_subdomain_stress_fibre_dir(0),
+            model.evaluate_subdomain_stress_transfibre_dir(0),
+            model.evaluate_subdomain_stress_normal_dir(0),
+        ]
+    )
 
 
 def init_model():
@@ -90,6 +94,7 @@ def init_stretch(mode):
 
     return stretch
 
+
 def sobol_analysis(mode, i, input_folder, output_folder):
     model = init_model()
     stretch = init_stretch(mode)
@@ -97,28 +102,47 @@ def sobol_analysis(mode, i, input_folder, output_folder):
     fname = f"{input_folder}/parameter_set_{i}.npy"
     X = np.load(fname)
 
-    outputs = evaluate_model(X, model, stretch, mode=="contr")
-    
+    outputs = evaluate_model(X, model, stretch, mode == "contr")
+
     fout = f"{output_folder}/results_{mode}_{i}.npy"
     np.save(fout, np.array(outputs))
 
 
-
 parser = argparse.ArgumentParser()
 
-parser.add_argument("-M", '--mode', type=str, default="contr",
-                    help='Deformation mode (valid options; "contr" \
+parser.add_argument(
+    "-M",
+    "--mode",
+    type=str,
+    default="contr",
+    help='Deformation mode (valid options; "contr" \
                             "stretch_ff" "shear_fs" "shear_fn" "shear_sf" "stretch_ss" \
-                            "shear_sn" "shear_nf" "shear_ns" "stretch_nn")')
+                            "shear_sn" "shear_nf" "shear_ns" "stretch_nn")',
+)
 
-parser.add_argument("-i", '--variable_count', type=int, default=0,
-                    help='Parameter set # to use for this simulation.')
+parser.add_argument(
+    "-i",
+    "--variable_count",
+    type=int,
+    default=0,
+    help="Parameter set # to use for this simulation.",
+)
 
-parser.add_argument("-if", "--input_folder", type=str, default="sobol_analysis",
-                    help='Get all input files, i.e., all parameter combinations here')
+parser.add_argument(
+    "-if",
+    "--input_folder",
+    type=str,
+    default="sobol_analysis",
+    help="Get all input files, i.e., all parameter combinations here",
+)
 
-parser.add_argument("-of", "--output_folder", type=str, default="sobol_analysis",
-                    help='Save all output files, i.e., all resulting metrics here')
+parser.add_argument(
+    "-of",
+    "--output_folder",
+    type=str,
+    default="sobol_analysis",
+    help="Save all output files, i.e., all resulting metrics here",
+)
 
 args = parser.parse_args()
 
@@ -128,11 +152,17 @@ input_folder = parser.input_folder
 output_folder = parser.output_folder
 
 possible_modes = [
-        "stretch_ff", "shear_fs", "shear_fn",
-        "shear_sf", "stretch_ss", "shear_sn",
-        "shear_nf", "shear_ns", "stretch_nn",
-        "contr",
-        ]
+    "stretch_ff",
+    "shear_fs",
+    "shear_fn",
+    "shear_sf",
+    "stretch_ss",
+    "shear_sn",
+    "shear_nf",
+    "shear_ns",
+    "stretch_nn",
+    "contr",
+]
 assert mode in possible_modes, "Error: Unknown mode"
 
 sobol_analysis(mode, i, input_folder, output_folder)

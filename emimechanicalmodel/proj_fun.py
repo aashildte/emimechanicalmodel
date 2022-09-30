@@ -6,6 +6,7 @@
 
 import dolfin as df
 
+
 class ProjectionFunction:
     """
 

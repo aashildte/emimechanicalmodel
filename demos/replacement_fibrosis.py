@@ -21,14 +21,13 @@ from emimechanicalmodel import (
 
 def replace_cell_with_matrix(volumes, cell_idt):
 
-    assert cell_idt in volumes.array(), \
-            "Error: No cell with id {cell_idt} identified."
+    assert cell_idt in volumes.array(), "Error: No cell with id {cell_idt} identified."
 
     volumes_array = volumes.array()[:]
 
     matrix_idt = 0
     new_array = np.where(volumes_array == cell_idt, 0, volumes_array)
-    
+
     volumes.array()[:] = new_array
 
 
@@ -74,14 +73,16 @@ for cell_idt in cell_its:
 # then run the simulation
 for i in range(num_time_steps):
     print(f"Time step {i+1} / {num_time_steps}", flush=True)
-    
+
     time_pt, a_str = time[i], active_values[i]
 
     model.update_active_fn(a_str)
     model.solve()
 
     for cell_idt in cell_its:
-        stress_per_cell[cell_idt][i] = model.evaluate_subdomain_stress_fibre_dir(cell_idt)
+        stress_per_cell[cell_idt][i] = model.evaluate_subdomain_stress_fibre_dir(
+            cell_idt
+        )
 
 for cell_idt in cell_its:
     plt.plot(time, stress_per_cell[cell_idt])

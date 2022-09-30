@@ -24,14 +24,17 @@ num_time_steps = 125
 
 time = np.linspace(0, 500, num_time_steps)  # ms
 active_values, scaling_value = compute_active_component(time)
-print(scaling_value)
+
+# scale such that we get approx 20 % contraction
+# adjust this value to get more or less contraction
+
 active_values *= 0.28 / scaling_value
 
 # load mesh, subdomains
 
 mesh_file = "meshes/tile_connected_10p0.h5"
 mesh, volumes = load_mesh(mesh_file)
-cell_id = 1        # while matrix_id = 0
+cell_id = 1  # while matrix_id = 0
 
 # specifiy material parameters
 
@@ -52,7 +55,7 @@ stiffness_scaling = [0.5, 1, 2, 4]
 for i, scale in enumerate(stiffness_scaling):
 
     material_parameters = material_parameters_org.copy()
-    material_parameters["a_e"]*= scale
+    material_parameters["a_e"] *= scale
 
     # initiate EMI model
 

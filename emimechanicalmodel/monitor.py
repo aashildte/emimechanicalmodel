@@ -115,10 +115,9 @@ class Monitor:
                 functions[name], name, it_number, append=True
             )
 
-
     def _init_tracked_scalar_functions(self):
         model = self.cardiac_model
-        
+
         scalar_functions = {
             "normal_load": model.evaluate_normal_load,
             "shear_load": model.evaluate_shear_load,

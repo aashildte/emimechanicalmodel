@@ -6,6 +6,7 @@ James Trotter, Åshild Telle / Simula Research Laboratory / 2021
 
 import dolfin as df
 
+
 class NonlinearProblem(df.NonlinearProblem):
     """
 
@@ -19,6 +20,7 @@ class NonlinearProblem(df.NonlinearProblem):
         bcs - boundary conditions (list; can be empty)
 
     """
+
     def __init__(self, J, F, bcs):
         self.bilinear_form = J
         self.linear_form = F
@@ -28,7 +30,7 @@ class NonlinearProblem(df.NonlinearProblem):
 
     def F(self, b, x):
         """
-        
+
         Assembles linear form (LHS)
 
         Args:
@@ -69,6 +71,7 @@ class NewtonSolver(df.NewtonSolver):
             PETScOptions
 
     """
+
     def __init__(self, mesh, verbose=0):
 
         df.NewtonSolver.__init__(

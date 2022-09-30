@@ -25,13 +25,13 @@ def sobol_analysis_stresses_single_mode(mode, N, input_folder):
     problem, param_values = init_SA_problem(N)
 
     metrics = [
-            "intracellular_stress_fiber_dir",
-            "intracellular_stress_sheet_dir",
-            "intracellular_stress_normal_dir",
-            "extracellular_stress_fiber_dir",
-            "extracellular_stress_sheet_dir",
-            "extracellular_stress_normal_dir",
-            ]
+        "intracellular_stress_fiber_dir",
+        "intracellular_stress_sheet_dir",
+        "intracellular_stress_normal_dir",
+        "extracellular_stress_fiber_dir",
+        "extracellular_stress_sheet_dir",
+        "extracellular_stress_normal_dir",
+    ]
 
     Ys = {}
     Si = {}
@@ -47,9 +47,9 @@ def sobol_analysis_stresses_single_mode(mode, N, input_folder):
             outputs = np.load(fin)
         except:
             print(f"Unable to load data for {mode}_{i}", flush=True)
-    
+
         for j, metric in enumerate(metrics):
-            Ys[metric][i] = outputs[j+2]
+            Ys[metric][i] = outputs[j + 2]
 
         fin.close()
 
@@ -75,22 +75,32 @@ def sobol_analysis_loads_single_mode(mode, N, input_folder):
             outputs = np.load(fin)
         except:
             print(f"Unable to load data for {mode}_{i}", flush=True)
-        
+
         fin.close()
-        
+
         Y_normal[i] = outputs[0]
         Y_shear[i] = outputs[1]
 
     Si_normal = sobol.analyze(problem, Y_normal, calc_second_order=False)
     Si_shear = sobol.analyze(problem, Y_shear, calc_second_order=False)
-    
-    return {"normal" : Si_normal, "shear" : Si_shear}
+
+    return {"normal": Si_normal, "shear": Si_shear}
 
 
 def perform_sobol_analysis(N, input_folder, output_folder):
     sa = {}
-    modes = ["stretch_ff", "shear_fs", "shear_fn", "shear_sf", "stretch_ss", "shear_sn", "shear_nf", "shear_ns", "stretch_nn"]
-    
+    modes = [
+        "stretch_ff",
+        "shear_fs",
+        "shear_fn",
+        "shear_sf",
+        "stretch_ss",
+        "shear_sn",
+        "shear_nf",
+        "shear_ns",
+        "stretch_nn",
+    ]
+
     for mode in modes:
         sa_sa[mode] = sobol_analysis_loads_single_mode(mode, N, input_folder)
 
@@ -98,7 +108,7 @@ def perform_sobol_analysis(N, input_folder, output_folder):
 
     sa = {}
     modes = ["stretch_ff", "contr"]
-        
+
     for mode in modes:
         sa[mode] = sobol_analysis_stresses_single_mode(mode, N, input_folder)
 
@@ -107,19 +117,39 @@ def perform_sobol_analysis(N, input_folder, output_folder):
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("-M", '--mode', type=str, default="contr",
-                    help='Deformation mode (valid options; "contr" \
+parser.add_argument(
+    "-M",
+    "--mode",
+    type=str,
+    default="contr",
+    help='Deformation mode (valid options; "contr" \
                             "stretch_ff" "shear_fs" "shear_fn" "shear_sf" "stretch_ss" \
-                            "shear_sn" "shear_nf" "shear_ns" "stretch_nn")')
+                            "shear_sn" "shear_nf" "shear_ns" "stretch_nn")',
+)
 
-parser.add_argument("-N", '--total_variable_count', type=int, default=0,
-                    help='Number of parameter set # to use for this simulation.')
+parser.add_argument(
+    "-N",
+    "--total_variable_count",
+    type=int,
+    default=0,
+    help="Number of parameter set # to use for this simulation.",
+)
 
-parser.add_argument("-if", "--input_folder", type=str, default="sobol_analysis",
-                    help='Get all input files, i.e., all parameter combinations here')
+parser.add_argument(
+    "-if",
+    "--input_folder",
+    type=str,
+    default="sobol_analysis",
+    help="Get all input files, i.e., all parameter combinations here",
+)
 
-parser.add_argument("-of", "--output_folder", type=str, default="sobol_analysis",
-                    help='Save all output files, i.e., all resulting metrics here')
+parser.add_argument(
+    "-of",
+    "--output_folder",
+    type=str,
+    default="sobol_analysis",
+    help="Save all output files, i.e., all resulting metrics here",
+)
 
 args = parser.parse_args()
 

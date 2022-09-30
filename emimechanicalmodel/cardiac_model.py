@@ -11,8 +11,6 @@ specified in classes implementing CardiacModel through heritage.
 
 from abc import ABC, abstractmethod
 import dolfin as df
-import ufl
-import numpy as np
 
 from emimechanicalmodel.deformation_experiments import (
     Contraction,
@@ -47,11 +45,10 @@ class CardiacModel(ABC):
             experiment (str): Which experiment - "contr", "xstretch" or "ystretch"
             verbose (int): Set to 0 (no verbose output; default), 1 (some),
                 or 2 (quite a bit)
-        """
-        # mesh properties
-        self.mesh = mesh
 
-        # write things out or not
+        """
+        
+        self.mesh = mesh
         self.verbose = verbose
 
         # define variational form
@@ -78,6 +75,8 @@ class CardiacModel(ABC):
         self.experiment = exp_dict[experiment](mesh, self.V_CG)
         self.bcs = self.experiment.bcs
 
+        # set directions, assuming alignment with the Cartesian axes
+
         self.fiber_dir = df.as_vector([1, 0, 0])
         self.sheet_dir = df.as_vector([0, 1, 0])
         self.normal_dir = df.as_vector([0, 0, 1])
@@ -101,7 +100,6 @@ class CardiacModel(ABC):
         self.problem = NonlinearProblem(J, self.weak_form, self.bcs)
         self._solver = NewtonSolver(self.mesh, verbose=verbose)
 
-
     def _set_fenics_parameters(self):
         """
 
@@ -112,7 +110,6 @@ class CardiacModel(ABC):
         df.parameters["form_compiler"]["cpp_optimize"] = True
         df.parameters["form_compiler"]["representation"] = "uflacs"
         df.parameters["form_compiler"]["quadrature_degree"] = 4
-
 
     def _define_state_space(self, experiment):
         """
@@ -160,7 +157,6 @@ class CardiacModel(ABC):
 
         self.experiment.assign_stretch(stretch_value)
 
-
     @abstractmethod
     def _define_active_strain(self):
         """
@@ -174,7 +170,6 @@ class CardiacModel(ABC):
         """
         pass
 
-
     @abstractmethod
     def update_active_fn(self, value):
         """
@@ -186,7 +181,6 @@ class CardiacModel(ABC):
 
         """
         pass
-
 
     def _calculate_P(self, F):
         """
@@ -209,7 +203,9 @@ class CardiacModel(ABC):
         F_e = df.variable(F * df.inv(F_a))
         psi = mat_model.passive_component(F_e)
 
-        P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T) + self.p * df.det(F) * df.inv(F.T)
+        P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T) + self.p * df.det(
+            F
+        ) * df.inv(F.T)
 
         return P
 
@@ -217,13 +213,12 @@ class CardiacModel(ABC):
     def _define_projections(self):
         pass
 
-
     def _define_kinematic_variables(self, experiment):
         """
 
         Defines test and trial functions, as well as derived quantities
         and the weak form which we aim to solve.
-        
+
         Args:
             experiment (str) - what kind of experiment to perform; main
                 difference her is whether it is "contr" or something else;
@@ -256,11 +251,10 @@ class CardiacModel(ABC):
         C = F.T * F  # the right Cauchy-Green tensor
         E = 0.5 * (C - I)  # the Green-Lagrange strain tensor
 
-        N = df.FacetNormal(self.mesh)
         sigma = (1 / df.det(F)) * P * F.T
 
         # then define the weak form
-        weak_form = self._elasticity_term(P, v) + self._incompressible_term(q, F)
+        weak_form = self._elasticity_term(P, v) + self._pressure_term(q, F)
 
         if experiment == "contr":
             weak_form += self._remove_rigid_motion_term(u, r, state, test_state)
@@ -274,10 +268,9 @@ class CardiacModel(ABC):
             weak_form,
         )
 
-
     def _elasticity_term(self, P, v):
         """
-        
+
         Defines the part of the weak form which defines an equilibrium of
         stresses.
 
@@ -292,7 +285,6 @@ class CardiacModel(ABC):
 
         return df.inner(P, df.grad(v)) * df.dx
 
-
     def _pressure_term(self, q, F):
         """
 
@@ -301,13 +293,12 @@ class CardiacModel(ABC):
         Args:
             q (dolfin function): test function for the pressure
             F: deformation tensor
-        
+
         Returns:
             weak form term
 
         """
         return q * (df.det(F) - 1) * df.dx
-
 
     def _remove_rigid_motion_term(self, u, r, state, test_state):
         """
@@ -326,7 +317,6 @@ class CardiacModel(ABC):
 
         """
 
-
         position = df.SpatialCoordinate(self.mesh)
 
         RM = [
@@ -341,7 +331,6 @@ class CardiacModel(ABC):
         Pi = sum(df.dot(u, zi) * r[i] * df.dx for i, zi in enumerate(RM))
 
         return df.derivative(Pi, state, test_state)
-
 
     def solve(self, project=True):
         """
@@ -361,7 +350,7 @@ class CardiacModel(ABC):
         # as per default we are using the manual implementation which
         # should be at least as fast; however, we will
         # just keep a simple version here for easy comparison:
-        """
+         
         df.solve(
             self.weak_form == 0,
             self.state,
@@ -376,13 +365,12 @@ class CardiacModel(ABC):
         )
         """
         self._solver.solve(self.problem, self.state.vector())
-        
+        """
         # save stress and strain to fenics functions
         if project:
             for proj_fun in self.projections:
                 proj_fun.project()
 
-    
     def integrate_subdomain(self, fun, subdomain_id):
         """
 
@@ -395,10 +383,9 @@ class CardiacModel(ABC):
             \int_{\Omega_subdomain_id} f dx
 
         """
-        
+
         dx = df.Measure("dx", domain=self.mesh, subdomain_data=self.volumes)
         return df.assemble(fun * dx(int(subdomain_id)))
-
 
     def calculate_volume(self, subdomain_id):
         """
@@ -413,8 +400,6 @@ class CardiacModel(ABC):
         """
 
         return self.integrate_subdomain(1, subdomain_id)
-
-
 
     def evaluate_subdomain_stress(self, unit_vector, subdomain_id):
         """
@@ -442,7 +427,6 @@ class CardiacModel(ABC):
             subdomain_id
         )
 
-
     def evaluate_normal_load(self):
         """
 
@@ -456,7 +440,6 @@ class CardiacModel(ABC):
 
         return self.experiment.evaluate_normal_load(self.F, self.sigma)
 
-
     def evaluate_shear_load(self):
         """
 
@@ -469,7 +452,6 @@ class CardiacModel(ABC):
         """
 
         return self.experiment.evaluate_shear_load(self.F, self.sigma)
-
 
     def evaluate_subdomain_stress_fibre_dir(self, subdomain_id):
         """
@@ -485,7 +467,6 @@ class CardiacModel(ABC):
         unit_vector = self.fiber_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_id)
 
-
     def evaluate_subdomain_stress_transfibre_dir(self, subdomain_id):
         """
 
@@ -500,7 +481,6 @@ class CardiacModel(ABC):
         unit_vector = self.sheet_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_id)
 
-
     def evaluate_subdomain_stress_normal_dir(self, subdomain_id):
         """
 
@@ -514,7 +494,6 @@ class CardiacModel(ABC):
         """
         unit_vector = self.normal_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_id)
-
 
     def evaluate_subdomain_strain(self, unit_vector, subdomain_id):
         """
@@ -536,7 +515,6 @@ class CardiacModel(ABC):
             subdomain_id
         )
 
-
     def evaluate_subdomain_strain_fibre_dir(self, subdomain_id):
         """
 
@@ -551,7 +529,6 @@ class CardiacModel(ABC):
         unit_vector = self.fiber_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_id)
 
-
     def evaluate_subdomain_strain_transfibre_dir(self, subdomain_id):
         """
 
@@ -565,7 +542,6 @@ class CardiacModel(ABC):
         """
         unit_vector = self.sheet_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_id)
-
 
     def evaluate_subdomain_strain_normal_dir(self, subdomain_id):
         """

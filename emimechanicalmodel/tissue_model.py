@@ -51,6 +51,7 @@ class TissueModel(CardiacModel):
             verbose,
         )
 
+
     def _define_active_strain(self):
         """
 
@@ -72,13 +73,13 @@ class TissueModel(CardiacModel):
             value (float) – value to be assigned to the active strain function
 
         """
-        self.active_fn.assign(value)
 
+        self.active_fn.assign(value)
 
 
     def _define_projections(self):
         """
-        
+
         Defines projection objects which tracks different variables of
         interest as CG functions, defined as scalars, vectors, or tensors.
 
@@ -88,19 +89,19 @@ class TissueModel(CardiacModel):
         """
 
         mesh = self.mesh
-        
+
         # define function spaces
 
-        U_CG = df.VectorFunctionSpace(mesh, "CG", 1)
+        U_CG = df.FunctionSpace(mesh, "CG", 1)
         V_CG = df.VectorFunctionSpace(mesh, "CG", 2)
         T_CG = df.TensorFunctionSpace(mesh, "CG", 2)
 
         # define functions
-        
+
         p = df.Function(U_CG, name="Hydrostatic pressure (kPa)")
         u = df.Function(V_CG, name="Displacement (µm)")
-        
-        E = df.Function(T_CG, name="Strain") 
+
+        E = df.Function(T_CG, name="Strain")
         sigma = df.Function(T_CG, name="Cauchy stress (kPa)")
         P = df.Function(T_CG, name="Piola-Kirchhoff stress (kPa)")
 
@@ -108,7 +109,7 @@ class TissueModel(CardiacModel):
 
         p_proj = ProjectionFunction(self.p, p)
         u_proj = ProjectionFunction(self.u, u)
-        E_proj = ProjectionFunction(self.E, E) 
+        E_proj = ProjectionFunction(self.E, E)
         sigma_proj = ProjectionFunction(self.sigma, sigma)
         P_proj = ProjectionFunction(self.P, P)
 

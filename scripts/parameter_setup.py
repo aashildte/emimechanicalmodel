@@ -65,7 +65,6 @@ def add_emi_holzapfel_arguments(parser):
     )
 
 
-
 def add_default_arguments(parser):
     """
 
@@ -95,13 +94,6 @@ def add_default_arguments(parser):
         default=False,
         action="store_true",
         help="Save spatial quantities for all time steps",
-    )
-    
-    parser.add_argument(
-        "--project_to_subspaces",
-        default=False,
-        action="store_true",
-        help="Save spatial quantities for each subdomain",
     )
 
     parser.add_argument(
@@ -133,8 +125,8 @@ def add_stretching_arguments(parser):
         "--dir_stretch",
         default="stretch_ff",
         type=str,
-        help="Direction for stretch; can be 'stretch_ff', 'stretch_ss', 'stretch_nn', " + \
-              "'shear_fn', 'shear_nf', 'shear_fs', 'shear_sf', 'shear_ns', or 'shear_sn'.",
+        help="Direction for stretch; can be 'stretch_ff', 'stretch_ss', 'stretch_nn', "
+        + "'shear_fn', 'shear_nf', 'shear_fs', 'shear_sf', 'shear_ns', or 'shear_sn'.",
     )
 
     parser.add_argument(

@@ -18,7 +18,11 @@ from emimechanicalmodel import (
     EMIModel,
 )
 
-from load_data import get_dimensions, load_experimental_data_stretch, load_experimental_data_shear
+from load_data import (
+    get_dimensions,
+    load_experimental_data_stretch,
+    load_experimental_data_shear,
+)
 
 # Optimization options for the form compiler
 df.parameters["form_compiler"]["cpp_optimize"] = True
@@ -33,7 +37,7 @@ def go_to_stretch(model, stretch):
     shear_loads = np.zeros_like(stretch)
 
     for (step, st) in enumerate(stretch):
-        #print(f"Forward step : {step}/{len(stretch)}", flush=True)
+        # print(f"Forward step : {step}/{len(stretch)}", flush=True)
         model.assign_stretch(st)
         model.solve()
 
@@ -58,12 +62,15 @@ def cost_function(params, experiments, experimental_data, models):
     a_i, b_i, a_e, b_e, a_if, b_if = params
     cf = 0
 
-    print(f"Current mat param values: a_i = {a_i}, b_i = {b_i}, a_e = {a_e}, b_e = {b_e}, a_if = {a_if}, b_if = {b_if}", flush=True)
+    print(
+        f"Current mat param values: a_i = {a_i}, b_i = {b_i}, a_e = {a_e}, b_e = {b_e}, a_if = {a_if}, b_if = {b_if}",
+        flush=True,
+    )
 
     for experiment in experiments:
         print("experiment: ", experiment)
         model = models[experiment]
-        model.state.vector()[:] = 0       # reset
+        model.state.vector()[:] = 0  # reset
 
         model.mat_model.a_i.assign(a_i)
         model.mat_model.b_i.assign(b_i)
@@ -76,14 +83,14 @@ def cost_function(params, experiments, experimental_data, models):
         try:
             normal_load, shear_load = go_to_stretch(model, stretch_values)
         except RuntimeError:
-            cf += 500 + 10*np.random.random()  # just a high number
+            cf += 500 + 10 * np.random.random()  # just a high number
             continue
 
         target_normal_load = experimental_data[experiment]["normal_values"]
-        cf += (np.linalg.norm(normal_load - target_normal_load)**2)
+        cf += np.linalg.norm(normal_load - target_normal_load) ** 2
 
         target_shear_load = experimental_data[experiment]["shear_values"]
-        cf += (np.linalg.norm(shear_load - target_shear_load)**2)
+        cf += np.linalg.norm(shear_load - target_shear_load) ** 2
 
     print(f"Current cost fun value: {cf**0.5}", flush=True)
 
@@ -111,7 +118,17 @@ mesh, volumes = load_mesh(mesh_file)
 
 experimental_data = defaultdict(dict)
 
-experiments = ["stretch_ff", "stretch_ss", "stretch_nn", "shear_fs", "shear_sf", "shear_fn", "shear_nf", "shear_sn", "shear_ns"]
+experiments = [
+    "stretch_ff",
+    "stretch_ss",
+    "stretch_nn",
+    "shear_fs",
+    "shear_sf",
+    "shear_fn",
+    "shear_nf",
+    "shear_sn",
+    "shear_ns",
+]
 
 for experiment in experiments:
     mode = experiment.split("_")[1].upper()
@@ -119,10 +136,14 @@ for experiment in experiments:
     fin = f"Data/LeftVentricle_MechanicalTesting/LeftVentricle_ForceDisplacement/LeftVentricle_{sample}/LeftVentricle_{sample}_{mode}.csv"
 
     if "stretch" in experiment:
-        stretch_values, normal_values = load_experimental_data_stretch(fin, dimensions[mode], areas[mode])
-        shear_values = -1*np.ones_like(normal_values)
+        stretch_values, normal_values = load_experimental_data_stretch(
+            fin, dimensions[mode], areas[mode]
+        )
+        shear_values = -1 * np.ones_like(normal_values)
     else:
-        stretch_values, normal_values, shear_values = load_experimental_data_shear(fin, dimensions[mode], areas[mode])
+        stretch_values, normal_values, shear_values = load_experimental_data_shear(
+            fin, dimensions[mode], areas[mode]
+        )
 
     experimental_data[experiment]["stretch_values"] = stretch_values
     experimental_data[experiment]["normal_values"] = normal_values
@@ -156,11 +177,11 @@ params = [a_i, b_i, a_e, b_e, a_if, b_if]
 bounds = [(0.01, 40), (0.01, 40), (0.01, 40), (0.01, 40), (0.0, 40), (0.01, 40)]
 
 opt = minimize(
-        cost_function,
-        np.array(params),
-        (experiments, experimental_data, emi_models),
-        bounds=bounds,
-        )
+    cost_function,
+    np.array(params),
+    (experiments, experimental_data, emi_models),
+    bounds=bounds,
+)
 params = opt.x
 
 print(opt)

@@ -6,30 +6,27 @@ import numpy as np
 
 from emimechanicalmodel import TissueModel
 
+
 def test_tissue_active():
     mesh = df.UnitCubeMesh(1, 1, 1)
 
-    model = TissueModel(
-        mesh, experiment="contr"
-    )
+    model = TissueModel(mesh, experiment="contr")
 
     active_value = 0.001
-    
+
     model.update_active_fn(active_value)
     model.solve(project=False)
 
-    assert abs(float(model.active_fn) - active_value) < 1E-10
+    assert abs(float(model.active_fn) - active_value) < 1e-10
 
 
 def test_tissue_proj_strain():
     mesh = df.UnitCubeMesh(1, 1, 1)
 
-    model = TissueModel(
-        mesh, experiment="contr"
-    )
+    model = TissueModel(mesh, experiment="contr")
 
     active_value = 0.001
-    
+
     model.update_active_fn(active_value)
     model.solve(project=True)
 
@@ -39,12 +36,10 @@ def test_tissue_proj_strain():
 def test_tissue_proj_stress():
     mesh = df.UnitCubeMesh(1, 1, 1)
 
-    model = TissueModel(
-        mesh, experiment="contr"
-    )
+    model = TissueModel(mesh, experiment="contr")
 
     active_value = 0.001
-    
+
     model.update_active_fn(active_value)
     model.solve(project=True)
 
@@ -67,19 +62,20 @@ def test_tissue_proj_stress():
 )
 def test_tissue_deformation(deformation_mode):
     mesh = df.UnitCubeMesh(1, 1, 1)
-    
+
     model = TissueModel(
-        mesh, experiment=deformation_mode,
+        mesh,
+        experiment=deformation_mode,
     )
 
     stretch_value = 0.05
     model.assign_stretch(stretch_value)
     model.solve()
-    
+
     if "stretch" in deformation_mode:
-        assert(model.evaluate_normal_load() > 0)
+        assert model.evaluate_normal_load() > 0
     else:
-        assert(model.evaluate_shear_load() > 0)
+        assert model.evaluate_shear_load() > 0
 
 
 if __name__ == "__main__":

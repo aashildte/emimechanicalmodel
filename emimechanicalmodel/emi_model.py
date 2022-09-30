@@ -67,7 +67,6 @@ class EMIModel(CardiacModel):
             verbose,
         )
 
-
     def _define_active_strain(self):
         """
 
@@ -80,7 +79,6 @@ class EMIModel(CardiacModel):
         self.active_fn = df.Function(self.U, name="Active strain (-)")
         self.active_fn.vector()[:] = 0  # initial value
 
-
     def update_active_fn(self, value):
         """
 
@@ -91,13 +89,12 @@ class EMIModel(CardiacModel):
                defined as non-zero over the intracellular domain
 
         """
-        
-        assign_discrete_values(self.active_fn, self.subdomain_map, value, 0)
 
+        assign_discrete_values(self.active_fn, self.subdomain_map, value, 0)
 
     def _define_projections(self):
         """
-        
+
         Defines projection objects which tracks different variables of
         interest as CG functions, defined as scalars, vectors, or tensors.
 
@@ -105,15 +102,15 @@ class EMIModel(CardiacModel):
         and (for efficiency) not otherwise.
 
         """
-        
+
         mesh = self.mesh
-        
+
         # define function spaces
 
-        U_DG = df.VectorFunctionSpace(mesh, "DG", 1)
+        U_DG = df.FunctionSpace(mesh, "DG", 1)
         V_DG = df.VectorFunctionSpace(mesh, "DG", 2)
         T_DG = df.TensorFunctionSpace(mesh, "DG", 2)
-        
+
         p_DG = df.Function(U_DG, name="Hydrostatic pressure (kPa))")
         u_DG = df.Function(V_DG, name="Displacement (µm)")
         E_DG = df.Function(T_DG, name="Strain")
@@ -125,6 +122,6 @@ class EMIModel(CardiacModel):
         E_proj = ProjectionFunction(self.E, E_DG)
         sigma_proj = ProjectionFunction(self.sigma, sigma_DG)
         P_proj = ProjectionFunction(self.P, P_DG)
-        
-        self.tracked_variables = [u_DG, p_DG,  E_DG, sigma_DG, P_DG]
+
+        self.tracked_variables = [u_DG, p_DG, E_DG, sigma_DG, P_DG]
         self.projections = [u_proj, p_proj, E_proj, sigma_proj, P_proj]

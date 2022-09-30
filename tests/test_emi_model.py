@@ -6,35 +6,32 @@ import numpy as np
 
 from emimechanicalmodel import EMIModel
 
+
 def test_emi_active():
     mesh = df.UnitCubeMesh(1, 1, 1)
-    volumes = df.MeshFunction('size_t', mesh, 3)
+    volumes = df.MeshFunction("size_t", mesh, 3)
     volumes.array()[0] = 1
 
-    model = EMIModel(
-        mesh, volumes, experiment="contr"
-    )
+    model = EMIModel(mesh, volumes, experiment="contr")
 
     active_value = 0.001
-    
+
     model.update_active_fn(active_value)
     model.solve(project=False)
 
-    assert abs(np.max(model.active_fn.vector()[:]) - active_value) < 1E-10
-    assert abs(np.min(model.active_fn.vector()[:]) - 0) < 1E-10
+    assert abs(np.max(model.active_fn.vector()[:]) - active_value) < 1e-10
+    assert abs(np.min(model.active_fn.vector()[:]) - 0) < 1e-10
 
 
 def test_emi_proj_strain():
     mesh = df.UnitCubeMesh(1, 1, 1)
-    volumes = df.MeshFunction('size_t', mesh, 3)
+    volumes = df.MeshFunction("size_t", mesh, 3)
     volumes.array()[0] = 1
 
-    model = EMIModel(
-        mesh, volumes, experiment="contr"
-    )
+    model = EMIModel(mesh, volumes, experiment="contr")
 
     active_value = 0.001
-    
+
     model.update_active_fn(active_value)
     model.solve(project=True)
 
@@ -43,12 +40,10 @@ def test_emi_proj_strain():
 
 def test_emi_proj_stress():
     mesh = df.UnitCubeMesh(1, 1, 1)
-    volumes = df.MeshFunction('size_t', mesh, 3)
+    volumes = df.MeshFunction("size_t", mesh, 3)
     volumes.array()[0] = 1
 
-    model = EMIModel(
-        mesh, volumes, experiment="contr"
-    )
+    model = EMIModel(mesh, volumes, experiment="contr")
 
     active_value = 0.001
 
@@ -71,11 +66,13 @@ def test_emi_proj_stress():
 )
 def test_emi_deformation(deformation_mode):
     mesh = df.UnitCubeMesh(1, 1, 1)
-    volumes = df.MeshFunction('size_t', mesh, 3)
+    volumes = df.MeshFunction("size_t", mesh, 3)
     volumes.array()[0] = 1
-    
+
     model = EMIModel(
-        mesh, volumes, experiment=deformation_mode,
+        mesh,
+        volumes,
+        experiment=deformation_mode,
     )
 
     stretch_value = 0.05
@@ -83,12 +80,13 @@ def test_emi_deformation(deformation_mode):
     model.solve()
 
     if "stretch" in deformation_mode:
-        assert(model.evaluate_normal_load() > 0)
+        assert model.evaluate_normal_load() > 0
     else:
-        assert(model.evaluate_shear_load() > 0)
+        assert model.evaluate_shear_load() > 0
+
 
 if __name__ == "__main__":
-    #test_emi_active()
-    #test_emi_proj_strain()
-    #test_emi_proj_stress()
+    # test_emi_active()
+    # test_emi_proj_strain()
+    # test_emi_proj_stress()
     test_emi_deformation("shear_fs")

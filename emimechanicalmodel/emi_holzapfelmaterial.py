@@ -24,6 +24,7 @@ class EMIHolzapfelMaterial:
         a_i ... b_if - material properties; see paper
 
     """
+
     def __init__(
         self,
         U,
@@ -36,8 +37,14 @@ class EMIHolzapfelMaterial:
         b_if=df.Constant(24.72),
     ):
         # these are df.Constants, which can be changed from the outside
-        self.a_i, self.a_e, self.b_i, self.b_e, self.a_if, self.b_if = \
-                a_i, a_e, b_i, b_e, a_if, b_if
+        self.a_i, self.a_e, self.b_i, self.b_e, self.a_if, self.b_if = (
+            a_i,
+            a_e,
+            b_i,
+            b_e,
+            a_if,
+            b_if,
+        )
 
         # assign material paramters via characteristic functions
         xi_i = df.Function(U)
@@ -46,14 +53,13 @@ class EMIHolzapfelMaterial:
         xi_e = df.Function(U)
         assign_discrete_values(xi_e, subdomain_map, 0, 1)
 
-        a = a_i*xi_i + a_e*xi_e
-        b = b_i*xi_i + b_e*xi_e
-        a_f = a_if*xi_i
-        b_f = b_if        # set everywhere to avoid division by zero error
+        a = a_i * xi_i + a_e * xi_e
+        b = b_i * xi_i + b_e * xi_e
+        a_f = a_if * xi_i
+        b_f = b_if  # set everywhere to avoid division by zero error
 
         # these are fenics functions defined over all of omega, not likely to be accessed
         self._a, self._b, self._a_f, self._b_f = a, b, a_f, b_f
-
 
     def passive_component(self, F):
 
