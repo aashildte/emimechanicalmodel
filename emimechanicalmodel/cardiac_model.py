@@ -10,7 +10,7 @@ specified in classes implementing CardiacModel through heritage.
 """
 
 from abc import ABC, abstractmethod
-import dolfinx as df
+import dolfin as df
 import ufl
 import numpy as np
 
@@ -432,6 +432,8 @@ class CardiacModel(ABC):
             ..math::
             v = \frac{F \cdot e} \frac{|| F \cdot e ||}
 
+        (see eq. (17) in the paper)
+
         """
         v = self.F * unit_vector
         v /= df.sqrt(df.dot(v, v))
@@ -440,11 +442,34 @@ class CardiacModel(ABC):
             subdomain_id
         )
 
+
     def evaluate_normal_load(self):
+        """
+
+        Evaluates the load in the normal direction of the direction of deformation,
+        i.e., in the direction of the normal of the surface being moved.
+
+        Returns:
+            normal load L (float)
+
+        """
+
         return self.experiment.evaluate_normal_load(self.F, self.sigma)
 
+
     def evaluate_shear_load(self):
+        """
+
+        Evaluates the load in the shear direction of the direction of deformation,
+        i.e., in the direction the surface being moved moves.
+
+        Returns:
+            shear load L (float)
+
+        """
+
         return self.experiment.evaluate_shear_load(self.F, self.sigma)
+
 
     def evaluate_subdomain_stress_fibre_dir(self, subdomain_id):
         """
@@ -460,6 +485,7 @@ class CardiacModel(ABC):
         unit_vector = self.fiber_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_id)
 
+
     def evaluate_subdomain_stress_transfibre_dir(self, subdomain_id):
         """
 
@@ -473,6 +499,7 @@ class CardiacModel(ABC):
         """
         unit_vector = self.sheet_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_id)
+
 
     def evaluate_subdomain_stress_normal_dir(self, subdomain_id):
         """
@@ -488,11 +515,27 @@ class CardiacModel(ABC):
         unit_vector = self.normal_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_id)
 
+
     def evaluate_subdomain_strain(self, unit_vector, subdomain_id):
+        """
+
+        Args:
+            unit_vector (dolfin vector): vector e determining the direction to
+               evaluate the Cauchy stress in
+            subdomain_id (int): cell idt or ECM idt
+
+        Returns:
+            ..math::
+            \int_{\Omega_subdomain_id} e \cdot E e dx
+
+        (see eq. (16) in the paper)
+
+        """
         strain = df.inner(unit_vector, self.E * unit_vector)
         return self.integrate_subdomain(strain, subdomain_id) / self.calculate_volume(
             subdomain_id
         )
+
 
     def evaluate_subdomain_strain_fibre_dir(self, subdomain_id):
         """
@@ -502,11 +545,12 @@ class CardiacModel(ABC):
 
         Returns:
             ..math:: \overline{E_{ff}}
-            (see eq. (17) in the paper)
+            (see eq. (16) in the paper)
 
         """
         unit_vector = self.fiber_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_id)
+
 
     def evaluate_subdomain_strain_transfibre_dir(self, subdomain_id):
         """
@@ -516,11 +560,12 @@ class CardiacModel(ABC):
 
         Returns:
             ..math:: \overline{E_{ss}}
-            (see eq. (17) in the paper)
+            (see eq. (16) in the paper)
 
         """
         unit_vector = self.sheet_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_id)
+
 
     def evaluate_subdomain_strain_normal_dir(self, subdomain_id):
         """
@@ -530,7 +575,7 @@ class CardiacModel(ABC):
 
         Returns:
             ..math:: \overline{E_{nn}}
-            (see eq. (17) in the paper)
+            (see eq. (16) in the paper)
 
         """
         unit_vector = self.normal_dir
