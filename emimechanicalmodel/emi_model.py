@@ -44,7 +44,6 @@ class EMIModel(CardiacModel):
     ):
         # mesh properties, subdomains
         self.volumes = volumes
-        self.project_to_subspaces = project_to_subspaces
 
         mpi_comm = mesh.mpi_comm()
 
