@@ -260,7 +260,7 @@ class CardiacModel(ABC):
         sigma = (1 / df.det(F)) * P * F.T
 
         # then define the weak form
-        weak_form = self._elasticity_term(P, v) + self.incompressible term(q, F)
+        weak_form = self._elasticity_term(P, v) + self._incompressible_term(q, F)
 
         if experiment == "contr":
             weak_form += self._remove_rigid_motion_term(u, r, state, test_state)
@@ -342,6 +342,7 @@ class CardiacModel(ABC):
 
         return df.derivative(Pi, state, test_state)
 
+
     def solve(self, project=True):
         """
 
@@ -386,7 +387,7 @@ class CardiacModel(ABC):
         """
 
         Args:
-            fun (ufl form): function we want to integrate
+            fun (ufl form): function f that we want to integrate
             subdomain_id (int): cell idt or ECM idt
 
         Returns:
@@ -416,6 +417,22 @@ class CardiacModel(ABC):
 
 
     def evaluate_subdomain_stress(self, unit_vector, subdomain_id):
+        """
+
+        Args:
+            unit_vector (dolfin vector): vector e determining the direction to
+               evaluate the Cauchy stress in
+            subdomain_id (int): cell idt or ECM idt
+
+        Returns:
+            ..math::
+            \int_{\Omega_subdomain_id} v \cdot \sigma v dx
+
+        where
+            ..math::
+            v = \frac{F \cdot e} \frac{|| F \cdot e ||}
+
+        """
         v = self.F * unit_vector
         v /= df.sqrt(df.dot(v, v))
         stress = df.inner(v, self.sigma * v)
@@ -430,14 +447,44 @@ class CardiacModel(ABC):
         return self.experiment.evaluate_shear_load(self.F, self.sigma)
 
     def evaluate_subdomain_stress_fibre_dir(self, subdomain_id):
+        """
+
+        Args:
+            subdomain_id (int): cell idt or ECM idt
+
+        Returns:
+            ..math:: \overline{\sigma_{ff}}
+            (see eq. (17) in the paper)
+
+        """
         unit_vector = self.fiber_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_id)
 
     def evaluate_subdomain_stress_transfibre_dir(self, subdomain_id):
+        """
+
+        Args:
+            subdomain_id (int): cell idt or ECM idt
+
+        Returns:
+            ..math:: \overline{\sigma_{ss}}
+            (see eq. (17) in the paper)
+
+        """
         unit_vector = self.sheet_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_id)
 
     def evaluate_subdomain_stress_normal_dir(self, subdomain_id):
+        """
+
+        Args:
+            subdomain_id (int): cell idt or ECM idt
+
+        Returns:
+            ..math:: \overline{\sigma_{nn}}
+            (see eq. (17) in the paper)
+
+        """
         unit_vector = self.normal_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_id)
 
@@ -448,13 +495,43 @@ class CardiacModel(ABC):
         )
 
     def evaluate_subdomain_strain_fibre_dir(self, subdomain_id):
+        """
+
+        Args:
+            subdomain_id (int): cell idt or ECM idt
+
+        Returns:
+            ..math:: \overline{E_{ff}}
+            (see eq. (17) in the paper)
+
+        """
         unit_vector = self.fiber_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_id)
 
     def evaluate_subdomain_strain_transfibre_dir(self, subdomain_id):
+        """
+
+        Args:
+            subdomain_id (int): cell idt or ECM idt
+
+        Returns:
+            ..math:: \overline{E_{ss}}
+            (see eq. (17) in the paper)
+
+        """
         unit_vector = self.sheet_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_id)
 
     def evaluate_subdomain_strain_normal_dir(self, subdomain_id):
+        """
+
+        Args:
+            subdomain_id (int): cell idt or ECM idt
+
+        Returns:
+            ..math:: \overline{E_{nn}}
+            (see eq. (17) in the paper)
+
+        """
         unit_vector = self.normal_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_id)
