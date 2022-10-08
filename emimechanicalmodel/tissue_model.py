@@ -8,7 +8,7 @@ corresponding EMIModel.
 
 """
 
-import dolfin as df
+import dolfinx as df
 
 from emimechanicalmodel.cardiac_model import CardiacModel
 from emimechanicalmodel.holzapfelmaterial import HolzapfelMaterial

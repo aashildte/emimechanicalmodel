@@ -6,7 +6,7 @@ Material model; the Holzapfel-Odgen model adapted to the EMI framework.
 
 """
 
-import dolfin as df
+import dolfinx as df
 import ufl
 
 from .mesh_setup import assign_discrete_values
@@ -28,12 +28,12 @@ class EMIHolzapfelMaterial:
         self,
         U,
         subdomain_map,
-        a_i=df.Constant(5.70),
-        b_i=df.Constant(11.67),
-        a_e=df.Constant(1.52),
-        b_e=df.Constant(16.31),
-        a_if=df.Constant(19.83),
-        b_if=df.Constant(24.72),
+        a_i=5.70,
+        b_i=11.67,
+        a_e=1.52,
+        b_e=16.31,
+        a_if=19.83,
+        b_if=24.72,
     ):
         # these are df.Constants, which can be changed from the outside
         self.a_i, self.a_e, self.b_i, self.b_e, self.a_if, self.b_if = \

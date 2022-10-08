@@ -9,7 +9,7 @@ import os
 from functools import partial
 import numpy as np
 from mpi4py import MPI
-import dolfin as df
+import dolfinx as df
 
 from .emi_model import EMIModel
 

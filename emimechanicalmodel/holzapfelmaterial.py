@@ -6,7 +6,7 @@ Material model based on the Holzapfel-Odgen model (2009).
 
 """
 
-import dolfin as df
+import dolfinx as df
 import ufl
 
 
@@ -22,14 +22,14 @@ class HolzapfelMaterial:
 
     def __init__(
         self,
-        a=df.Constant(0.074),
-        b=df.Constant(4.878),
-        a_f=df.Constant(2.628),
-        b_f=df.Constant(5.214),
-        a_s=df.Constant(0.438),
-        b_s=df.Constant(3.002),
-        a_fs=df.Constant(0.062),
-        b_fs=df.Constant(3.476),
+        a=0.074,
+        b=4.878,
+        a_f=2.628,
+        b_f=5.214,
+        a_s=0.438,
+        b_s=3.002,
+        a_fs=0.062,
+        b_fs=3.476,
     ):
 
         self.a, self.b, self.a_f, self.b_f, self.a_s, self.b_s, self.a_fs, self.b_fs = (

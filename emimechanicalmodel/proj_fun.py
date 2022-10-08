@@ -4,7 +4,7 @@
 
 """
 
-import dolfin as df
+import dolfinx as df
 
 class ProjectionFunction:
     """

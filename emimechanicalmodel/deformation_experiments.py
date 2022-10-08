@@ -6,7 +6,7 @@ Implementation of boundary conditions ++ for different passive deformation modes
 
 """
 
-import dolfin as df
+import dolfinx as df
 from mpi4py import MPI
 
 
@@ -507,7 +507,7 @@ class ShearSN(DeformationExperiment):
         return bcs
 
 
-class Wall(df.SubDomain):
+class Wall(): #df.SubDomain):
     """
 
     Subdomain class; extracts coordinates for the six walls. Assumes

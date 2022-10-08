@@ -8,7 +8,7 @@ TissueModel for homogenized version.
 
 """
 
-import dolfin as df
+import dolfinx as df
 from mpi4py import MPI
 
 from emimechanicalmodel.cardiac_model import CardiacModel

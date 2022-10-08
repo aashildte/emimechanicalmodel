@@ -7,7 +7,7 @@
 import numpy as np
 from mpi4py import MPI
 
-import dolfin as df
+import dolfinx as df
 
 
 def load_mesh(mesh_file: str, verbose=1):
@@ -28,12 +28,16 @@ def load_mesh(mesh_file: str, verbose=1):
     """
 
     comm = MPI.COMM_WORLD
-    h5_file = df.HDF5File(comm, mesh_file, "r")
-    mesh = df.Mesh()
-    h5_file.read(mesh, "mesh", False)
+    encoding = df.io.XDMFFile.Encoding.HDF5
+    with df.io.XDMFFile(comm, mesh_file, "r") as h5_file:
+        print("hei")
+        exit() #mesh = h5_file.read_mesh("mesh")
 
     volumes = df.MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
-    h5_file.read(volumes, "volumes")
+    
+    with df.io.XDMFFile(MPI.COMM_WORLD, mesh_file, "r") as h5file:
+        #h5_file.read(mesh, "mesh", False)
+        h5_file.read(volumes, "volumes")
 
     if verbose > 0:
         print(

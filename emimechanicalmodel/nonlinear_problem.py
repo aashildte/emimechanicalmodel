@@ -4,9 +4,9 @@ James Trotter, Åshild Telle / Simula Research Laboratory / 2021
 
 """
 
-import dolfin as df
+import dolfinx as df
 
-class NonlinearProblem(df.NonlinearProblem):
+class NonlinearProblem(): #df.NonlinearProblem):
     """
 
     Class extending dolfin's NonLinearProblem class,
@@ -55,7 +55,7 @@ class NonlinearProblem(df.NonlinearProblem):
             bc.apply(A)
 
 
-class NewtonSolver(df.NewtonSolver):
+class NewtonSolver(): #df.NewtonSolver):
     """
 
     Class extending dolfin's NewtonSolver,setting several of

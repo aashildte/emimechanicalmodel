@@ -10,7 +10,7 @@ specified in classes implementing CardiacModel through heritage.
 """
 
 from abc import ABC, abstractmethod
-import dolfin as df
+import dolfinx as df
 import ufl
 import numpy as np
 
@@ -221,7 +221,7 @@ class CardiacModel(ABC):
 
     def solve(self, project=True):
         # just keep the simple version here for easy comparison:
-        """
+        
         df.solve(
             self.weak_form == 0,
             self.state,
@@ -236,7 +236,7 @@ class CardiacModel(ABC):
         )
         """
         self._solver.solve(self.problem, self.state.vector())
-        
+        """
         # save stress and strain to fenics functions
         if project:
             for proj_fun in self.projections:

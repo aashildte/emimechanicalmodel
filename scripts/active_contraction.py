@@ -8,7 +8,7 @@ Script for simulating active contraction; over (parts of) one cardiac cycle.
 
 from argparse import ArgumentParser
 import numpy as np
-import dolfin as df
+import dolfinx as df
 from mpi4py import MPI
 
 

@@ -76,7 +76,7 @@ def add_default_arguments(parser):
     parser.add_argument(
         "-m",
         "--mesh_file",
-        default="meshes/tile_connected.h5",
+        default="meshes/tile_connected.xdmf",
         type=str,
         help="Mesh file (h5 format)",
     )
