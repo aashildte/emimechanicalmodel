@@ -7,8 +7,9 @@ Implementation of boundary conditions ++ for different passive deformation modes
 """
 
 import dolfinx as df
+import ufl
 from mpi4py import MPI
-
+from petsc4py import PETSc
 
 class DeformationExperiment():
     """
@@ -29,8 +30,8 @@ class DeformationExperiment():
         V_CG,
     ):
         self.V_CG2 = V_CG
-        self.surface_normal = df.FacetNormal(mesh)
-        self.stretch = df.Constant(0)
+        self.surface_normal = ufl.FacetNormal(mesh)
+        self.stretch = df.fem.Constant(mesh, PETSc.ScalarType(0))
         self.dimensions = self.get_dimensions(mesh)
         self.boundaries, self.ds = self.get_boundary_markers(mesh, self.dimensions)
         self.normal_vector = df.FacetNormal(mesh)
@@ -53,8 +54,8 @@ class DeformationExperiment():
         return -1
 
     def get_dimensions(self, mesh):
-        mpi_comm = mesh.mpi_comm()
-        coords = mesh.coordinates()[:]
+        mpi_comm = MPI.COMM_WORLD # TODO ? mesh.mpi_comm()
+        coords = mesh.geometry.x
 
         xcoords = coords[:, 0]
         ycoords = coords[:, 1]

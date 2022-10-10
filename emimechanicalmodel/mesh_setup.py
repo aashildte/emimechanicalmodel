@@ -29,21 +29,15 @@ def load_mesh(mesh_file: str, verbose=1):
 
     comm = MPI.COMM_WORLD
     encoding = df.io.XDMFFile.Encoding.HDF5
-    with df.io.XDMFFile(comm, mesh_file, "r") as h5_file:
-        print("hei")
-        exit() #mesh = h5_file.read_mesh("mesh")
-
-    volumes = df.MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
     
-    with df.io.XDMFFile(MPI.COMM_WORLD, mesh_file, "r") as h5file:
-        #h5_file.read(mesh, "mesh", False)
-        h5_file.read(volumes, "volumes")
+    with df.io.XDMFFile(comm, mesh_file, "r") as xdmf_file:
+        mesh = xdmf_file.read_mesh(name="mesh")
+        volumes = xdmf_file.read_meshtags(mesh, name="mesh")
 
     if verbose > 0:
-        print(
-            "Number of nodes: %g, number of elements: %g"
-            % (mesh.num_vertices(), mesh.num_cells())
-        )
+        num_vertices = mesh.geometry.index_map().size_global
+        num_cells = mesh.topology.index_map(3).size_global
+        print(f"Number of nodes: {num_vertices}, number of elements: {num_cells}")
 
     return mesh, volumes
 
@@ -67,7 +61,8 @@ def assign_discrete_values(function, subdomain_map, value_i, value_e):
     """
 
     id_extra = 0
-    function.vector()[:] = np.where(
+    
+    function.vector[:] = np.where(
         subdomain_map == id_extra,
         value_e,
         value_i,

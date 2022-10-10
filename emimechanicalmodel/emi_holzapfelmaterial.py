@@ -40,10 +40,10 @@ class EMIHolzapfelMaterial:
                 a_i, a_e, b_i, b_e, a_if, b_if
 
         # assign material paramters via characteristic functions
-        xi_i = df.Function(U)
+        xi_i = df.fem.Function(U)
         assign_discrete_values(xi_i, subdomain_map, 1, 0)
 
-        xi_e = df.Function(U)
+        xi_e = df.fem.Function(U)
         assign_discrete_values(xi_e, subdomain_map, 0, 1)
 
         a = a_i*xi_i + a_e*xi_e
@@ -64,17 +64,17 @@ class EMIHolzapfelMaterial:
             self._b_f,
         )
 
-        e1 = df.as_vector([1.0, 0.0, 0.0])
+        e1 = ufl.as_vector([1.0, 0.0, 0.0])
 
-        J = df.det(F)
+        J = ufl.det(F)
         C = pow(J, -float(2) / 3) * F.T * F
 
-        IIFx = df.tr(C)
-        I4e1 = df.inner(C * e1, e1)
+        IIFx = ufl.tr(C)
+        I4e1 = ufl.inner(C * e1, e1)
 
         cond = lambda a: ufl.conditional(a > 0, a, 0)
 
-        W_hat = a / (2 * b) * (df.exp(b * (IIFx - 3)) - 1)
-        W_f = a_f / (2 * b_f) * (df.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
+        W_hat = a / (2 * b) * (ufl.exp(b * (IIFx - 3)) - 1)
+        W_f = a_f / (2 * b_f) * (ufl.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
 
         return W_hat + W_f

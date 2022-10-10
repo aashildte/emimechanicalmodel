@@ -9,7 +9,7 @@ Script for simulating passive deformation, i.e. stretch and shear experiments.
 import os
 from argparse import ArgumentParser
 import numpy as np
-import dolfin as df
+import dolfinx as df
 
 from mpi4py import MPI
 

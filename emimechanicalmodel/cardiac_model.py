@@ -56,7 +56,6 @@ class CardiacModel(ABC):
 
         # define variational form
         self._define_active_strain()
-        self._set_fenics_parameters()
         self._define_state_space(experiment)
         self._define_kinematic_variables(experiment)
 
@@ -92,37 +91,26 @@ class CardiacModel(ABC):
         self.problem = NonlinearProblem(J, self.weak_form, self.bcs)
         self._solver = NewtonSolver(self.mesh, verbose=verbose)
 
-    def _set_fenics_parameters(self):
-        """
-
-        Default parameters for form compiler + solver
-
-        """
-
-        df.parameters["form_compiler"]["cpp_optimize"] = True
-        df.parameters["form_compiler"]["representation"] = "uflacs"
-        df.parameters["form_compiler"]["quadrature_degree"] = 4
-
     def _define_state_space(self, experiment):
 
         # needs to be called before setting exp conds + weak form
 
         mesh = self.mesh
-
-        P1 = df.FiniteElement("Lagrange", mesh.ufl_cell(), 1)
-        P2 = df.VectorElement("Lagrange", mesh.ufl_cell(), 2)
+ 
+        P2 = ufl.VectorElement("Lagrange", mesh.ufl_cell(), 2)
+        P1 = ufl.FiniteElement("Lagrange", mesh.ufl_cell(), 1)
 
         if experiment == "contr":
-            P3 = df.VectorElement("Real", mesh.ufl_cell(), 0, 6)
-            state_space = df.FunctionSpace(mesh, df.MixedElement([P1, P2, P3]))
+            R = ufl.VectorElement("Real", mesh.ufl_cell(), 0, 6)
+            state_space = df.fem.FunctionSpace(mesh, P2 * P1 * R)
         else:
-            state_space = df.FunctionSpace(mesh, df.MixedElement([P1, P2]))
+            state_space = df.fem.FunctionSpace(mesh, P2 * P1)
 
-        self.V_CG = state_space.sub(1)
+        self.V_CG = state_space.sub(0)
         self.state_space = state_space
 
         if self.verbose:
-            dofs = len(state_space.dofmap().dofs())
+            dofs = state_space.dofmap.index_map.size_global
             print("Degrees of freedom: ", dofs, flush=True)
 
     def assign_stretch(self, stretch_value):
@@ -139,15 +127,15 @@ class CardiacModel(ABC):
     def _calculate_P(self, F, J):
         active_fn, mat_model = self.active_fn, self.mat_model
 
-        sqrt_fun = (df.Constant(1) - active_fn) ** (-0.5)
-        F_a = df.as_tensor(
-            ((df.Constant(1) - active_fn, 0, 0), (0, sqrt_fun, 0), (0, 0, sqrt_fun))
+        sqrt_fun = (1 - active_fn)**(-0.5)
+        F_a = ufl.as_tensor(
+            ((1 - active_fn, 0, 0), (0, sqrt_fun, 0), (0, 0, sqrt_fun))
         )
 
-        F_e = df.variable(F * df.inv(F_a))
-        psi = mat_model.passive_component(F_e)
+        F_e = ufl.variable(F * ufl.inv(F_a))
+        psi = mat_model.passive_component(F_e) 
 
-        P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T) + self.p * J * df.inv(F.T)
+        P = ufl.det(F_a) * ufl.diff(psi, F_e) * ufl.inv(F_a.T) + self.p * J * ufl.inv(F.T)
 
         return P
 
@@ -157,42 +145,43 @@ class CardiacModel(ABC):
 
     def _define_kinematic_variables(self, experiment):
         state_space = self.state_space
-
-        state = df.Function(state_space, name="state")
-        test_state = df.TestFunction(state_space)
+        
+        state = df.fem.Function(state_space, name="state")
+        test_functions = ufl.TestFunctions(state_space)
 
         if experiment == "contr":
-            p, u, r = df.split(state)
-            q, v, _ = df.split(test_state)
+            u, p, r = state.split()
+            v, q, _ = test_functions
         else:
-            p, u = df.split(state)
-            q, v = df.split(test_state)
+            u, p = state.split()
+            v, q = test_functions
 
         self.state = state
         self.p = p
 
         # Kinematics
         d = len(u)
-        I = df.Identity(d)  # Identity tensor
+        I = ufl.Identity(d)  # Identity tensor
 
-        F = df.variable(I + df.grad(u))  # Deformation gradient
-        J = df.det(F)
+        F = ufl.variable(I + ufl.grad(u))   # Deformation gradient; TODO check if ufl.variable is actually needed
+        J = ufl.det(F)
         P = self._calculate_P(F, J)
 
         C = F.T * F  # the right Cauchy-Green tensor
         E = 0.5 * (C - I)  # the Green-Lagrange strain tensor
 
-        N = df.FacetNormal(self.mesh)
-        sigma = (1 / df.det(F)) * P * F.T
+        sigma = (1 / ufl.det(F)) * P * F.T
+
+        dx = ufl.dx(metadata={"quadrature_degree": 4})
 
         # weak form
-        weak_form = df.inner(P, df.grad(v)) * df.dx
+        weak_form = ufl.inner(P, ufl.grad(v)) * dx
 
         if experiment == "contr":
-            weak_form += self.remove_rigid_motion_term(u, r, state, test_state)
+            weak_form += self.remove_rigid_motion_term(u, r, state, test_state, dx)
 
-        weak_form += q * (J - 1) * df.dx  # incompressible term
-
+        weak_form += q * (J - 1) * dx  # incompressible term
+        
         (self.F, self.E, self.sigma, self.P, self.u, self.weak_form,) = (
             F,
             E,
@@ -202,7 +191,7 @@ class CardiacModel(ABC):
             weak_form,
         )
 
-    def remove_rigid_motion_term(self, u, r, state, test_state):
+    def remove_rigid_motion_term(self, u, r, state, test_state, dx):
 
         position = df.SpatialCoordinate(self.mesh)
 
@@ -215,7 +204,7 @@ class CardiacModel(ABC):
             df.cross(position, df.Constant((0, 0, 1))),
         ]
 
-        Pi = sum(df.dot(u, zi) * r[i] * df.dx for i, zi in enumerate(RM))
+        Pi = sum(df.dot(u, zi) * r[i] * dx for i, zi in enumerate(RM))
 
         return df.derivative(Pi, state, test_state)
 
@@ -247,7 +236,7 @@ class CardiacModel(ABC):
         return self.integrate_subdomain(1, subdomain_id)
 
     def integrate_subdomain(self, fun, subdomain_id):
-        dx = df.Measure("dx", domain=self.mesh, subdomain_data=self.volumes)
+        dx = df.Measure("dx", domain=self.mesh, subdomain_data=self.volumes, metadata={"quadrature_degree": 4})
         return df.assemble(fun * dx(int(subdomain_id)))
 
     def evaluate_subdomain_stress(self, unit_vector, subdomain_id):
