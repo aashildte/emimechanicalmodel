@@ -6,6 +6,7 @@ Implementation of boundary conditions ++ for different passive deformation modes
 
 """
 
+import numpy as np
 import dolfinx as df
 import ufl
 from mpi4py import MPI
@@ -34,7 +35,7 @@ class DeformationExperiment():
         self.stretch = df.fem.Constant(mesh, PETSc.ScalarType(0))
         self.dimensions = self.get_dimensions(mesh)
         self.boundaries, self.ds = self.get_boundary_markers(mesh, self.dimensions)
-        self.normal_vector = df.FacetNormal(mesh)
+        self.normal_vector = ufl.FacetNormal(mesh)
 
     def _evaluate_load(self, F, P, wall_idt, unit_vector):
         load = df.inner(P*self.normal_vector, unit_vector)
@@ -79,30 +80,63 @@ class DeformationExperiment():
         return dimensions
 
     def get_boundary_markers(self, mesh, dimensions):
+
+        # functions for walls
+
+        xmin = lambda x : np.isclose(x[0], dimensions[0][0])
+        ymin = lambda x : np.isclose(x[1], dimensions[1][0])
+        zmin = lambda x : np.isclose(x[2], dimensions[2][0])
+        xmax = lambda x : np.isclose(x[0], dimensions[0][1])
+        ymax = lambda x : np.isclose(x[1], dimensions[1][1])
+        zmax = lambda x : np.isclose(x[2], dimensions[2][1])
+
         # define subdomains
 
         boundaries = {
-            "x_min": {"subdomain": Wall(0, "min", dimensions), "idt": 1},
-            "x_max": {"subdomain": Wall(0, "max", dimensions), "idt": 2},
-            "y_min": {"subdomain": Wall(1, "min", dimensions), "idt": 3},
-            "y_max": {"subdomain": Wall(1, "max", dimensions), "idt": 4},
-            "z_min": {"subdomain": Wall(2, "min", dimensions), "idt": 5},
-            "z_max": {"subdomain": Wall(2, "max", dimensions), "idt": 6},
+            "x_min": {"subdomain": xmin, "idt": 1},
+            "x_max": {"subdomain": xmax, "idt": 2},
+            "y_min": {"subdomain": ymin, "idt": 3},
+            "y_max": {"subdomain": ymax, "idt": 4},
+            "z_min": {"subdomain": zmin, "idt": 5},
+            "z_max": {"subdomain": zmax, "idt": 6},
         }
 
         # Mark boundary subdomains
+ 
+        fdim = 2  # 2D surfaces
 
-        boundary_markers = df.MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
-        boundary_markers.set_all(0)
+        facets = []
+        values = []
 
-        for bnd_pair in boundaries.items():
-            bnd = bnd_pair[1]
-            bnd["subdomain"].mark(boundary_markers, bnd["idt"])
+        for (key, bnd) in boundaries.items():
+            wall_fn = bnd["subdomain"]
+            wall_dofs = df.mesh.locate_entities_boundary(mesh, fdim, wall_fn)
+ 
+            facets.append(wall_dofs)
+            values.append(np.full_like(wall_dofs, bnd["idt"]))
+            boundaries[key]["dofs"] = wall_dofs
 
-        # df.File("boundaries.pvd") << boundary_markers
+        marked_facets = np.hstack(facets)
+        marked_values = np.hstack(values)
+        sorted_facets = np.argsort(marked_facets)
+
+        boundary_markers = df.mesh.meshtags(
+                mesh,
+                fdim,
+                marked_facets[sorted_facets],
+                marked_values[sorted_facets],
+                )
+
+        self.facet_tag = boundary_markers
 
         # Redefine boundary measure
-        ds = df.Measure("ds", domain=mesh, subdomain_data=boundary_markers)
+        metadata = {"quadrature_degree": 4}
+        ds = ufl.Measure(
+                "ds",
+                domain=mesh,
+                subdomain_data=boundary_markers,
+                metadata=metadata,
+                )
 
         return boundaries, ds
 
@@ -127,17 +161,12 @@ class StretchFF(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[0]
-        L = max_v - min_v
-        
-        self.bcsfun = df.Expression(
-            ("k*L", 0, 0), 
-            L=L, 
-            k=0, 
-            degree=2
-        )
+        self.L = max_v - min_v
+
+        self.bcsfun = df.fem.Constant(mesh, PETSc.ScalarType((0, 0, 0)))
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.k = stretch_value
+        self.bcsfun.value = (stretch_value*self.L, 0, 0)
 
     def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([1.0, 0.0, 0.0])
@@ -154,12 +183,35 @@ class StretchFF(DeformationExperiment):
     def bcs(self):
         boundaries, V_CG2, stretch = self.boundaries, self.V_CG2, self.stretch
 
-        xmin = boundaries["x_min"]["subdomain"]
-        xmax = boundaries["x_max"]["subdomain"]
+        xmin = boundaries["x_min"]
+        xmax = boundaries["x_max"]
+
+
+        domain = V_CG2.mesh
+        u_bc = np.array((0,) * domain.geometry.dim, dtype=PETSc.ScalarType)
+        left_dofs = df.fem.locate_dofs_topological(V_CG2, self.facet_tag.dim, self.facet_tag.find(1))
+        bcs = [df.fem.dirichletbc(u_bc, left_dofs, V_CG2)]
+
+        exit()
+
+
+        u_bc = np.array((0,)*2, dtype=PETSc.ScalarType)
+        
+
+        dofs_fixed = df.fem.locate_dofs_topological(
+                V_CG2,
+                self.facet_tag.dim,
+                self.facet_tag.find(xmin["idt"]))
+
+        dofs_moving = df.fem.locate_dofs_topological(
+                V_CG2,
+                self.facet_tag.dim,
+                self.facet_tag.find(xmax["idt"]))
+        
 
         bcs = [
-            df.DirichletBC(V_CG2, df.Constant((0., 0., 0.)), xmin),
-            df.DirichletBC(V_CG2, self.bcsfun, xmax),
+            df.fem.dirichletbc(u_bc, dofs_fixed, V_CG2),
+            #df.fem.dirichletbc(self.bcsfun, dofs_moving, V_CG2),
         ]
 
         return bcs
@@ -506,34 +558,3 @@ class ShearSN(DeformationExperiment):
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
-
-
-class Wall(): #df.SubDomain):
-    """
-
-    Subdomain class; extracts coordinates for the six walls. Assumes
-    all boundaryes are aligned with the x, y and z axes.
-
-    Params:
-        index: 0, 1 or 2 for x, y or z
-        minmax: 'min' or 'max'; for smallest and largest values for
-            chosen dimension
-        dimensions: 3 x 2 array giving dimensions of the domain,
-            logically following the same flow as index and minmax
-
-    """
-
-    def __init__(self, index, minmax, dimensions):
-        super().__init__()
-
-        assert minmax in ["min", "max"], "Error: Let minmax be 'min' or 'max'."
-
-        # extract coordinate for min or max in the direction we're working in
-        index_coord = dimensions[index][0 if minmax == "min" else 1]
-
-        self.index, self.index_coord = index, index_coord
-
-    def inside(self, x, on_boundary):
-        index, index_coord = self.index, self.index_coord
-
-        return df.near(x[index], index_coord, eps=1e-10) and on_boundary

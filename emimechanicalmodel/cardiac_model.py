@@ -76,9 +76,9 @@ class CardiacModel(ABC):
 
         self.exp = exp_dict[experiment](mesh, self.V_CG)
 
-        self.fiber_dir = df.as_vector([1, 0, 0])
-        self.sheet_dir = df.as_vector([0, 1, 0])
-        self.normal_dir = df.as_vector([0, 0, 1])
+        self.fiber_dir = ufl.as_vector([1, 0, 0])
+        self.sheet_dir = ufl.as_vector([0, 1, 0])
+        self.normal_dir = ufl.as_vector([0, 0, 1])
 
         self.bcs = self.exp.bcs
 
@@ -222,6 +222,7 @@ class CardiacModel(ABC):
                 }
             },
             form_compiler_parameters={"optimize": True},
+            metadata={"quadrature_degree": 4},
         )
         """
         self._solver.solve(self.problem, self.state.vector())
