@@ -206,16 +206,16 @@ def define_weak_form(mesh, stretch_fun, mat_params):
     # Weak form
     dx = ufl.Measure("dx", domain=mesh, metadata={"qudrature_degree" : 4})
     weak_form = 0
-    weak_form += elasticity_term(F, J, p, v, mat_params, dx)
+    weak_form += elasticity_term(F, J, p, v, mat_params, dx, mesh)
     weak_form += pressure_term(q, J, dx)
 
-    V = state_space.sub(0)
+    V, _ = state_space.sub(0).collapse()
     bcs = define_bcs(V, mesh, stretch_fun)
 
     return weak_form, state, u, bcs
 
 
-def elasticity_term(F, J, p, v, mat_params, dx):
+def elasticity_term(F, J, p, v, mat_params, dx, mesh):
     """
 
     First term of the weak form
@@ -235,7 +235,7 @@ def elasticity_term(F, J, p, v, mat_params, dx):
 
     psi = psi_holzapfel(F, mat_params)
     P = ufl.diff(psi, F) + p * J * ufl.inv(F.T)
-
+    
     return ufl.inner(P, ufl.grad(v)) * dx
 
 
@@ -291,7 +291,7 @@ def define_bcs(V, mesh, stretch_fun):
 
     u_fixed = df.fem.Constant(mesh, PETSc.ScalarType(0))
     
-    bnd_funs = [xmax_bnd, ymin_bnd, zmin_bnd]
+    bnd_funs = [xmin_bnd, ymin_bnd, zmin_bnd]
     components = [0, 1, 2]
 
     bcs = []
@@ -311,13 +311,13 @@ def define_bcs(V, mesh, stretch_fun):
     
     bc = df.fem.dirichletbc(stretch_fun, dofs, V.sub(0))
     bcs.append(bc)
-    
+
     return bcs
 
 
 mesh, volumes = load_mesh("single_cell.xdmf")
-stretch = np.linspace(0, 0.2, 21)
-stretch_fun = df.fem.Constant(mesh, PETSc.ScalarType(0))
+stretch = np.linspace(0, 0.1, 100)
+stretch_fun = df.fem.Constant(mesh, PETSc.ScalarType(0.0))
 
 U_DG0 = df.fem.FunctionSpace(mesh, ("DG", 0))
 mat_params = discrete_material_params(U_DG0, volumes)
@@ -327,10 +327,11 @@ weak_form, state, u, bcs = define_weak_form(mesh, stretch_fun, mat_params)
 problem = df.fem.petsc.NonlinearProblem(weak_form, state, bcs)
 solver = df.nls.petsc.NewtonSolver(mesh.comm, problem)
 
-solver.rtol=1e-4
-solver.atol=1e-4
+solver.rtol=1e-2
+solver.atol=1e-2
 solver.convergence_criterium = "incremental"
-    
+
+
 # saving displacement solution to file
 disp_file = df.io.XDMFFile(mesh.comm, "u_emi_stretching.xdmf", "w")
 disp_file.write_mesh(mesh)
@@ -338,8 +339,10 @@ disp_file.write_mesh(mesh)
 V_CG2 = df.fem.VectorFunctionSpace(mesh, ("CG", 2))
 u_fun = df.fem.Function(V_CG2, name="Displacement (µm)")
 
+#df.log.set_log_level(df.cpp.log.LogLevel(2))
+
 for s in stretch:
-    print(f"Domain stretch: {100*s:.1f} %")
+    print(f"Domain stretch: {100*s:.5f} %")
     stretch_fun.value = s
     solver.solve(state)
 
