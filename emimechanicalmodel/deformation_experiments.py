@@ -93,12 +93,12 @@ class DeformationExperiment():
         # define subdomains
 
         boundaries = {
-            "x_min": {"subdomain": xmin, "idt": 1},
-            "x_max": {"subdomain": xmax, "idt": 2},
-            "y_min": {"subdomain": ymin, "idt": 3},
-            "y_max": {"subdomain": ymax, "idt": 4},
-            "z_min": {"subdomain": zmin, "idt": 5},
-            "z_max": {"subdomain": zmax, "idt": 6},
+            "x_min": {"bnd_fun": xmin, "idt": 1},
+            "x_max": {"bnd_fun": xmax, "idt": 2},
+            "y_min": {"bnd_fun": ymin, "idt": 3},
+            "y_max": {"bnd_fun": ymax, "idt": 4},
+            "z_min": {"bnd_fun": zmin, "idt": 5},
+            "z_max": {"bnd_fun": zmax, "idt": 6},
         }
 
         # Mark boundary subdomains
@@ -109,7 +109,7 @@ class DeformationExperiment():
         values = []
 
         for (key, bnd) in boundaries.items():
-            wall_fn = bnd["subdomain"]
+            wall_fn = bnd["bnd_fun"]
             wall_dofs = df.mesh.locate_entities_boundary(mesh, fdim, wall_fn)
  
             facets.append(wall_dofs)
@@ -140,6 +140,49 @@ class DeformationExperiment():
 
         return boundaries, ds
 
+    def _define_deformation_bcs(self, surface_fixed, surface_moving):
+        """
+        
+        Defines Dirichlet BC for two sides, in a pairwise manner.
+
+        Args:
+            surface_fixed - dictionary for properties of the fixed surface
+            surface_moving - dictionary for properties of the fixed surface
+
+        Both surface dictionary objects needs an "idt" tag which corresponds to
+        the meshfunction defined over all surfaces of the mesh (top, bottom, ...).
+
+        """
+        V_CG2, stretch = self.V_CG2, self.stretch
+        mesh = V_CG2.mesh
+        
+        u_moving = df.fem.Constant(mesh, PETSc.ScalarType((0, 0, 0)))
+        u_fixed = np.array((0,) * mesh.geometry.dim, dtype=PETSc.ScalarType)
+        """
+        dofs_fixed = df.fem.locate_dofs_topological(
+                V_CG2,
+                self.facet_tag.dim,
+                self.facet_tag.find(surface_fixed["idt"]))
+
+        dofs_moving = df.fem.locate_dofs_topological(
+                V_CG2,
+                self.facet_tag.dim,
+                self.facet_tag.find(surface_moving["idt"]))        
+        """
+
+        dofs_fixed = df.mesh.locate_entities_boundary(mesh, 2, surface_fixed["bnd_fun"])
+        dofs_moving = df.mesh.locate_entities_boundary(mesh, 2, surface_moving["bnd_fun"])
+
+        bcs = [
+            df.fem.dirichletbc(u_fixed, dofs_fixed, V_CG2),
+            df.fem.dirichletbc(u_moving, dofs_moving, V_CG2),
+        ]
+
+        self.bcsfun = u_moving      # this will be updated by respective subclasses
+
+        return bcs
+
+
     def assign_stretch(self, stretch_value):
         """
 
@@ -163,7 +206,6 @@ class StretchFF(DeformationExperiment):
         min_v, max_v = self.dimensions[0]
         self.L = max_v - min_v
 
-        self.bcsfun = df.fem.Constant(mesh, PETSc.ScalarType((0, 0, 0)))
 
     def assign_stretch(self, stretch_value):
         self.bcsfun.value = (stretch_value*self.L, 0, 0)
@@ -181,40 +223,10 @@ class StretchFF(DeformationExperiment):
 
     @property
     def bcs(self):
-        boundaries, V_CG2, stretch = self.boundaries, self.V_CG2, self.stretch
-
-        xmin = boundaries["x_min"]
-        xmax = boundaries["x_max"]
-
-
-        domain = V_CG2.mesh
-        u_bc = np.array((0,) * domain.geometry.dim, dtype=PETSc.ScalarType)
-        left_dofs = df.fem.locate_dofs_topological(V_CG2, self.facet_tag.dim, self.facet_tag.find(1))
-        bcs = [df.fem.dirichletbc(u_bc, left_dofs, V_CG2)]
-
-        exit()
-
-
-        u_bc = np.array((0,)*2, dtype=PETSc.ScalarType)
+        xmin = self.boundaries["x_min"]
+        xmax = self.boundaries["x_max"]
         
-
-        dofs_fixed = df.fem.locate_dofs_topological(
-                V_CG2,
-                self.facet_tag.dim,
-                self.facet_tag.find(xmin["idt"]))
-
-        dofs_moving = df.fem.locate_dofs_topological(
-                V_CG2,
-                self.facet_tag.dim,
-                self.facet_tag.find(xmax["idt"]))
-        
-
-        bcs = [
-            df.fem.dirichletbc(u_bc, dofs_fixed, V_CG2),
-            #df.fem.dirichletbc(self.bcsfun, dofs_moving, V_CG2),
-        ]
-
-        return bcs
+        return self._define_deformation_bcs(xmin, xmax)
 
 
 class StretchSS(DeformationExperiment):

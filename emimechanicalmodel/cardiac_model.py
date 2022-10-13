@@ -86,10 +86,26 @@ class CardiacModel(ABC):
         self._define_solver(verbose)
         self._define_projections()
 
+        if verbose < 2:
+            # remove information about convergence
+            df.log.set_log_level(df.cpp.log.LogLevel(60))
+
+
     def _define_solver(self, verbose):
-        J = df.fem.formmanipulations.derivative(self.weak_form, self.state)
-        self.problem = NonlinearProblem(J, self.weak_form, self.bcs)
-        self._solver = NewtonSolver(self.mesh, verbose=verbose)
+        # TODO manual implemenations to dolfinx as well
+        #J = ufl.derivative(self.weak_form, self.state)
+        #self.problem = NonlinearProblem(J, self.weak_form, self.bcs)
+        #self.solver = NewtonSolver(self.mesh, verbose=verbose)
+
+        problem = df.fem.petsc.NonlinearProblem(self.weak_form, self.state, bcs=self.bcs) 
+        solver = df.nls.petsc.NewtonSolver(self.mesh.comm, problem)
+        
+        solver.rtol=1e-4
+        solver.atol=1e-4
+        solver.convergence_criterium = "incremental"
+        
+        self.solver = solver
+
 
     def _define_state_space(self, experiment):
 
@@ -106,7 +122,7 @@ class CardiacModel(ABC):
         else:
             state_space = df.fem.FunctionSpace(mesh, P2 * P1)
 
-        self.V_CG = state_space.sub(0)
+        self.V_CG, _ = state_space.sub(0).collapse()
         self.state_space = state_space
 
         if self.verbose:
@@ -145,8 +161,8 @@ class CardiacModel(ABC):
 
     def _define_kinematic_variables(self, experiment):
         state_space = self.state_space
-        
         state = df.fem.Function(state_space, name="state")
+        
         test_functions = ufl.TestFunctions(state_space)
 
         if experiment == "contr":
@@ -208,25 +224,9 @@ class CardiacModel(ABC):
 
         return df.derivative(Pi, state, test_state)
 
-    def solve(self, project=True):
-        # just keep the simple version here for easy comparison:
+    def solve(self, project=True): 
+        self.solver.solve(self.state)
         
-        df.solve(
-            self.weak_form == 0,
-            self.state,
-            self.exp.bcs,
-            solver_parameters={
-                "newton_solver": {
-                    "absolute_tolerance": 1e-5,
-                    "maximum_iterations": 10,
-                }
-            },
-            form_compiler_parameters={"optimize": True},
-            metadata={"quadrature_degree": 4},
-        )
-        """
-        self._solver.solve(self.problem, self.state.vector())
-        """
         # save stress and strain to fenics functions
         if project:
             for proj_fun in self.projections:

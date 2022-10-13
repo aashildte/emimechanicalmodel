@@ -122,9 +122,6 @@ if enable_monitor:
 else:
     monitor = None
 
-if verbose < 2:
-    df.set_log_level(60)  # remove information about convergence
-
 # then run the simulation
 
 for (i, st_val) in enumerate(stretch):

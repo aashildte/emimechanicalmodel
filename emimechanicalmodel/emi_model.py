@@ -71,7 +71,7 @@ class EMIModel(CardiacModel):
         )
 
     def _define_active_strain(self):
-        self.active_fn = df.fem.Function(self.U, name="Active strain (-)")
+        self.active_fn = df.fem.Function(self.U, name="Active_strain")
         self.active_fn.vector.array[:] = 0  # initial value
 
     def update_active_fn(self, value):
@@ -91,8 +91,8 @@ class EMIModel(CardiacModel):
         
         # define function spaces
 
-        V_DG = df.VectorFunctionSpace(mesh, "DG", 2)
-        T_DG = df.TensorFunctionSpace(mesh, "DG", 2)
+        V_DG = df.fem.VectorFunctionSpace(mesh, ("DG", 2))
+        T_DG = df.fem.TensorFunctionSpace(mesh, ("DG", 2))
         
         u_DG = df.fem.Function(V_DG, name="Displacement (µm)")
         E_DG = df.fem.Function(T_DG, name="Strain")

@@ -1,10 +1,11 @@
 """
 
-This MWE/standalone example demonstrates a contraction for a single cell,
-using free Neumann boundary conditions on all of the outer boundary.
+This MWE/standalone example demonstrates fiber direction stretch for a single cell,
+imposed by fixing x, y and z in their respective planes for the "min" boundary,
+and by stretching x from the "max" side.
 
 This features
-- a stretching example, for stretching in the fiber direction
+- how to impose stretching using boundary conditions componentwise
 - how to assign material parameters discretely, giving two different
   strain energy functions
 - how to set up the weak formulation, including the 2 parts relevant for stretching
@@ -16,9 +17,9 @@ while ignoring
 - all options that are needed to reproduce paper plots
 
 Overall, it might provide a good persemoneous starting point for understanding
-the core of our model.
+the core of our model without being too much of a black box.
 
-Åshild Telle / Simula Research Laboratory / 2021
+Åshild Telle / Simula Research Laboratory / 2022
 
 """
 
@@ -189,7 +190,7 @@ def define_weak_form(mesh, stretch_fun, mat_params):
     P1 = ufl.FiniteElement("Lagrange", mesh.ufl_cell(), 1)
 
     state_space = df.fem.FunctionSpace(mesh, P2 * P1)
-
+    
     state = df.fem.Function(state_space, name="state")
     test_state = ufl.TestFunctions(state_space)
 
@@ -285,10 +286,13 @@ def define_bcs(V, mesh, stretch_fun):
     zmin_bnd = lambda x : np.isclose(x[2], zmin)
 
     fdim = 2
+
+    # first define the fixed boundaries
+
     u_fixed = df.fem.Constant(mesh, PETSc.ScalarType(0))
     
-    bnd_funs = [xmin_bnd, xmax_bnd, ymin_bnd, zmin_bnd]
-    components = [0, 0, 1, 2]
+    bnd_funs = [xmax_bnd, ymin_bnd, zmin_bnd]
+    components = [0, 1, 2]
 
     bcs = []
 
@@ -296,9 +300,18 @@ def define_bcs(V, mesh, stretch_fun):
         boundary_facets = df.mesh.locate_entities_boundary(mesh, fdim, bnd_fun)
         dofs = df.fem.locate_dofs_topological(V, fdim, boundary_facets)
         
-        bc = df.fem.dirichletbc(u_fixed, dofs, V.sub(comp))
+        bc = df.fem.dirichletbc(u_fixed, dofs, V.sub(0))
         bcs.append(bc)
+        
 
+    # then the moving one
+
+    boundary_facets = df.mesh.locate_entities_boundary(mesh, fdim, xmax_bnd)
+    dofs = df.fem.locate_dofs_topological(V, fdim, boundary_facets)
+    
+    bc = df.fem.dirichletbc(stretch_fun, dofs, V.sub(0))
+    bcs.append(bc)
+    
     return bcs
 
 

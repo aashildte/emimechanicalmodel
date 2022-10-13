@@ -6,7 +6,7 @@ James Trotter, Åshild Telle / Simula Research Laboratory / 2021
 
 import dolfinx as df
 
-class NonlinearProblem(): #df.NonlinearProblem):
+class NonlinearProblem(df.fem.petsc.NonlinearProblem):
     """
 
     Class extending dolfin's NonLinearProblem class,
@@ -24,7 +24,7 @@ class NonlinearProblem(): #df.NonlinearProblem):
         self.linear_form = F
         self.bcs = bcs
         self.n = 0
-        df.NonlinearProblem.__init__(self)
+        df.fem.petsc.NonlinearProblem.__init__(self)
 
     def F(self, b, x):
         """
@@ -55,7 +55,7 @@ class NonlinearProblem(): #df.NonlinearProblem):
             bc.apply(A)
 
 
-class NewtonSolver(): #df.NewtonSolver):
+class NewtonSolver(df.nls.petsc.NewtonSolver):
     """
 
     Class extending dolfin's NewtonSolver,setting several of

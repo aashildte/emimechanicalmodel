@@ -5,6 +5,7 @@
 """
 
 import dolfinx as df
+import ufl
 
 class ProjectionFunction:
     """
@@ -20,7 +21,7 @@ class ProjectionFunction:
     def __init__(self, org_fun, proj_fun):
         self.org_fun = org_fun
         self.proj_fun = proj_fun
-        self.proj_space = proj_fun.function_space()
+        self.proj_space = proj_fun.function_space
 
         self._define_proj_matrices()
 
@@ -29,19 +30,18 @@ class ProjectionFunction:
         V = self.proj_space
 
         # Define bilinear form for projection and assemble matrix
-        mesh = V.mesh()
-        dx = df.dx(mesh)
-        w = df.TestFunction(V)
-        Pv = df.TrialFunction(V)
-        a = df.inner(w, Pv) * dx
-        self.proj_A = df.assemble(a)
+        mesh = V.mesh
+        dx = ufl.dx(mesh, metadata={"quadrature_degree" : 4})
+        w = ufl.TestFunction(V)
+        Pv = ufl.TrialFunction(V)
+        a = df.fem.form(ufl.inner(w, Pv) * dx)
+        self.proj_A = df.fem.petsc.assemble_matrix(a)
 
         # Define linear form for projection
-        mesh = V.mesh()
-        dx = df.dx(mesh)
-        w = df.TestFunction(V)
-        Pv = df.TrialFunction(V)
-        self.proj_L = df.inner(w, v) * dx
+        mesh = V.mesh
+        w = ufl.TestFunction(V)
+        Pv = ufl.TrialFunction(V)
+        self.proj_L = ufl.inner(w, v) * dx
 
     def project(self):
         """
