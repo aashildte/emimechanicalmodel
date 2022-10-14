@@ -1,24 +1,24 @@
 """
-
-This MWE/standalone example demonstrates a contraction for a single cell,
-using free Neumann boundary conditions on all of the outer boundary.
+This MWE/standalone example demonstrates fiber direction stretch for a single cell,
+imposed by fixing x, y and z in their respective planes for the "min" boundary,
+and by stretching x from the "max" side.
 
 This features
-- a stretching example, for stretching in the fiber direction
+- how to impose stretching using boundary conditions componentwise
 - how to assign material parameters discretely, giving two different
   strain energy functions
 - how to set up the weak formulation, including the 2 parts relevant for stretching
 
 while ignoring
+
 - active contraction setup + sheet-fiber direction stretch
 - all HPC options
 - all monitoring options
 - all options that are needed to reproduce paper plots
 
 Overall, it might provide a good persemoneous starting point for understanding
-the core of our model.
-
-Åshild Telle / Simula Research Laboratory / 2021
+the core of our model without being too much of a black box.
+Åshild Telle / Simula Research Laboratory / 2022
 
 """
 
@@ -151,7 +151,7 @@ def psi_holzapfel(
 
     """
 
-    a, b, a_f, b_f, a_s, b_s, a_fs, b_fs = (
+    a, b, a_f, b_f = (
         mat_params["a"],
         mat_params["b"],
         mat_params["a_f"],
@@ -225,7 +225,6 @@ def elasticity_term(F, J, p, v, mat_params):
     First term of the weak form
 
     Args:
-        active_fun (ufl form): active strain function
         F (ufl form): deformation tensor
         J (ufl form): Jacobian
         p (df.Function): pressure
@@ -237,7 +236,7 @@ def elasticity_term(F, J, p, v, mat_params):
 
     """
 
-    psi = psi_holzapfel(F, *mat_params)
+    psi = psi_holzapfel(F, mat_params)
     P = df.diff(psi, F) + p * J * df.inv(F.T)
 
     return df.inner(P, df.grad(v)) * df.dx
@@ -312,9 +311,16 @@ disp_file = df.XDMFFile("stretching_example/u_emi.xdmf")
 V_CG2 = df.VectorFunctionSpace(mesh, "CG", 2)
 u_fun = df.Function(V_CG2, name="Displacement")
 
+
+problem = df.NonlinearProblem(weak_form, state, bcs)
+newtonsolver = df.NewtonSolver()
+
+
 for s in stretch:
     stretch_fun.assign(s)
-    df.solve(weak_form == 0, state, bcs=bcs)
+    #df.solve(weak_form == 0, state, bcs=bcs)
+    newtonsolver.solve(problem, state.vector())
+
 
     # plotting again
     u_fun.assign(df.project(u, V_CG2))
