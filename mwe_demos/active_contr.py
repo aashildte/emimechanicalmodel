@@ -22,13 +22,9 @@ the core of our model.
 """
 
 import numpy as np
-import dolfin as df
+import dolfinx as df
 import ufl
 from mpi4py import MPI
-
-df.parameters["form_compiler"]["cpp_optimize"] = True
-df.parameters["form_compiler"]["representation"] = "uflacs"
-df.parameters["form_compiler"]["quadrature_degree"] = 4
 
 
 def load_mesh(mesh_file):
@@ -44,19 +40,16 @@ def load_mesh(mesh_file):
         volumes (df.MeshFunction): Subdomain partition
 
     """
-
+    
     comm = MPI.COMM_WORLD
-    h5_file = df.HDF5File(comm, mesh_file, "r")
-    mesh = df.Mesh()
-    h5_file.read(mesh, "mesh", False)
 
-    volumes = df.MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
-    h5_file.read(volumes, "volumes")
-
-    print(
-        "Number of nodes: %g, number of elements: %g"
-        % (mesh.num_vertices(), mesh.num_cells())
-    )
+    with df.io.XDMFFile(comm, mesh_file, "r") as xdmf_file:
+        mesh = xdmf_file.read_mesh(name="mesh")
+        volumes = xdmf_file.read_meshtags(mesh, name="mesh")
+    
+    num_vertices = mesh.geometry.index_map().size_global
+    num_cells = mesh.topology.index_map(3).size_global
+    print(f"Number of nodes: {num_vertices}, number of elements: {num_cells}")
 
     return mesh, volumes
 
@@ -81,8 +74,8 @@ def assign_discrete_values(
 
     extracellular_domain_id = 0
 
-    function.vector()[:] = np.where(
-        subdomain_map.array()[:] == extracellular_domain_id,
+    function.vector.array[:] = np.where(
+        subdomain_map.values[:] == extracellular_domain_id,
         extracellular_value,
         intracellular_value,
     )
@@ -109,16 +102,58 @@ def discrete_material_params(fun_space, subdomain_map):
     a_if = 19.83
     b_if = 24.72
 
-    a_fun = df.Function(fun_space, name="a")
+    a_fun = df.fem.Function(fun_space, name="a")
     assign_discrete_values(a_fun, subdomain_map, a_i, a_e)
 
-    b_fun = df.Function(fun_space, name="b")
+    b_fun = df.fem.Function(fun_space, name="b")
     assign_discrete_values(b_fun, subdomain_map, b_i, b_e)
 
-    a_f_fun = df.Function(fun_space, name="a_f")
+    a_f_fun = df.fem.Function(fun_space, name="a_f")
     assign_discrete_values(a_f_fun, subdomain_map, a_if, 0)
 
-    b_f_fun = df.Function(fun_space, name="b_f")
+    b_f_fun = df.fem.Function(fun_space, name="b_f")
+    assign_discrete_values(b_f_fun, subdomain_map, b_if, 1)
+
+
+    return {
+        "a": a_fun,
+        "b": b_fun,
+        "a_f": a_f_fun,
+        "b_f": b_f_fun,
+    }
+
+
+def discrete_material_params(fun_space, subdomain_map):
+    """
+
+    Defines material parameters based on subdomain partition; instead
+    of using two strain energy functions we define each material parameter
+    as a discontinous function.
+
+    Args:
+        fun_space (df.FunctionSpace): function space in which each
+            parameter will live in
+        subdomain_map_(df.MeshFunction): corresponding subdomain partition
+
+    """
+
+    a_i = 5.7
+    b_i = 11.67
+    a_e = 1.52
+    b_e = 16.31
+    a_if = 19.83
+    b_if = 24.72
+
+    a_fun = df.fem.Function(fun_space, name="a")
+    assign_discrete_values(a_fun, subdomain_map, a_i, a_e)
+
+    b_fun = df.fem.Function(fun_space, name="b")
+    assign_discrete_values(b_fun, subdomain_map, b_i, b_e)
+
+    a_f_fun = df.fem.Function(fun_space, name="a_f")
+    assign_discrete_values(a_f_fun, subdomain_map, a_if, 0)
+
+    b_f_fun = df.fem.Function(fun_space, name="b_f")
     assign_discrete_values(b_f_fun, subdomain_map, b_if, 1)
 
 
@@ -150,7 +185,7 @@ def psi_holzapfel(
 
     """
 
-    a, b, a_f, b_f, a_s, b_s, a_fs, b_fs = (
+    a, b, a_f, b_f = (
         mat_params["a"],
         mat_params["b"],
         mat_params["a_f"],
@@ -159,18 +194,19 @@ def psi_holzapfel(
 
     cond = lambda a: ufl.conditional(a > 0, a, 0)
 
-    e1 = df.as_vector([1.0, 0.0, 0.0])
+    e1 = ufl.as_vector([1.0, 0.0, 0.0])
 
-    J = df.det(F)
+    J = ufl.det(F)
     C = pow(J, -float(2) / 3) * F.T * F
 
-    IIFx = df.tr(C)
-    I4e1 = df.inner(C * e1, e1)
+    IIFx = ufl.tr(C)
+    I4e1 = ufl.inner(C * e1, e1)
 
-    W_hat = a / (2 * b) * (df.exp(b * (IIFx - 3)) - 1)
-    W_f = a_f / (2 * b_f) * (df.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
+    W_hat = a / (2 * b) * (ufl.exp(b * (IIFx - 3)) - 1)
+    W_f = a_f / (2 * b_f) * (ufl.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
 
     return W_hat + W_f
+
 
 def define_weak_form(mesh, active_fun, mat_params):
     """
@@ -188,34 +224,35 @@ def define_weak_form(mesh, active_fun, mat_params):
 
     """
 
-    P1 = df.FiniteElement("Lagrange", mesh.ufl_cell(), 1)
-    P2 = df.VectorElement("Lagrange", mesh.ufl_cell(), 2)
-    P3 = df.VectorElement("Real", mesh.ufl_cell(), 0, 6)
+    P1 = ufl.FiniteElement("Lagrange", mesh.ufl_cell(), 1)
+    P2 = ufl.VectorElement("Lagrange", mesh.ufl_cell(), 2)
+    P3 = ufl.VectorElement("Real", mesh.ufl_cell(), 0, 6)
 
-    state_space = df.FunctionSpace(mesh, df.MixedElement([P1, P2, P3]))
+    state_space = df.fem.FunctionSpace(mesh, P1 * P1 * #)
 
-    state = df.Function(state_space, name="state")
-    test_state = df.TestFunction(state_space)
+    state = df.fem.Function(state_space, name="state")
+    test_state = ufl.TestFunctions(state_space)
 
-    p, u, r = df.split(state)
-    q, v, _ = df.split(test_state)
+    u, p, r = state.split()
+    v, q, _ = test_state
 
     # Kinematics
     d = len(u)
-    I = df.Identity(d)  # Identity tensor
-    F = df.variable(I + df.grad(u))  # Deformation gradient
-    J = df.det(F)
+    I = ufl.Identity(d)  # Identity tensor
+    F = ufl.variable(I + ufl.grad(u))  # Deformation gradient
+    J = ufl.det(F)
 
     # Weak form
+    dx = ufl.Measure("dx", domain=mesh, metadata={"qudrature_degree" : 4})
     weak_form = 0
-    weak_form += elasticity_term(active_fun, F, J, p, v, mat_params)
-    weak_form += pressure_term(q, J)
-    weak_form += rigid_motion_term(mesh, u, r, state, test_state)
+    weak_form += elasticity_term(active_fun, F, J, p, v, mat_params, dx)
+    weak_form += pressure_term(q, J, dx)
+    #weak_form += rigid_motion_term(mesh, u, r, state, test_state, dx)
 
     return weak_form, state, u
 
 
-def elasticity_term(active_fun, F, J, p, v, mat_params):
+def elasticity_term(active_fun, F, J, p, v, mat_params, dx):
     """
 
     First term of the weak form
@@ -234,17 +271,17 @@ def elasticity_term(active_fun, F, J, p, v, mat_params):
     """
 
     sqrt_fun = (1 - active_fun) ** (-0.5)
-    F_a = df.as_tensor(((1 - active_fun, 0, 0), (0, sqrt_fun, 0), (0, 0, sqrt_fun)))
+    F_a = ufl.as_tensor(((1 - active_fun, 0, 0), (0, sqrt_fun, 0), (0, 0, sqrt_fun)))
 
-    F_e = df.variable(F * df.inv(F_a))
+    F_e = ufl.variable(F * ufl.inv(F_a))
     psi = psi_holzapfel(F_e, mat_params)
 
-    P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T) + p * J * df.inv(F.T)
+    P = ufl.det(F_a) * ufl.diff(psi, F_e) * ufl.inv(F_a.T) + p * J * ufl.inv(F.T)
 
-    return df.inner(P, df.grad(v)) * df.dx
+    return ufl.inner(P, ufl.grad(v)) * dx
 
 
-def pressure_term(q, J):
+def pressure_term(q, J, dx):
     """
 
     Second term of the weak form
@@ -257,10 +294,10 @@ def pressure_term(q, J):
         component of weak form (ufl form)
 
     """
-    return q * (J - 1) * df.dx
+    return q * (J - 1) * dx
 
 
-def rigid_motion_term(mesh, u, r, state, test_state):
+def rigid_motion_term(mesh, u, r, state, test_state, dx):
     """
 
     Third term of the weak form
@@ -277,7 +314,7 @@ def rigid_motion_term(mesh, u, r, state, test_state):
 
     """
 
-    position = df.SpatialCoordinate(mesh)
+    position = mesh.spatial_coordinates
 
     RM = [
         df.Constant((1, 0, 0)),
@@ -288,36 +325,45 @@ def rigid_motion_term(mesh, u, r, state, test_state):
         df.cross(position, df.Constant((0, 0, 1))),
     ]
 
-    Pi = sum(df.dot(u, zi) * r[i] * df.dx for i, zi in enumerate(RM))
+    Pi = sum(df.dot(u, zi) * r[i] * dx for i, zi in enumerate(RM))
 
     return df.derivative(Pi, state, test_state)
 
 
 if __name__ == "__main__":
-    mesh, volumes = load_mesh("cell_3D.h5")
+    mesh, volumes = load_mesh("single_cell.xdmf")
     active_strain = np.linspace(0, 0.2, 20)
 
-    U_DG0 = df.FunctionSpace(mesh, "DG", 0)
+    U_DG0 = df.fem.FunctionSpace(mesh, ("DG", 0))
 
     mat_params = discrete_material_params(U_DG0, volumes)
 
-    active_fun = df.Function(U_DG0, name="Active strain")
-    active_fun.vector()[:] = 0  # initial value
+    active_fun = df.fem.Function(U_DG0, name="Active_strain")
+    active_fun.vector.array[:] = 0  # initial value
 
     weak_form, state, u = define_weak_form(mesh, active_fun, mat_params)
+    
+    problem = df.fem.petsc.NonlinearProblem(weak_form, state)
+    solver = df.nls.petsc.NewtonSolver(mesh.comm, problem)
 
+    solver.rtol=1e-2
+    solver.atol=1e-2
+    solver.convergence_criterium = "incremental"
+    
     # just for plotting purposes
-    disp_file = df.XDMFFile("contraction_example/u_emi.xdmf")
-    V_CG2 = df.VectorFunctionSpace(mesh, "CG", 2)
-    u_fun = df.Function(V_CG2, name="Displacement")
+    disp_file = df.io.XDMFFile(mesh.comm, "u_emi_contraction.xdmf", "w")
+    disp_file.write_mesh(mesh)
+
+    V_CG2 = df.fem.VectorFunctionSpace(mesh, ("CG", 2))
+    u_fun = df.fem.Function(V_CG2, name="Displacement")
 
     for a in active_strain:
         assign_discrete_values(active_fun, volumes, a, 0)  # a in omega_i, 0 in omega_e
-        df.solve(weak_form == 0, state)
+        solver.solve(state)
 
         # plotting again
         u_fun.assign(df.project(u, V_CG2))
 
-        disp_file.write_checkpoint(u_fun, "Displacement (µm)", a, append=True)
+        disp_file.write_function(u_fun, a)
 
     disp_file.close()
