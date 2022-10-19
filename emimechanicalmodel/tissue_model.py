@@ -9,6 +9,7 @@ corresponding EMIModel.
 """
 
 import dolfinx as df
+from petsc4py import PETSc
 
 from emimechanicalmodel.cardiac_model import CardiacModel
 from emimechanicalmodel.holzapfelmaterial import HolzapfelMaterial
@@ -42,8 +43,8 @@ class TissueModel(CardiacModel):
         self.num_subdomains = 1
 
         # necessesary for volume integrals etc.
-        self.volumes = df.MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
-        self.volumes.array()[:] = 0
+        #self.volumes = df.MeshTags("size_t", mesh, mesh.topology().dim(), 0)
+        #self.volumes.array()[:] = 0
 
         super().__init__(
             mesh,
@@ -52,26 +53,26 @@ class TissueModel(CardiacModel):
         )
 
     def _define_active_strain(self):
-        self.active_fn = df.Constant(0.0, name="Active strain (-)")
+        self.active_fn = df.fem.Constant(self.mesh, PETSc.ScalarType(0))
 
     def update_active_fn(self, value):
-        self.active_fn.assign(value)
+        self.active_fn.value = value
 
     def _define_projections(self):
         mesh = self.mesh
         
         # define function spaces
 
-        V_CG = df.VectorFunctionSpace(mesh, "CG", 2)
-        T_CG = df.TensorFunctionSpace(mesh, "CG", 2)
+        V_CG = df.fem.VectorFunctionSpace(mesh, ("CG", 2))
+        T_CG = df.fem.TensorFunctionSpace(mesh, ("CG", 2))
 
         # define functions
 
-        u = df.Function(V_CG, name="Displacement (µm)")
+        u = df.fem.Function(V_CG, name="Displacement (µm)")
         
-        E = df.Function(T_CG, name="Strain") 
-        sigma = df.Function(T_CG, name="Cauchy stress (kPa)")
-        P = df.Function(T_CG, name="Piola-Kirchhoff stress (kPa)")
+        E = df.fem.Function(T_CG, name="Strain") 
+        sigma = df.fem.Function(T_CG, name="Cauchy stress (kPa)")
+        P = df.fem.Function(T_CG, name="Piola-Kirchhoff stress (kPa)")
 
         # then projection objects
 

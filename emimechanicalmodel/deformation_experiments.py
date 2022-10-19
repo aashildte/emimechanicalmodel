@@ -20,7 +20,7 @@ class DeformationExperiment():
 
     Args:
         mesh (df.Mesh): Mesh used
-        V_CG (df.VectorFunctionSpace): Function space for displacement
+        state_space (df.VectorFunctionSpace): Function space for displacement
         experiment (str): Which experiment - ...
         verbose (int): print level; 0, 1 or 2
     """
@@ -28,9 +28,10 @@ class DeformationExperiment():
     def __init__(
         self,
         mesh,
-        V_CG,
+        state_space,
     ):
-        self.V_CG2 = V_CG
+        self.state_space = state_space
+        self.mesh = mesh
         self.surface_normal = ufl.FacetNormal(mesh)
         self.stretch = df.fem.Constant(mesh, PETSc.ScalarType(0))
         self.dimensions = self.get_dimensions(mesh)
@@ -153,23 +154,29 @@ class DeformationExperiment():
         the meshfunction defined over all surfaces of the mesh (top, bottom, ...).
 
         """
-        V_CG2, stretch = self.V_CG2, self.stretch
-        mesh = V_CG2.mesh
+        state_space, stretch = self.state_space, self.stretch
+        mesh = self.mesh
         
-        u_moving = df.fem.Constant(mesh, PETSc.ScalarType((0, 0, 0)))
-        u_fixed = np.array((0,) * mesh.geometry.dim, dtype=PETSc.ScalarType)
-
-        dofs_fixed = df.mesh.locate_entities_boundary(mesh, 2, surface_fixed["bnd_fun"])
-        dofs_moving = df.mesh.locate_entities_boundary(mesh, 2, surface_moving["bnd_fun"])
+        V0, _ = state_space.sub(0).collapse()
+        dofs_fixed =  df.fem.locate_dofs_geometrical((state_space.sub(0), V0), surface_fixed["bnd_fun"])
+        dofs_moving = df.fem.locate_dofs_geometrical((state_space.sub(0), V0), surface_moving["bnd_fun"])
+            
+        
+        u_fixed = df.fem.Function(V0)
+        u_fixed.vector.array[:] = 0
+        
+        u_moving = df.fem.Function(V0)
+        u_moving.vector.array[:] = 0
 
         bcs = [
-            df.fem.dirichletbc(u_fixed, dofs_fixed, V_CG2),
-            df.fem.dirichletbc(u_moving, dofs_moving, V_CG2),
+            df.fem.dirichletbc(u_fixed, dofs_fixed, state_space.sub(0)),
+            df.fem.dirichletbc(u_moving, dofs_moving, state_space.sub(0)),
         ]
 
         self.bcsfun = u_moving      # this will be updated by respective subclasses
 
         return bcs
+
 
 
     def assign_stretch(self, stretch_value):
@@ -196,7 +203,7 @@ class StretchFF(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = (stretch_value*self.L, 0, 0)
+        self.bcsfun.vector.array[:] = stretch_value*self.L #, 0, 0)
 
     def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([1.0, 0.0, 0.0])

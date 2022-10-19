@@ -16,7 +16,7 @@ from mpi4py import MPI
 
 from emimechanicalmodel import (
     load_mesh,
-    EMIModel,
+    TissueModel,
 )
 
 from parameter_setup import (
@@ -95,14 +95,13 @@ material_params = {
     "a_if": a_f,
     "b_if": b_f,
 }
-
-model = EMIModel(
+print(type(volumes))
+model = TissueModel(
     mesh,
-    volumes,
-    material_parameters=material_params,
+    #volumes,
+    #material_parameters=material_params,
     experiment=experiment,
     verbose=verbose,
-    project_to_subspaces=project_to_subspaces,
 )
 
 # setup parameters - define the parameter space to explore

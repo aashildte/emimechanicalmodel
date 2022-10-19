@@ -74,7 +74,7 @@ class CardiacModel(ABC):
             "shear_sn": ShearSN,
         }
 
-        self.exp = exp_dict[experiment](mesh, self.V_CG)
+        self.exp = exp_dict[experiment](mesh, self.state_space)
 
         self.fiber_dir = ufl.as_vector([1, 0, 0])
         self.sheet_dir = ufl.as_vector([0, 1, 0])
@@ -88,7 +88,7 @@ class CardiacModel(ABC):
 
         if verbose < 2:
             # remove information about convergence
-            df.log.set_log_level(df.cpp.log.LogLevel(60))
+            df.log.set_log_level(df.cpp.log.LogLevel(60))     #TODO use named constant
 
 
     def _define_solver(self, verbose):
@@ -122,7 +122,6 @@ class CardiacModel(ABC):
         else:
             state_space = df.fem.FunctionSpace(mesh, P2 * P1)
 
-        self.V_CG, _ = state_space.sub(0).collapse()
         self.state_space = state_space
 
         if self.verbose:
@@ -166,10 +165,10 @@ class CardiacModel(ABC):
         test_functions = ufl.TestFunctions(state_space)
 
         if experiment == "contr":
-            u, p, r = state.split()
+            u, p, r = ufl.split(state)
             v, q, _ = test_functions
         else:
-            u, p = state.split()
+            u, p = ufl.split(state)
             v, q = test_functions
 
         self.state = state

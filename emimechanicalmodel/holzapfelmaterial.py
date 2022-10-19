@@ -6,7 +6,7 @@ Material model based on the Holzapfel-Odgen model (2009).
 
 """
 
-import dolfinx as df
+#import dolfinx as df
 import ufl
 
 
@@ -55,23 +55,23 @@ class HolzapfelMaterial:
             self.b_fs,
         )
 
-        e1 = df.as_vector([1.0, 0.0, 0.0])
-        e2 = df.as_vector([0.0, 1.0, 0.0])
+        e1 = ufl.as_vector([1.0, 0.0, 0.0])
+        e2 = ufl.as_vector([0.0, 1.0, 0.0])
 
-        J = df.det(F)
+        J = ufl.det(F)
         C = pow(J, -float(2) / 3) * F.T * F
 
-        IIFx = df.tr(C)
-        I4e1 = df.inner(C * e1, e1)
-        I4e2 = df.inner(C * e2, e2)
-        I8e1e2 = df.inner(C * e1, e2)
+        IIFx = ufl.tr(C)
+        I4e1 = ufl.inner(C * e1, e1)
+        I4e2 = ufl.inner(C * e2, e2)
+        I8e1e2 = ufl.inner(C * e1, e2)
 
         cond = lambda a: ufl.conditional(a > 0, a, 0)
 
-        W_hat = a / (2 * b) * (df.exp(b * (IIFx - 3)) - 1)
-        W_f = a_f / (2 * b_f) * (df.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
-        W_s = a_s / (2 * b_s) * (df.exp(b_s * cond(I4e2 - 1) ** 2) - 1)
-        W_fs = a_fs / (2 * b_fs) * (df.exp(b_fs * (I8e1e2**2)) - 1)
+        W_hat = a / (2 * b) * (ufl.exp(b * (IIFx - 3)) - 1)
+        W_f = a_f / (2 * b_f) * (ufl.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
+        W_s = a_s / (2 * b_s) * (ufl.exp(b_s * cond(I4e2 - 1) ** 2) - 1)
+        W_fs = a_fs / (2 * b_fs) * (ufl.exp(b_fs * (I8e1e2**2)) - 1)
         W_ani = W_f + W_s + W_fs
 
         return W_hat + W_ani

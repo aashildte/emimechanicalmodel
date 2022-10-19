@@ -1,8 +1,28 @@
 """
+This MWE/standalone example demonstrates fiber direction stretch for a single cell,
+imposed by fixing x, y and z in their respective planes for the "min" boundary,
+and by stretching x from the "max" side.
+
+This features
+- how to impose stretching using boundary conditions componentwise
+- how to assign material parameters discretely, giving two different
+  strain energy functions
+- how to set up the weak formulation, including the 2 parts relevant for stretching
+
+while ignoring
+
+- active contraction setup + sheet-fiber direction stretch
+- all HPC options
+- all monitoring options
+- all options that are needed to reproduce paper plots
+
+Overall, it might provide a good persemoneous starting point for understanding
+the core of our model without being too much of a black box.
 
 Åshild Telle / Simula Research Laboratory / 2022
 
 """
+
 
 import numpy as np
 import dolfinx as df
