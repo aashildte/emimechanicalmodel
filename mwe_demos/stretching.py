@@ -1,29 +1,9 @@
 """
 
-This MWE/standalone example demonstrates fiber direction stretch for a single cell,
-imposed by fixing x, y and z in their respective planes for the "min" boundary,
-and by stretching x from the "max" side.
-
-This features
-- how to impose stretching using boundary conditions componentwise
-- how to assign material parameters discretely, giving two different
-  strain energy functions
-- how to set up the weak formulation, including the 2 parts relevant for stretching
-
-while ignoring
-- active contraction setup + sheet-fiber direction stretch
-- all HPC options
-- all monitoring options
-- all options that are needed to reproduce paper plots
-
-Overall, it might provide a good persemoneous starting point for understanding
-the core of our model without being too much of a black box.
-
 Åshild Telle / Simula Research Laboratory / 2022
 
 """
 
-import os
 import numpy as np
 import dolfinx as df
 import ufl
@@ -109,6 +89,7 @@ def discrete_material_params(fun_space, subdomain_map):
     a_fun = df.fem.Function(fun_space, name="a")
     assign_discrete_values(a_fun, subdomain_map, a_i, a_e)
 
+
     b_fun = df.fem.Function(fun_space, name="b")
     assign_discrete_values(b_fun, subdomain_map, b_i, b_e)
 
@@ -154,6 +135,7 @@ def psi_holzapfel(
         mat_params["b_f"],
     )
 
+
     cond = lambda a: ufl.conditional(a > 0, a, 0)
 
     e1 = ufl.as_vector([1.0, 0.0, 0.0])
@@ -169,64 +151,69 @@ def psi_holzapfel(
 
     return W_hat + W_f
 
-def define_weak_form(mesh, stretch_fun, mat_params):
+
+def define_weak_form(mesh, mat_params):
     """
 
-    Defines function spaces (P1 x P2 x RM) and functions to solve for,
-    as well as the weak form for the problem itself.
+    Defines function spaces (P1 x P2) and functions to solve for, as well
+    as the weak form for the problem itself. This assumes a fully incompressible
+    formulation, solving for the displacement and the hydrostatic pressure.
 
     Args:
         mesh (df.Mesh): domain to solve equations over
-        stretch_fun (ufl form): function that assigns Dirichlet bcs
-                on wall to be stretched/extended
         mat_params (dict): material parameters
 
     Returns:
         weak form (ufl form), state, displacement, boundary conditions
+        stretch_fun (ufl form): function that assigns Dirichlet bcs
+                on wall to be stretched/extended
 
     """
-
+    
+    
     P2 = ufl.VectorElement("Lagrange", mesh.ufl_cell(), 2)
     P1 = ufl.FiniteElement("Lagrange", mesh.ufl_cell(), 1)
 
     state_space = df.fem.FunctionSpace(mesh, P2 * P1)
     
-    state = df.fem.Function(state_space, name="state")
+    state = df.fem.Function(state_space)
     test_state = ufl.TestFunctions(state_space)
 
-    u, p = state.split()
+    u, p = ufl.split(state)
     v, q = test_state
-
+    
     # Kinematics
     d = len(u)
-    I = ufl.Identity(d)  # Identity tensor
+    I = ufl.Identity(d)                # Identity tensor
     F = ufl.variable(I + ufl.grad(u))  # Deformation gradient
     J = ufl.det(F)
-
+    
     # Weak form
-    dx = ufl.Measure("dx", domain=mesh, metadata={"qudrature_degree" : 4})
+    
+    metadata = {"quadrature_degree": 4}
+    dx = ufl.Measure("dx", domain=mesh, metadata=metadata)
+    
     weak_form = 0
-    weak_form += elasticity_term(F, J, p, v, mat_params, dx, mesh)
-    weak_form += pressure_term(q, J, dx)
+    weak_form += elasticity_term(F, J, p, v, mat_params, dx)
+    weak_form += pressure_term(q, J, dx) 
+    
+    bcs, stretch_fun = define_bcs(state_space, mesh)
+    
+    return weak_form, state, bcs, stretch_fun
 
-    V, _ = state_space.sub(0).collapse()
-    bcs = define_bcs(V, mesh, stretch_fun)
 
-    return weak_form, state, u, bcs
-
-
-def elasticity_term(F, J, p, v, mat_params, dx, mesh):
+def elasticity_term(F, J, p, v, mat_params, dx):
     """
 
     First term of the weak form
 
     Args:
-        active_fun (ufl form): active strain function
         F (ufl form): deformation tensor
         J (ufl form): Jacobian
         p (df.Function): pressure
         v (df.TestFunction): test function for displacement
         mat_params (dict): material parameters
+        
 
     Returns:
         component of weak form (ufl form)
@@ -255,7 +242,7 @@ def pressure_term(q, J, dx):
     return q * (J - 1) * dx
 
 
-def define_bcs(V, mesh, stretch_fun):
+def define_bcs(state_space, mesh):
     """
 
     Defines boundary conditions based on displacement, assuming the domain
@@ -264,15 +251,15 @@ def define_bcs(V, mesh, stretch_fun):
     planes, while stretching the side defined by the highest x coord.
 
     Args:
-        V (df.VectorFunctionSpace): function space for displacement
+        state_space (FunctionSpace): function space for displacement and pressure
         mesh (df.Mesh): Domain in which we solve the problem
-        stretch_fun (ufl form): function that assigns Dirichlet bcs
-                on wall to be stretched/extended
 
     Returns:
         List of boundary conditions
-
+        stretch_fun (ufl form): function that assigns Dirichlet bcs
+                on wall to be stretched/extended
     """
+    
 
     coords = mesh.geometry.x
     xmin = min(coords[:, 0])
@@ -285,69 +272,67 @@ def define_bcs(V, mesh, stretch_fun):
     ymin_bnd = lambda x : np.isclose(x[1], ymin)
     zmin_bnd = lambda x : np.isclose(x[2], zmin)
 
-    fdim = 2
-
+    fdim = 2 
+    bcs = []
+    
     # first define the fixed boundaries
-
-    u_fixed = df.fem.Constant(mesh, PETSc.ScalarType(0))
     
     bnd_funs = [xmin_bnd, ymin_bnd, zmin_bnd]
     components = [0, 1, 2]
 
-    bcs = []
+    V0, _ = state_space.sub(0).collapse()
 
     for bnd_fun, comp in zip(bnd_funs, components):
-        boundary_facets = df.mesh.locate_entities_boundary(mesh, fdim, bnd_fun)
-        dofs = df.fem.locate_dofs_topological(V, fdim, boundary_facets)
-        
-        bc = df.fem.dirichletbc(u_fixed, dofs, V.sub(0))
+        V_c, _ = V0.sub(comp).collapse()
+        u_fixed = df.fem.Function(V_c)
+        u_fixed.vector.array[:] = 0
+        dofs = df.fem.locate_dofs_geometrical((state_space.sub(0).sub(comp),V_c), bnd_fun)
+        bc = df.fem.dirichletbc(u_fixed, dofs, state_space.sub(0).sub(comp))
         bcs.append(bc)
-        
-
+    
     # then the moving one
+    V0, _ = state_space.sub(0).collapse()
+    V0x, _ = V0.sub(0).collapse()
+    
+    stretch_fun = df.fem.Function(V0x)
+    stretch_fun.vector.array[:] = 0
 
     boundary_facets = df.mesh.locate_entities_boundary(mesh, fdim, xmax_bnd)
-    dofs = df.fem.locate_dofs_topological(V, fdim, boundary_facets)
+    dofs = df.fem.locate_dofs_topological((state_space.sub(0).sub(0), V0x), fdim, boundary_facets)
     
-    bc = df.fem.dirichletbc(stretch_fun, dofs, V.sub(0))
+    bc = df.fem.dirichletbc(stretch_fun, dofs, state_space.sub(0).sub(0))
     bcs.append(bc)
 
-    return bcs
+    return bcs, stretch_fun 
+
 
 
 mesh, volumes = load_mesh("single_cell.xdmf")
-stretch = np.linspace(0, 0.1, 100)
-stretch_fun = df.fem.Constant(mesh, PETSc.ScalarType(0.0))
 
 U_DG0 = df.fem.FunctionSpace(mesh, ("DG", 0))
 mat_params = discrete_material_params(U_DG0, volumes)
 
-weak_form, state, u, bcs = define_weak_form(mesh, stretch_fun, mat_params)
+weak_form, state, bcs, stretch_fun = define_weak_form(mesh, mat_params)
+
 
 problem = df.fem.petsc.NonlinearProblem(weak_form, state, bcs)
 solver = df.nls.petsc.NewtonSolver(mesh.comm, problem)
 
-solver.rtol=1e-2
-solver.atol=1e-2
+solver.rtol=1e-4
+solver.atol=1e-4
 solver.convergence_criterium = "incremental"
 
+stretch_values = np.linspace(0, 0.1, 10)
 
-# saving displacement solution to file
-disp_file = df.io.XDMFFile(mesh.comm, "u_emi_stretching.xdmf", "w")
-disp_file.write_mesh(mesh)
+fout = df.io.XDMFFile(mesh.comm, "displacement.xdmf", "w")
+fout.write_mesh(mesh)
 
-V_CG2 = df.fem.VectorFunctionSpace(mesh, ("CG", 2))
-u_fun = df.fem.Function(V_CG2, name="Displacement (µm)")
-
-#df.log.set_log_level(df.cpp.log.LogLevel(2))
-
-for s in stretch:
+for s in stretch_values:
     print(f"Domain stretch: {100*s:.5f} %")
-    stretch_fun.value = s
+    stretch_fun.vector.array[:] = s
     solver.solve(state)
+    u, _ = state.split()
 
-    # writing to file
-    u_fun.interpolate(u)
-    disp_file.write_function(u_fun, s)
+    fout.write_function(u, s)
 
-disp_file.close()
+fout.close()
