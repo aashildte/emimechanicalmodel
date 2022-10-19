@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="3.0" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="mesh" GridType="Uniform">
+      <Topology NumberOfElements="1364" TopologyType="Tetrahedron" NodesPerElement="4">
+        <DataItem Dimensions="1364 4" NumberType="UInt" Format="HDF">tile_connected_10p0.h5:/MeshFunction/0/mesh/topology</DataItem>
+      </Topology>
+      <Geometry GeometryType="XYZ">
+        <DataItem Dimensions="335 3" Format="HDF">tile_connected_10p0.h5:/MeshFunction/0/mesh/geometry</DataItem>
+      </Geometry>
+      <Attribute Name="f" AttributeType="Scalar" Center="Cell">
+        <DataItem Dimensions="1364 1" Format="HDF">tile_connected_10p0.h5:/MeshFunction/0/values</DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>
