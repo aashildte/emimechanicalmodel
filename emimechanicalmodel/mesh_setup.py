@@ -59,9 +59,9 @@ def assign_discrete_values(function, subdomain_map, value_i, value_e):
     Note that all cells are assigned the same value homogeneously.
 
     """
-    #import IPython; IPython.embed()
-    id_extra = 0
     
+    id_extra = 0
+
     function.vector[:] = np.where(
         subdomain_map == id_extra,
         value_e,

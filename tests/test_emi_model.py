@@ -6,12 +6,20 @@ import numpy as np
 
 from emimechanicalmodel import EMIModel
 
+def create_volumes_meshtag(mesh):
+    dim = mesh.topology.dim
+    N = mesh.topology.index_map(dim).size_local
+    indices = np.arange(0, N, 1, dtype=np.int32)
+    values = np.zeros(N, dtype=np.int32)
+    
+    volumes = df.cpp.mesh.MeshTags_int32(mesh, dim, indices, values)
+    volumes.vector.array[0] = 1
+    
+    return volumes
+
 def test_emi_active():
     mesh = df.mesh.create_unit_cube(MPI.COMM_WORLD, 1, 1, 1)
-    
-    U = df.FunctionSpace(mesh, ("DG", 0))
-    volumes = df.Function(U)
-    volumes.vector.array[0] = 1
+    volumes = create_volumes_meshtag(mesh) 
 
     model = EMIModel(
         mesh, volumes, experiment="contr"
@@ -28,10 +36,7 @@ def test_emi_active():
 
 def test_emi_proj_strain():
     mesh = df.mesh.create_unit_cube(MPI.COMM_WORLD, 1, 1, 1)
-    
-    U = df.FunctionSpace(mesh, ("DG", 0))
-    volumes = df.Function(U)
-    volumes.vector.array[0] = 1
+    volumes = create_volumes_meshtag(mesh) 
 
     model = EMIModel(
         mesh, volumes, experiment="contr"
@@ -47,10 +52,7 @@ def test_emi_proj_strain():
 
 def test_emi_proj_stress():
     mesh = df.mesh.create_unit_cube(MPI.COMM_WORLD, 1, 1, 1)
-    
-    U = df.FunctionSpace(mesh, ("DG", 0))
-    volumes = df.Function(U)
-    volumes.vector.array[0] = 1
+    volumes = create_volumes_meshtag(mesh)     
 
     model = EMIModel(
         mesh, volumes, experiment="contr"
@@ -78,9 +80,7 @@ def test_emi_proj_stress():
 def test_emi_deformation(deformation_mode):
     mesh = df.mesh.create_unit_cube(MPI.COMM_WORLD, 1, 1, 1)
     
-    U = df.FunctionSpace(mesh, ("DG", 0))
-    volumes = df.Function(U)
-    volumes.vector.array[0] = 1
+    volumes = create_volumes_meshtag(mesh)     
     
     model = EMIModel(
         mesh, volumes, experiment=deformation_mode,

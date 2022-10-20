@@ -8,6 +8,7 @@ Material model; the Holzapfel-Odgen model adapted to the EMI framework.
 
 import dolfinx as df
 import ufl
+from petsc4py import PETSc
 
 from .mesh_setup import assign_discrete_values
 
@@ -35,9 +36,16 @@ class EMIHolzapfelMaterial:
         a_if=19.83,
         b_if=24.72,
     ):
-        # these are df.Constants, which can be changed from the outside
-        self.a_i, self.a_e, self.b_i, self.b_e, self.a_if, self.b_if = \
-                a_i, a_e, b_i, b_e, a_if, b_if
+        mesh = U.mesh
+
+        # convert to constants
+
+        a_i = df.fem.Constant(mesh, PETSc.ScalarType(a_i))
+        b_i = df.fem.Constant(mesh, PETSc.ScalarType(b_i))
+        a_if = df.fem.Constant(mesh, PETSc.ScalarType(a_if))
+        b_if = df.fem.Constant(mesh, PETSc.ScalarType(b_if))
+        a_e = df.fem.Constant(mesh, PETSc.ScalarType(a_e))
+        b_e = df.fem.Constant(mesh, PETSc.ScalarType(b_e))
 
         # assign material paramters via characteristic functions
         xi_i = df.fem.Function(U)
@@ -51,9 +59,14 @@ class EMIHolzapfelMaterial:
         a_f = a_if*xi_i
         b_f = b_if        # set everywhere to avoid division by zero error
 
+        # these are constants and can be altered from the outside
+        self.a_i, self.b_i, self.a_if, self.b_if, self.a_e, self.b_e = \
+                a_i, b_i, a_if, b_if, a_e, b_e
+
         # these are fenics functions defined over all of omega, not likely to be accessed
         self._a, self._b, self._a_f, self._b_f = a, b, a_f, b_f
-
+        self.xi_e = xi_e
+        self.xi_i = xi_i
 
     def passive_component(self, F):
 

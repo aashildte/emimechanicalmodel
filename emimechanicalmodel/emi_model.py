@@ -47,8 +47,7 @@ class EMIModel(CardiacModel):
         self.volumes = volumes
         self.project_to_subspaces = project_to_subspaces
 
-        #mpi_comm = mesh.mpi_comm()
-        mpi_comm = MPI.COMM_WORLD       # TODO doublecheck that this works in parallel
+        mpi_comm = mesh.comm
 
         self.num_subdomains = int(
             mpi_comm.allreduce(max(volumes.values), op=MPI.MAX) + 1

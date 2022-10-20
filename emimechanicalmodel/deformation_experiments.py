@@ -39,13 +39,17 @@ class DeformationExperiment():
         self.normal_vector = ufl.FacetNormal(mesh)
 
     def _evaluate_load(self, F, P, wall_idt, unit_vector):
-        load = df.inner(P*self.normal_vector, unit_vector)
-        total_load = df.assemble(load * self.ds(wall_idt))
-        area = df.assemble(
-            df.det(F)
-            * df.inner(df.inv(F).T * unit_vector, unit_vector)
+        load = ufl.inner(P*self.normal_vector, unit_vector)
+        
+        total_load_form= df.fem.form(load * self.ds(wall_idt))
+        total_load = df.fem.assemble_scalar(total_load_form)
+
+        area_form = df.fem.form(
+            ufl.det(F)
+            * ufl.inner(ufl.inv(F).T * unit_vector, unit_vector)
             * self.ds(wall_idt)
         )
+        area = df.fem.assemble_scalar(area_form)
 
         return total_load / area
     
@@ -220,7 +224,7 @@ class StretchFF(DeformationExperiment):
         self.u_moving[0].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector([1.0, 0.0, 0.0])
+        unit_vector = ufl.as_vector([1.0, 0.0, 0.0])
         wall_idt = self.boundaries["x_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
@@ -245,10 +249,10 @@ class StretchSS(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = self.u_moving[1].vector.array[:] = stretch_value*self.L
+        self.u_moving[1].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector([0.0, 1.0, 0.0])
+        unit_vector = ufl.as_vector([0.0, 1.0, 0.0])
         wall_idt = self.boundaries["y_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
@@ -273,10 +277,10 @@ class StretchNN(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = self.u_moving[2].vector.array[:] = stretch_value*self.L
+        self.u_moving[2].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector([0.0, 0.0, 1.0])
+        unit_vector = ufl.as_vector([0.0, 0.0, 1.0])
         wall_idt = self.boundaries["z_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
@@ -301,16 +305,16 @@ class ShearNS(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = self.u_moving[1].vector.array[:] = stretch_value*self.L
+        self.u_moving[1].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector([0.0, 0.0, 1.0])
+        unit_vector = ufl.as_vector([0.0, 0.0, 1.0])
         wall_idt = self.boundaries["z_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
 
     def evaluate_shear_load(self, F, P):
-        unit_vector = df.as_vector([0.0, 1.0, 0.0])
+        unit_vector = ufl.as_vector([0.0, 1.0, 0.0])
         wall_idt = self.boundaries["z_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
@@ -330,16 +334,16 @@ class ShearNF(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = self.u_moving[0].vector.array[:] = stretch_value*self.L
+        self.u_moving[0].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector([0.0, 0.0, 1.0])
+        unit_vector = ufl.as_vector([0.0, 0.0, 1.0])
         wall_idt = self.boundaries["z_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
 
     def evaluate_shear_load(self, F, P):
-        unit_vector = df.as_vector([1.0, 0.0, 0.0])
+        unit_vector = ufl.as_vector([1.0, 0.0, 0.0])
         wall_idt = self.boundaries["z_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
@@ -359,16 +363,16 @@ class ShearFN(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = self.u_moving[2].vector.array[:] = stretch_value*self.L
+        self.u_moving[2].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector([1.0, 0.0, 0.0])
+        unit_vector = ufl.as_vector([1.0, 0.0, 0.0])
         wall_idt = self.boundaries["x_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
 
     def evaluate_shear_load(self, F, P):
-        unit_vector = df.as_vector([0.0, 0.0, 1.0])
+        unit_vector = ufl.as_vector([0.0, 0.0, 1.0])
         wall_idt = self.boundaries["x_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
@@ -388,19 +392,16 @@ class ShearFS(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = self.u_moving[1].vector.array[:] = stretch_value*self.L
-
-    def assign_stretch(self, stretch_value):
-        self.bcsfun.k = stretch_value
+        self.u_moving[1].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector([1.0, 0.0, 0.0])
+        unit_vector = ufl.as_vector([1.0, 0.0, 0.0])
         wall_idt = self.boundaries["x_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
 
     def evaluate_shear_load(self, F, P):
-        unit_vector = df.as_vector([0.0, 1.0, 0.0])
+        unit_vector = ufl.as_vector([0.0, 1.0, 0.0])
         wall_idt = self.boundaries["x_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
@@ -420,16 +421,16 @@ class ShearSF(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = self.u_moving[0].vector.array[:] = stretch_value*self.L
+        self.u_moving[0].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector([0.0, 1.0, 0.0])
+        unit_vector = ufl.as_vector([0.0, 1.0, 0.0])
         wall_idt = self.boundaries["y_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
 
     def evaluate_shear_load(self, F, P):
-        unit_vector = df.as_vector([1.0, 0.0, 0.0])
+        unit_vector = ufl.as_vector([1.0, 0.0, 0.0])
         wall_idt = self.boundaries["y_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
@@ -449,16 +450,16 @@ class ShearSN(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = self.u_moving[2].vector.array[:] = stretch_value*self.L
+        self.u_moving[2].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector([0.0, 1.0, 0.0])
+        unit_vector = ufl.as_vector([0.0, 1.0, 0.0])
         wall_idt = self.boundaries["y_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
 
     def evaluate_shear_load(self, F, P):
-        unit_vector = df.as_vector([0.0, 0.0, 1.0])
+        unit_vector = ufl.as_vector([0.0, 0.0, 1.0])
         wall_idt = self.boundaries["y_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
