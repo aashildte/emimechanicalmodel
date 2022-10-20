@@ -1,15 +1,17 @@
 import os
 import pytest
-import dolfin as df
+import dolfinx as df
 from mpi4py import MPI
 import numpy as np
 
 from emimechanicalmodel import EMIModel
 
 def test_emi_active():
-    mesh = df.UnitCubeMesh(1, 1, 1)
-    volumes = df.MeshFunction('size_t', mesh, 3)
-    volumes.array()[0] = 1
+    mesh = df.mesh.create_unit_cube(MPI.COMM_WORLD, 1, 1, 1)
+    
+    U = df.FunctionSpace(mesh, ("DG", 0))
+    volumes = df.Function(U)
+    volumes.vector.array[0] = 1
 
     model = EMIModel(
         mesh, volumes, experiment="contr"
@@ -25,9 +27,11 @@ def test_emi_active():
 
 
 def test_emi_proj_strain():
-    mesh = df.UnitCubeMesh(1, 1, 1)
-    volumes = df.MeshFunction('size_t', mesh, 3)
-    volumes.array()[0] = 1
+    mesh = df.mesh.create_unit_cube(MPI.COMM_WORLD, 1, 1, 1)
+    
+    U = df.FunctionSpace(mesh, ("DG", 0))
+    volumes = df.Function(U)
+    volumes.vector.array[0] = 1
 
     model = EMIModel(
         mesh, volumes, experiment="contr"
@@ -42,9 +46,11 @@ def test_emi_proj_strain():
 
 
 def test_emi_proj_stress():
-    mesh = df.UnitCubeMesh(1, 1, 1)
-    volumes = df.MeshFunction('size_t', mesh, 3)
-    volumes.array()[0] = 1
+    mesh = df.mesh.create_unit_cube(MPI.COMM_WORLD, 1, 1, 1)
+    
+    U = df.FunctionSpace(mesh, ("DG", 0))
+    volumes = df.Function(U)
+    volumes.vector.array[0] = 1
 
     model = EMIModel(
         mesh, volumes, experiment="contr"
@@ -70,9 +76,11 @@ def test_emi_proj_stress():
     ],
 )
 def test_emi_deformation(deformation_mode):
-    mesh = df.UnitCubeMesh(1, 1, 1)
-    volumes = df.MeshFunction('size_t', mesh, 3)
-    volumes.array()[0] = 1
+    mesh = df.mesh.create_unit_cube(MPI.COMM_WORLD, 1, 1, 1)
+    
+    U = df.FunctionSpace(mesh, ("DG", 0))
+    volumes = df.Function(U)
+    volumes.vector.array[0] = 1
     
     model = EMIModel(
         mesh, volumes, experiment=deformation_mode,
@@ -88,7 +96,7 @@ def test_emi_deformation(deformation_mode):
         assert(model.evaluate_shear_load() > 0)
 
 if __name__ == "__main__":
-    #test_emi_active()
-    #test_emi_proj_strain()
-    #test_emi_proj_stress()
+    test_emi_active()
+    test_emi_proj_strain()
+    test_emi_proj_stress()
     test_emi_deformation("shear_fs")

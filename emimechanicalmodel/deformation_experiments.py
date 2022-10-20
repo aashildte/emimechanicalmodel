@@ -159,21 +159,35 @@ class DeformationExperiment():
         
         V0, _ = state_space.sub(0).collapse()
         dofs_fixed =  df.fem.locate_dofs_geometrical((state_space.sub(0), V0), surface_fixed["bnd_fun"])
-        dofs_moving = df.fem.locate_dofs_geometrical((state_space.sub(0), V0), surface_moving["bnd_fun"])
-            
+
+        V0x, _ = V0.sub(0).collapse()
+        V0y, _ = V0.sub(1).collapse()
+        V0z, _ = V0.sub(2).collapse()
+
+        dofs_moving_x = df.fem.locate_dofs_geometrical((state_space.sub(0).sub(0), V0x), surface_moving["bnd_fun"]) 
+        dofs_moving_y = df.fem.locate_dofs_geometrical((state_space.sub(0).sub(1), V0x), surface_moving["bnd_fun"]) 
+        dofs_moving_z = df.fem.locate_dofs_geometrical((state_space.sub(0).sub(2), V0x), surface_moving["bnd_fun"]) 
         
         u_fixed = df.fem.Function(V0)
         u_fixed.vector.array[:] = 0
         
-        u_moving = df.fem.Function(V0)
-        u_moving.vector.array[:] = 0
+        u_moving_x = df.fem.Function(V0x)
+        u_moving_x.vector.array[:] = 0
+        u_moving_y = df.fem.Function(V0y)
+        u_moving_y.vector.array[:] = 0
+        u_moving_z = df.fem.Function(V0z)
+        u_moving_z.vector.array[:] = 0
 
         bcs = [
             df.fem.dirichletbc(u_fixed, dofs_fixed, state_space.sub(0)),
-            df.fem.dirichletbc(u_moving, dofs_moving, state_space.sub(0)),
+            df.fem.dirichletbc(u_moving_x, dofs_moving_x, state_space.sub(0).sub(0)),
+            df.fem.dirichletbc(u_moving_y, dofs_moving_y, state_space.sub(0).sub(1)),
+            df.fem.dirichletbc(u_moving_z, dofs_moving_z, state_space.sub(0).sub(2)),
         ]
 
-        self.bcsfun = u_moving      # this will be updated by respective subclasses
+
+        # this will be updated by respective subclasses
+        self.u_moving = [u_moving_x, u_moving_y, u_moving_z]
 
         return bcs
 
@@ -203,7 +217,7 @@ class StretchFF(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.vector.array[:] = stretch_value*self.L #, 0, 0)
+        self.u_moving[0].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([1.0, 0.0, 0.0])
@@ -231,7 +245,7 @@ class StretchSS(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = (0, stretch_value*self.L, 0)
+        self.bcsfun.value = self.u_moving[1].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([0.0, 1.0, 0.0])
@@ -259,7 +273,7 @@ class StretchNN(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = (0, 0, stretch_value*self.L)
+        self.bcsfun.value = self.u_moving[2].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([0.0, 0.0, 1.0])
@@ -287,7 +301,7 @@ class ShearNS(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = (0, stretch_value*self.L, 0)
+        self.bcsfun.value = self.u_moving[1].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([0.0, 0.0, 1.0])
@@ -316,7 +330,7 @@ class ShearNF(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = (stretch_value*self.L, 0, 0)
+        self.bcsfun.value = self.u_moving[0].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([0.0, 0.0, 1.0])
@@ -345,7 +359,7 @@ class ShearFN(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = (0, 0, stretch_value*self.L)
+        self.bcsfun.value = self.u_moving[2].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([1.0, 0.0, 0.0])
@@ -374,7 +388,7 @@ class ShearFS(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = (0, stretch_value*self.L, 0)
+        self.bcsfun.value = self.u_moving[1].vector.array[:] = stretch_value*self.L
 
     def assign_stretch(self, stretch_value):
         self.bcsfun.k = stretch_value
@@ -406,7 +420,7 @@ class ShearSF(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = (stretch_value*self.L, 0, 0)
+        self.bcsfun.value = self.u_moving[0].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([0.0, 1.0, 0.0])
@@ -435,7 +449,7 @@ class ShearSN(DeformationExperiment):
         self.L = max_v - min_v
 
     def assign_stretch(self, stretch_value):
-        self.bcsfun.value = (0, 0, stretch_value*self.L)
+        self.bcsfun.value = self.u_moving[2].vector.array[:] = stretch_value*self.L
 
     def evaluate_normal_load(self, F, P):
         unit_vector = df.as_vector([0.0, 1.0, 0.0])

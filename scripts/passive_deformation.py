@@ -84,7 +84,10 @@ peak_index = num_steps - 1
 # load mesh, subdomains
 
 mesh, volumes = load_mesh(mesh_file, verbose)
+print(type(volumes))
 
+import IPython; IPython.embed()
+exit()
 # initiate EMI model
 
 material_params = {
@@ -95,11 +98,11 @@ material_params = {
     "a_if": a_f,
     "b_if": b_f,
 }
-print(type(volumes))
-model = TissueModel(
+
+model = EMIModel(
     mesh,
-    #volumes,
-    #material_parameters=material_params,
+    volumes,
+    material_parameters=material_params,
     experiment=experiment,
     verbose=verbose,
 )

@@ -6,7 +6,6 @@ Material model based on the Holzapfel-Odgen model (2009).
 
 """
 
-#import dolfinx as df
 import ufl
 
 

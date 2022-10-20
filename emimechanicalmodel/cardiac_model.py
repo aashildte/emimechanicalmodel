@@ -236,8 +236,10 @@ class CardiacModel(ABC):
         return self.integrate_subdomain(1, subdomain_id)
 
     def integrate_subdomain(self, fun, subdomain_id):
-        dx = df.Measure("dx", domain=self.mesh, subdomain_data=self.volumes, metadata={"quadrature_degree": 4})
-        return df.assemble(fun * dx(int(subdomain_id)))
+        dx = ufl.Measure("dx", domain=self.mesh, subdomain_data=self.volumes, metadata={"quadrature_degree": 4}) 
+        
+        form = df.fem.form(fun * dx(int(subdomain_id))) 
+        return df.fem.assemble_scalar(form)
 
     def evaluate_subdomain_stress(self, unit_vector, subdomain_id):
         v = self.F * unit_vector
