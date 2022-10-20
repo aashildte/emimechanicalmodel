@@ -1,13 +1,13 @@
 import os
 import pytest
-import dolfin as df
+import dolfinx as df
 from mpi4py import MPI
 import numpy as np
 
 from emimechanicalmodel import TissueModel
 
 def test_tissue_active():
-    mesh = df.UnitCubeMesh(1, 1, 1)
+    mesh = df.mesh.create_unit_cube(MPI.COMM_WORLD, 1, 1, 1)
 
     model = TissueModel(
         mesh, experiment="contr"
@@ -22,7 +22,7 @@ def test_tissue_active():
 
 
 def test_tissue_proj_strain():
-    mesh = df.UnitCubeMesh(1, 1, 1)
+    mesh = df.mesh.create_unit_cube(MPI.COMM_WORLD, 1, 1, 1)
 
     model = TissueModel(
         mesh, experiment="contr"
@@ -37,7 +37,7 @@ def test_tissue_proj_strain():
 
 
 def test_tissue_proj_stress():
-    mesh = df.UnitCubeMesh(1, 1, 1)
+    mesh = df.mesh.create_unit_cube(MPI.COMM_WORLD, 1, 1, 1)
 
     model = TissueModel(
         mesh, experiment="contr"
@@ -66,7 +66,7 @@ def test_tissue_proj_stress():
     ],
 )
 def test_tissue_deformation(deformation_mode):
-    mesh = df.UnitCubeMesh(1, 1, 1)
+    mesh = df.mesh.create_unit_cube(MPI.COMM_WORLD, 1, 1, 1)
     
     model = TissueModel(
         mesh, experiment=deformation_mode,
@@ -83,9 +83,9 @@ def test_tissue_deformation(deformation_mode):
 
 
 if __name__ == "__main__":
-    test_tissue_active()
-    test_tissue_proj_strain()
-    test_tissue_proj_stress()
+    #test_tissue_active()
+    #test_tissue_proj_strain()
+    #test_tissue_proj_stress()
     test_tissue_deformation("shear_fs")
     test_tissue_deformation("shear_sf")
     test_tissue_deformation("shear_nf")
