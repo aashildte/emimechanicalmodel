@@ -63,5 +63,11 @@ class ProjectionFunction:
 
         """
 
+
+        self.b.x.set(0.)
+        df.fem.petsc.assemble_vector(self.b.vector, self._rhs)
+        self.b.x.scatter_reverse(df.cpp.la.ScatterMode.add)
+        self.b.x.scatter_forward()
+
         df.fem.petsc.assemble_vector(self.b.vector, self._rhs)
         self.solver.solve(self.b.vector, x = self.proj_fun.vector)
