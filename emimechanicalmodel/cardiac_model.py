@@ -34,6 +34,7 @@ class CardiacModel(ABC):
         mesh,
         experiment,
         active_model,
+        compressibility_model,
         verbose=0,
     ):
         """
@@ -45,6 +46,7 @@ class CardiacModel(ABC):
             mesh (df.Mesh): Domain to be used
             experiment (str): Which experiment - "contr", "stretch_ff, "strain_fs", ...
             active_model (str): Active model - "active_stress" or "active_strain"
+            compressibility_model (str): Compressibility model - "incompressible" or "nearly_incompressible"
             verbose (int): Set to 0 (no verbose output; default), 1 (some),
                 or 2 (quite a bit)
 
@@ -53,7 +55,8 @@ class CardiacModel(ABC):
         self.mesh = mesh
         self.verbose = verbose
         self.active_model = active_model
-        
+        self.compressibility_model = compressibility_model
+
         # set directions, assuming alignment with the Cartesian axes
 
         self.fiber_dir = df.as_vector([1, 0, 0])
@@ -200,12 +203,13 @@ class CardiacModel(ABC):
             F (ufl form) - deformation tensor
         """
 
-        active_fn, active_model, mat_model = self.active_fn, self.active_model, self.mat_model
+        active_fn, comp_model, active_model, mat_model = \
+                self.active_fn, self.compressibility_model, self.active_model, self.mat_model
 
         assert active_model in ["active_stress", "active_strain"], "Error: Unknown active model."
+        assert comp_model in ["incompressible", "nearly_incompressible"], "Error: Unknown compressibility model."
         
         J = df.det(F)
-        psi_incomp = self.p * (J - 1)
 
         if active_model == "active_stress":
             e1 = self.fiber_dir
@@ -215,6 +219,7 @@ class CardiacModel(ABC):
 
             psi_active = active_fn / 2.0 * (I4 - 1)
             psi_passive = mat_model.passive_component(F)
+            psi_incomp = self.p * (J - 1)
             
             psi = psi_active + psi_passive + psi_incomp
             P = df.diff(psi, F)

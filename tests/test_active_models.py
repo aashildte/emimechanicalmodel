@@ -8,18 +8,21 @@ from emimechanicalmodel import TissueModel
 
 
 @pytest.mark.parametrize(
-    "active_model",
+    ["active_model", "compressible_model"],
     [
-        "active_strain",
-        "active_stress",
+        ["active_strain", "incompressible"],
+        ["active_stress", "incompressible"],
     ],
 )
-def test_active_contraction(active_model):
+def test_active_contraction(active_model, compressibility_model):
     mesh = df.UnitCubeMesh(1, 1, 1)
 
-    model = TissueModel(mesh,
-                     active_model=active_model,
-                     experiment="contr")
+    model = TissueModel(
+            mesh,
+            active_model=active_model,
+            compressibility_model=compressibility_model,
+            experiment="contr",
+            )
 
     active_value = 0.001
 
@@ -33,5 +36,5 @@ def test_active_contraction(active_model):
 
 
 if __name__ == "__main__":
-    test_active_model("active_stress")
-    test_active_model("active_strain")
+    test_active_model("active_stress", "incompressible")
+    test_active_model("active_strain", "incompressible")

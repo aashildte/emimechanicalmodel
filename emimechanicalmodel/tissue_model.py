@@ -35,6 +35,7 @@ class TissueModel(CardiacModel):
         mesh,
         experiment,
         active_model="active_strain",
+        compressibility_model="incompressible",
         material_parameters={},
         verbose=0,
     ):
@@ -50,6 +51,7 @@ class TissueModel(CardiacModel):
             mesh,
             experiment,
             active_model,
+            compressibility_model,
             verbose,
         )
 
