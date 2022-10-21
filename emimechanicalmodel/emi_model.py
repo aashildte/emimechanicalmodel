@@ -42,6 +42,7 @@ class EMIModel(CardiacModel):
         experiment,
         material_model="holzapfel",
         active_model="active_strain",
+        compressibility_model="incompressible",
         material_parameters={},
         verbose=0,
     ):
@@ -73,6 +74,7 @@ class EMIModel(CardiacModel):
             mesh,
             experiment,
             active_model,
+            compressibility_model,
             verbose,
         )
 
