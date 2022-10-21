@@ -33,6 +33,7 @@ class CardiacModel(ABC):
         self,
         mesh,
         experiment,
+        active_model,
         verbose=0,
     ):
         """
@@ -42,7 +43,8 @@ class CardiacModel(ABC):
 
         Args:
             mesh (df.Mesh): Domain to be used
-            experiment (str): Which experiment - "contr", "xstretch" or "ystretch"
+            experiment (str): Which experiment - "contr", "stretch_ff, "strain_fs", ...
+            active_model (str): Active model - "active_stress" or "active_strain"
             verbose (int): Set to 0 (no verbose output; default), 1 (some),
                 or 2 (quite a bit)
 
@@ -50,6 +52,13 @@ class CardiacModel(ABC):
         
         self.mesh = mesh
         self.verbose = verbose
+        self.active_model = active_model
+        
+        # set directions, assuming alignment with the Cartesian axes
+
+        self.fiber_dir = df.as_vector([1, 0, 0])
+        self.sheet_dir = df.as_vector([0, 1, 0])
+        self.normal_dir = df.as_vector([0, 0, 1])
 
         # define variational form
         self._define_active_strain()
@@ -74,12 +83,6 @@ class CardiacModel(ABC):
 
         self.experiment = exp_dict[experiment](mesh, self.V_CG)
         self.bcs = self.experiment.bcs
-
-        # set directions, assuming alignment with the Cartesian axes
-
-        self.fiber_dir = df.as_vector([1, 0, 0])
-        self.sheet_dir = df.as_vector([0, 1, 0])
-        self.normal_dir = df.as_vector([0, 0, 1])
 
         # define solver and initiate tracked variables
         self._define_solver(verbose)
@@ -182,6 +185,7 @@ class CardiacModel(ABC):
         """
         pass
 
+
     def _calculate_P(self, F):
         """
 
@@ -189,25 +193,45 @@ class CardiacModel(ABC):
         ..math::
             \mathbf{P} &=& \mathrm{det} (\mathbf{F_a}) \frac{\partial \psi (\mathbf{F_p})}{\partial \mathbf{F_p}} \mathbf{F_a}^{-T} + J p \mathbf{F}^{-T}
 
+        This is calculated either using an active strain or an active stress
+        approach. For all passive deformation modes, these should be equal.
+
         Args:
             F (ufl form) - deformation tensor
         """
 
-        active_fn, mat_model = self.active_fn, self.mat_model
+        active_fn, active_model, mat_model = self.active_fn, self.active_model, self.mat_model
 
-        sqrt_fun = (df.Constant(1) - active_fn) ** (-0.5)
-        F_a = df.as_tensor(
-            ((df.Constant(1) - active_fn, 0, 0), (0, sqrt_fun, 0), (0, 0, sqrt_fun))
-        )
+        assert active_model in ["active_stress", "active_strain"], "Error: Unknown active model."
+        
+        J = df.det(F)
+        psi_incomp = self.p * (J - 1)
 
-        F_e = df.variable(F * df.inv(F_a))
-        psi = mat_model.passive_component(F_e)
+        if active_model == "active_stress":
+            e1 = self.fiber_dir
+            
+            C = pow(J, -float(2) / 3) * F.T * F 
+            I4 = df.inner(C * e1, e1)
 
-        P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T) + self.p * df.det(
-            F
-        ) * df.inv(F.T)
+            psi_active = active_fn / 2.0 * (I4 - 1)
+            psi_passive = mat_model.passive_component(F)
+            
+            psi = psi_active + psi_passive + psi_incomp
+            P = df.diff(psi, F)
+        else:
+
+            sqrt_fun = (df.Constant(1) - active_fn) ** (-0.5)
+            F_a = df.as_tensor(
+                ((df.Constant(1) - active_fn, 0, 0), (0, sqrt_fun, 0), (0, 0, sqrt_fun))
+            )
+
+            F_e = df.variable(F * df.inv(F_a))
+            psi = mat_model.passive_component(F_e)
+
+            P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T) + self.p * J * df.inv(F.T)
 
         return P
+
 
     @abstractmethod
     def _define_projections(self):

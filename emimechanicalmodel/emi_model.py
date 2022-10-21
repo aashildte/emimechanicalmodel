@@ -41,6 +41,7 @@ class EMIModel(CardiacModel):
         volumes,
         experiment,
         material_model="holzapfel",
+        active_model="active_strain",
         material_parameters={},
         verbose=0,
     ):
@@ -71,6 +72,7 @@ class EMIModel(CardiacModel):
         super().__init__(
             mesh,
             experiment,
+            active_model,
             verbose,
         )
 

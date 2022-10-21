@@ -34,6 +34,7 @@ class TissueModel(CardiacModel):
         self,
         mesh,
         experiment,
+        active_model="active_strain",
         material_parameters={},
         verbose=0,
     ):
@@ -48,6 +49,7 @@ class TissueModel(CardiacModel):
         super().__init__(
             mesh,
             experiment,
+            active_model,
             verbose,
         )
 
