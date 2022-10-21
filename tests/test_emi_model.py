@@ -21,9 +21,11 @@ def test_emi_active_strain():
     model.update_active_fn(active_value)
     model.solve(project=False)
 
+    u, _, _ = model.state.split(deepcopy=True)
+
     assert abs(np.max(model.active_fn.vector()[:]) - active_value) < 1e-10
     assert abs(np.min(model.active_fn.vector()[:]) - 0) < 1e-10
-    assert np.linalg.norm(model.u.vector()[:]) > 0
+    assert np.linalg.norm(u.vector()[:]) > 0
 
 def test_emi_active_stress():
     mesh = df.UnitCubeMesh(1, 1, 1)
@@ -40,9 +42,11 @@ def test_emi_active_stress():
     model.update_active_fn(active_value)
     model.solve(project=False)
 
+    u, _, _ = model.state.split(deepcopy=True)
+
     assert abs(np.max(model.active_fn.vector()[:]) - active_value) < 1e-10
     assert abs(np.min(model.active_fn.vector()[:]) - 0) < 1e-10
-    assert np.linalg.norm(model.u.vector()[:]) > 0
+    assert np.linalg.norm(u.vector()[:]) > 0
 
 
 def test_emi_proj_strain():
