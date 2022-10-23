@@ -86,8 +86,8 @@ class CardiacModel(ABC):
             "shear_sn": ShearSN,
         }
 
-        self.deformation_setup = exp_dict[experiment](mesh, self.V_CG)
-        self.bcs = self.deformation_setup.bcs
+        self.deformation = exp_dict[experiment](mesh, self.V_CG)
+        self.bcs = self.deformation.bcs
 
         # define solver and initiate tracked variables
         self._define_solver(verbose)
@@ -217,7 +217,7 @@ class CardiacModel(ABC):
 
         """
 
-        self.experiment.assign_stretch(stretch_value)
+        self.deformation.assign_stretch(stretch_value)
 
     @abstractmethod
     def _define_active_strain(self):
@@ -526,7 +526,7 @@ class CardiacModel(ABC):
 
         """
 
-        return self.experiment.evaluate_normal_load(self.F, self.sigma)
+        return self.deformation.evaluate_normal_load(self.F, self.sigma)
 
     def evaluate_shear_load(self):
         """
@@ -539,7 +539,7 @@ class CardiacModel(ABC):
 
         """
 
-        return self.experiment.evaluate_shear_load(self.F, self.sigma)
+        return self.deformation.evaluate_shear_load(self.F, self.sigma)
 
     def evaluate_subdomain_stress_fibre_dir(self, subdomain_id):
         """

@@ -28,7 +28,7 @@ class EMIModel(CardiacModel):
 
     Args:
         mesh (df.Mesh): Domain to be used
-        experiment (str): Which experiment - "contr", "xstretch" or "ystretch"
+        experiment (str): Which experiment - "contr", "stretch_ff", "shear_fs", ...
         material_properties: parameters to underlying material model,
             default empty dictionary which means default values will be used
         verbose (int): Set to 0 (no verbose output; default), 1 (some),
