@@ -149,7 +149,7 @@ def psi_holzapfel(
 
     """
 
-    a, b, a_f, b_f, a_s, b_s, a_fs, b_fs = (
+    a, b, a_f, b_f = (
         mat_params["a"],
         mat_params["b"],
         mat_params["a_f"],
@@ -237,7 +237,7 @@ def elasticity_term(active_fun, F, J, p, v, mat_params):
     F_a = df.as_tensor(((1 - active_fun, 0, 0), (0, sqrt_fun, 0), (0, 0, sqrt_fun)))
 
     F_e = df.variable(F * df.inv(F_a))
-    psi = psi_holzapfel(F_e, mat_params)
+    psi = psi_holzapfel(F_e, mat_params) # + p * (J - 1)
 
     P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T) + p * J * df.inv(F.T)
 
