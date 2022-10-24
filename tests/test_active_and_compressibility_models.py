@@ -10,17 +10,17 @@ from emimechanicalmodel import TissueModel
 @pytest.mark.parametrize(
     ["active_model", "compressibility_model", "experiment"],
     [
-        ("active_strain", "incompressible", "contr"),
-        ("active_stress", "incompressible", "contr"),
-        ("active_strain", "nearly_incompressible", "contr"),
-        ("active_stress", "nearly_incompressible", "contr"),
+        ("active_strain", "incompressible", "contraction"),
+        ("active_stress", "incompressible", "contraction"),
+        ("active_strain", "nearly_incompressible", "contraction"),
+        ("active_stress", "nearly_incompressible", "contraction"),
         ("active_strain", "incompressible", "stretch_ff"),
         ("active_stress", "incompressible", "stretch_ff"),
         ("active_strain", "nearly_incompressible", "stretch_ff"),
         ("active_stress", "nearly_incompressible", "stretch_ff"),
     ],
 )
-def test_active_contraction(active_model, compressibility_model, experiment):
+def test_active_and_compressibility(active_model, compressibility_model, experiment):
     mesh = df.UnitCubeMesh(1, 1, 1)
     
     model = TissueModel(
@@ -42,14 +42,11 @@ def test_active_contraction(active_model, compressibility_model, experiment):
     assert np.linalg.norm(u.vector()[:]) > 0
 
 if __name__ == "__main__":
-    test_active_contraction("active_strain", "incompressible", "contr")
-    test_active_contraction("active_stress", "incompressible", "contr")
-    test_active_contraction("active_strain", "nearly_incompressible", "contr")
-    test_active_contraction("active_stress", "nearly_incompressible", "contr")
-    test_active_contraction("active_strain", "incompressible", "stretch_ff")
-    test_active_contraction("active_stress", "incompressible", "stretch_ff")
-    test_active_contraction("active_strain", "nearly_incompressible", "stretch_ff")
-    test_active_contraction("active_stress", "nearly_incompressible", "stretch_ff")
-    test_active_contraction("active_stress", "nearly_incompressible", "contr")
-    test_active_contraction("active_stress", "nearly_incompressible", "stretch_ff")
-    test_active_contraction("active_strain", "incompressible", "contr")
+    test_active_and_compressibility("active_strain", "incompressible", "contraction")
+    test_active_and_compressibility("active_stress", "incompressible", "contraction")
+    test_active_and_compressibility("active_strain", "nearly_incompressible", "contraction")
+    test_active_and_compressibility("active_stress", "nearly_incompressible", "contraction")
+    test_active_and_compressibility("active_strain", "incompressible", "stretch_ff")
+    test_active_and_compressibility("active_stress", "incompressible", "stretch_ff")
+    test_active_and_compressibility("active_strain", "nearly_incompressible", "stretch_ff")
+    test_active_and_compressibility("active_stress", "nearly_incompressible", "stretch_ff")

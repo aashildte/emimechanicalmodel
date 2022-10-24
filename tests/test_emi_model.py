@@ -14,7 +14,7 @@ def test_emi_active_strain():
 
     model = EMIModel(mesh,
                      volumes,
-                     experiment="contr")
+                     experiment="contraction")
 
     active_value = 0.001
 
@@ -35,7 +35,7 @@ def test_emi_active_stress():
     model = EMIModel(mesh,
                      volumes,
                      active_model="active_stress",
-                     experiment="contr")
+                     experiment="contraction")
 
     active_value = 0.001
 
@@ -54,7 +54,7 @@ def test_emi_proj_strain():
     volumes = df.MeshFunction("size_t", mesh, 3)
     volumes.array()[0] = 1
 
-    model = EMIModel(mesh, volumes, experiment="contr")
+    model = EMIModel(mesh, volumes, experiment="contraction")
 
     active_value = 0.001
 
@@ -69,7 +69,7 @@ def test_emi_proj_stress():
     volumes = df.MeshFunction("size_t", mesh, 3)
     volumes.array()[0] = 1
 
-    model = EMIModel(mesh, volumes, experiment="contr")
+    model = EMIModel(mesh, volumes, experiment="contraction")
 
     active_value = 0.001
 

@@ -44,7 +44,7 @@ class CardiacModel(ABC):
 
         Args:
             mesh (df.Mesh): Domain to be used
-            experiment (str): Which experiment - "contr", "stretch_ff, "strain_fs", ...
+            experiment (str): Which experiment - "contraction", "stretch_ff, "strain_fs", ...
             active_model (str): Active model - "active_stress" or "active_strain"
             compressibility_model (str): Compressibility model - "incompressible" or "nearly_incompressible"
             verbose (int): Set to 0 (no verbose output; default), 1 (some),
@@ -74,7 +74,7 @@ class CardiacModel(ABC):
         # boundary conditions
 
         exp_dict = {
-            "contr": Contraction,
+            "contraction": Contraction,
             "stretch_ff": StretchFF,
             "stretch_ss": StretchSS,
             "stretch_nn": StretchNN,
@@ -129,7 +129,7 @@ class CardiacModel(ABC):
 
         Args:
             experiment (str): what kind of experiment to be performed
-                (if this is "contr" we create a subspace for avoiding
+                (if this is "contraction" we create a subspace for avoiding
                 rigid motion using Lagrangian multipliers)
 
         """
@@ -145,7 +145,7 @@ class CardiacModel(ABC):
         if self.compressibility_model == "incompressible":
             mixed_elements += [P1]
 
-        if self.experiment_str == "contr":
+        if self.experiment_str == "contraction":
             mixed_elements += [P3]
 
         state_space = df.FunctionSpace(mesh, df.MixedElement(mixed_elements))
@@ -171,7 +171,7 @@ class CardiacModel(ABC):
 
         Args:
             experiment (str): what kind of experiment to be performed
-                (if this is "contr" we create a subspace for avoiding
+                (if this is "contraction" we create a subspace for avoiding
                 rigid motion using Lagrangian multipliers)
 
         """
@@ -184,7 +184,7 @@ class CardiacModel(ABC):
         u = p = r = v = q = s = 0        # if these are declared they can be ufl variables!
 
         if self.compressibility_model == "incompressible":
-            if self.experiment_str == "contr":
+            if self.experiment_str == "contraction":
                 u, p, r = df.split(state)
                 v, q, s = df.split(test_state)
             else:
@@ -192,7 +192,7 @@ class CardiacModel(ABC):
                 v, q = df.split(test_state)
             self.p = p
         else:
-            if self.experiment_str == "contr":
+            if self.experiment_str == "contraction":
                 u, r = df.split(state)
                 v,  _ = df.split(test_state)
             else:
@@ -344,7 +344,7 @@ class CardiacModel(ABC):
         if self.compressibility_model == "incompressible":
             weak_form += self._pressure_term(q, F)
 
-        if self.experiment_str == "contr":
+        if self.experiment_str == "contraction":
             state, test_state = self.state, self.test_state
             weak_form += self._remove_rigid_motion_term(u, r, state, test_state)
 
