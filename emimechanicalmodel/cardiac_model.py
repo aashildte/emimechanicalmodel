@@ -201,6 +201,9 @@ class CardiacModel(ABC):
 
         self.state = state
         self.test_state = test_state
+        
+        self.u, self.p, self.r, self.v, self.q, self.s = u, p, r, v, q, s
+
         self.state_functions = [u, p, r]
         self.test_state_functions = [v, q, s]
 
