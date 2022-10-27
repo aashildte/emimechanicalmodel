@@ -61,7 +61,7 @@ class EMIHolzapfelMaterial:
         # these are fenics functions defined over all of omega, not likely to be accessed
         self._a, self._b, self._a_f, self._b_f = a, b, a_f, b_f
 
-    def passive_component(self, F):
+    def get_strain_energy_term(self, F):
 
         a, b, a_f, b_f = (
             self._a,

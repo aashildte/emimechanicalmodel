@@ -263,12 +263,10 @@ class CardiacModel(ABC):
         """
 
         active_fn, comp_model, active_model, mat_model = \
-                self.active_fn, self.compressibility_model, self.active_model, self.mat_model
+                self.active_fn, self.comp_model, self.active_model, self.mat_model
 
         assert active_model in ["active_stress", "active_strain"], \
-                "Error: Unknown active model."
-        assert comp_model in ["incompressible", "nearly_incompressible"], \
-                "Error: Unknown compressibility model."
+                "Error: Unknown active model, please specify as 'active_stress' or 'active_strain'."
         
         J = df.det(F)
 
@@ -279,14 +277,9 @@ class CardiacModel(ABC):
             I4 = df.inner(C * e1, e1)
 
             psi_active = active_fn / 2.0 * (I4 - 1)
-            psi_passive = mat_model.passive_component(F)
-            
-            if comp_model == "nearly_incompressible":
-                kappa = df.Constant(1000)
-                psi_comp = kappa * (J*df.ln(J) - J + 1) 
-            else:
-                psi_comp = self.p * (J - 1)
-            
+            psi_passive = mat_model.get_strain_energy_term(F)
+            psi_comp = comp_model.get_strain_energy_term(F, self.p)
+ 
             psi = psi_active + psi_passive + psi_comp
             P = df.diff(psi, F)
         else:
@@ -297,16 +290,11 @@ class CardiacModel(ABC):
             )
 
             F_e = df.variable(F * df.inv(F_a))
-            psi = mat_model.passive_component(F_e)
-
-            if comp_model == "nearly_incompressible":
-                kappa = df.Constant(1000)
-                psi_comp = kappa * (J*df.ln(J) - J + 1)
+            psi_passive = mat_model.get_strain_energy_term(F_e)
+            psi_comp = comp_model.get_strain_energy_term(F_e, self.p)
+            psi = psi_passive + psi_comp
 
             P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T)
-
-            if comp_model == "incompressible":
-                P += self.p * J * df.inv(F.T)
 
         return P
 

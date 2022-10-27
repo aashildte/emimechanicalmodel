@@ -1,6 +1,6 @@
 """
 
-Åshild Telle / Simula Research Laboratiry / 2022
+Åshild Telle / Simula Research Laboratory / 2022
 
 Material model; the Guccione model adapted to the EMI framework.
 
@@ -59,7 +59,7 @@ class EMIGuccioneMaterial():
         # these are fenics functions defined over all of omega, not likely to be accessed
         self._C, self._b_f, self._b_t, self._b_ft = C, b_f, b_t, b_ft
 
-    def passive_component(self, F):
+    def get_strain_energy_term(self, F):
         C_ss, b_f, b_t, b_ft = self._C, self._b_f, self._b_t, self._b_ft
 
         e1 = df.as_vector([1.0, 0.0, 0.0])

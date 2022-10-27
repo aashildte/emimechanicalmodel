@@ -15,6 +15,7 @@ from emimechanicalmodel.cardiac_model import CardiacModel
 from emimechanicalmodel.mesh_setup import assign_discrete_values
 from emimechanicalmodel.emi_holzapfelmaterial import EMIHolzapfelMaterial
 from emimechanicalmodel.emi_guccionematerial import EMIGuccioneMaterial
+from emimechanicalmodel.compressibility import IncompressibleMaterial, EMINearlyIncompressibleMaterial
 from emimechanicalmodel.proj_fun import ProjectionFunction
 
 
@@ -41,9 +42,10 @@ class EMIModel(CardiacModel):
         volumes,
         experiment,
         material_model="holzapfel",
+        material_parameters={},
         active_model="active_strain",
         compressibility_model="incompressible",
-        material_parameters={},
+        compressibility_parameters={},
         verbose=0,
     ):
         # mesh properties, subdomains
@@ -61,14 +63,25 @@ class EMIModel(CardiacModel):
         U = df.FunctionSpace(mesh, "DG", 0)
         subdomain_map = volumes.array()  # only works for DG-0
 
+
         if material_model=="holzapfel":
             mat_model = EMIHolzapfelMaterial(U, subdomain_map, **material_parameters)
         elif material_model=="guccione":
             mat_model = EMIGuccioneMaterial(U, subdomain_map, **material_parameters)
         else:
-            print("Error: Uknown material model.")
+            print("Error: Uknown material model; please specify as 'holzapfel' or 'guccione'.")
 
-        self.U, self.subdomain_map, self.mat_model = U, subdomain_map, mat_model
+
+        if compressibility_model=="incompressible":
+            comp_model = Incompressible()
+        elif compressibility_model=="nearly_incompressible":
+            comp_model = EMINearlyIncompressible(U, subdomain_map, **compressibility_parameters)
+        else:
+            print("Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'.")
+
+
+        self.U, self.subdomain_map, self.mat_model, self.comp_model = \
+                U, subdomain_map, mat_model, comp_model
 
         super().__init__(
             mesh,
