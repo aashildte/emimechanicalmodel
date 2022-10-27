@@ -181,7 +181,7 @@ class CardiacModel(ABC):
         state = df.Function(state_space, name="state")
         test_state = df.TestFunction(state_space)
 
-        u = p = r = v = q = s = 0        # if these are declared they can be ufl variables!
+        u = p = r = v = q = s = df.Constant(0)        # if these are declared they can be ufl variables!
 
         if self.compressibility_model == "incompressible":
             if self.experiment_str == "contraction":
@@ -558,7 +558,7 @@ class CardiacModel(ABC):
         unit_vector = self.fiber_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_id)
 
-    def evaluate_subdomain_stress_transfibre_dir(self, subdomain_id):
+    def evaluate_subdomain_stress_sheet_dir(self, subdomain_id):
         """
 
         Args:
@@ -620,7 +620,7 @@ class CardiacModel(ABC):
         unit_vector = self.fiber_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_id)
 
-    def evaluate_subdomain_strain_transfibre_dir(self, subdomain_id):
+    def evaluate_subdomain_strain_sheet_dir(self, subdomain_id):
         """
 
         Args:
