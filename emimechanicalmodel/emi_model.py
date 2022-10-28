@@ -73,9 +73,9 @@ class EMIModel(CardiacModel):
 
 
         if compressibility_model=="incompressible":
-            comp_model = Incompressible()
+            comp_model = IncompressibleMaterial()
         elif compressibility_model=="nearly_incompressible":
-            comp_model = EMINearlyIncompressible(U, subdomain_map, **compressibility_parameters)
+            comp_model = EMINearlyIncompressibleMaterial(U, subdomain_map, **compressibility_parameters)
         else:
             print("Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'.")
 
