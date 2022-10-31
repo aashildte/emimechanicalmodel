@@ -28,21 +28,22 @@ jobs:
 
   build:
     runs-on: ubuntu-22.04
-    container: continuumio/miniconda3:latest
+    defaults:
+      run:
+        shell: bash -l {0}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - uses: conda-incubator/setup-miniconda@v2
         with:
-          python-version: "3.10"
+          activate-environment: anaconda-client-env
+          environment-file: environment.yml
+          python-version: 3.8
+          auto-activate-base: false
 
       - name: Install dependencies and build docs
         run: |
-          conda env create -f environment.yml
-          conda activate emimechanicalmodel
           pip install .
           jupyter book build -W docs
 
