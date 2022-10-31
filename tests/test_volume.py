@@ -15,7 +15,7 @@ def test_emi_volume():
     volumes.array()[0] = 1
     volumes.array()[1] = 2
 
-    model = EMIModel(mesh, volumes, experiment="contr")
+    model = EMIModel(mesh, volumes, experiment="contraction")
 
     for idt in set(volumes.array()):
         vol = model.calculate_volume(idt)

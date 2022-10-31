@@ -7,20 +7,46 @@ import numpy as np
 from emimechanicalmodel import EMIModel
 
 
-def test_emi_active():
+def test_emi_active_strain():
     mesh = df.UnitCubeMesh(1, 1, 1)
     volumes = df.MeshFunction("size_t", mesh, 3)
     volumes.array()[0] = 1
 
-    model = EMIModel(mesh, volumes, experiment="contr")
+    model = EMIModel(mesh,
+                     volumes,
+                     experiment="contraction")
 
     active_value = 0.001
 
     model.update_active_fn(active_value)
     model.solve(project=False)
 
+    u, _, _ = model.state.split(deepcopy=True)
+
     assert abs(np.max(model.active_fn.vector()[:]) - active_value) < 1e-10
     assert abs(np.min(model.active_fn.vector()[:]) - 0) < 1e-10
+    assert np.linalg.norm(u.vector()[:]) > 0
+
+def test_emi_active_stress():
+    mesh = df.UnitCubeMesh(1, 1, 1)
+    volumes = df.MeshFunction("size_t", mesh, 3)
+    volumes.array()[0] = 1
+
+    model = EMIModel(mesh,
+                     volumes,
+                     active_model="active_stress",
+                     experiment="contraction")
+
+    active_value = 0.001
+
+    model.update_active_fn(active_value)
+    model.solve(project=False)
+
+    u, _, _ = model.state.split(deepcopy=True)
+
+    assert abs(np.max(model.active_fn.vector()[:]) - active_value) < 1e-10
+    assert abs(np.min(model.active_fn.vector()[:]) - 0) < 1e-10
+    assert np.linalg.norm(u.vector()[:]) > 0
 
 
 def test_emi_proj_strain():
@@ -28,7 +54,7 @@ def test_emi_proj_strain():
     volumes = df.MeshFunction("size_t", mesh, 3)
     volumes.array()[0] = 1
 
-    model = EMIModel(mesh, volumes, experiment="contr")
+    model = EMIModel(mesh, volumes, experiment="contraction")
 
     active_value = 0.001
 
@@ -43,7 +69,7 @@ def test_emi_proj_stress():
     volumes = df.MeshFunction("size_t", mesh, 3)
     volumes.array()[0] = 1
 
-    model = EMIModel(mesh, volumes, experiment="contr")
+    model = EMIModel(mesh, volumes, experiment="contraction")
 
     active_value = 0.001
 
@@ -86,7 +112,8 @@ def test_emi_deformation(deformation_mode):
 
 
 if __name__ == "__main__":
-    # test_emi_active()
+    test_emi_active_stress()
+    test_emi_active_strain()
     # test_emi_proj_strain()
     # test_emi_proj_stress()
-    test_emi_deformation("shear_fs")
+    # test_emi_deformation("shear_fs")

@@ -14,6 +14,8 @@ from mpi4py import MPI
 from emimechanicalmodel.cardiac_model import CardiacModel
 from emimechanicalmodel.mesh_setup import assign_discrete_values
 from emimechanicalmodel.emi_holzapfelmaterial import EMIHolzapfelMaterial
+from emimechanicalmodel.emi_guccionematerial import EMIGuccioneMaterial
+from emimechanicalmodel.compressibility import IncompressibleMaterial, EMINearlyIncompressibleMaterial
 from emimechanicalmodel.proj_fun import ProjectionFunction
 
 
@@ -27,7 +29,7 @@ class EMIModel(CardiacModel):
 
     Args:
         mesh (df.Mesh): Domain to be used
-        experiment (str): Which experiment - "contr", "xstretch" or "ystretch"
+        experiment (str): Which experiment - "contr", "stretch_ff", "shear_fs", ...
         material_properties: parameters to underlying material model,
             default empty dictionary which means default values will be used
         verbose (int): Set to 0 (no verbose output; default), 1 (some),
@@ -39,7 +41,11 @@ class EMIModel(CardiacModel):
         mesh,
         volumes,
         experiment,
+        material_model="holzapfel",
         material_parameters={},
+        active_model="active_strain",
+        compressibility_model="incompressible",
+        compressibility_parameters={},
         verbose=0,
     ):
         # mesh properties, subdomains
@@ -57,13 +63,31 @@ class EMIModel(CardiacModel):
         U = df.FunctionSpace(mesh, "DG", 0)
         subdomain_map = volumes.array()  # only works for DG-0
 
-        mat_model = EMIHolzapfelMaterial(U, subdomain_map, **material_parameters)
 
-        self.U, self.subdomain_map, self.mat_model = U, subdomain_map, mat_model
+        if material_model=="holzapfel":
+            mat_model = EMIHolzapfelMaterial(U, subdomain_map, **material_parameters)
+        elif material_model=="guccione":
+            mat_model = EMIGuccioneMaterial(U, subdomain_map, **material_parameters)
+        else:
+            print("Error: Uknown material model; please specify as 'holzapfel' or 'guccione'.")
+
+
+        if compressibility_model=="incompressible":
+            comp_model = IncompressibleMaterial()
+        elif compressibility_model=="nearly_incompressible":
+            comp_model = EMINearlyIncompressibleMaterial(U, subdomain_map, **compressibility_parameters)
+        else:
+            print("Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'.")
+
+
+        self.U, self.subdomain_map, self.mat_model, self.comp_model = \
+                U, subdomain_map, mat_model, comp_model
 
         super().__init__(
             mesh,
             experiment,
+            active_model,
+            compressibility_model,
             verbose,
         )
 

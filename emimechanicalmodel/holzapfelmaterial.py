@@ -43,7 +43,7 @@ class HolzapfelMaterial:
             b_fs,
         )
 
-    def passive_component(self, F):
+    def get_strain_energy_term(self, F):
         a, b, a_f, b_f, a_s, b_s, a_fs, b_fs = (
             self.a,
             self.b,

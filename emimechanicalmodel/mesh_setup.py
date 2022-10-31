@@ -36,6 +36,7 @@ def load_mesh(mesh_file: str, verbose=1):
     h5_file.read(volumes, "volumes")
 
     if verbose > 0:
+        print("Mesh and subdomains loaded successfully.")
         print(
             "Number of nodes: %g, number of elements: %g"
             % (mesh.num_vertices(), mesh.num_cells())

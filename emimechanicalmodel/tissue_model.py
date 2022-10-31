@@ -12,6 +12,8 @@ import dolfin as df
 
 from emimechanicalmodel.cardiac_model import CardiacModel
 from emimechanicalmodel.holzapfelmaterial import HolzapfelMaterial
+from emimechanicalmodel.guccionematerial import GuccioneMaterial
+from emimechanicalmodel.compressibility import IncompressibleMaterial, NearlyIncompressibleMaterial
 from emimechanicalmodel.proj_fun import ProjectionFunction
 
 
@@ -34,12 +36,34 @@ class TissueModel(CardiacModel):
         self,
         mesh,
         experiment,
+        material_model="holzapfel",
         material_parameters={},
+        active_model="active_strain",
+        compressibility_model="incompressible",
+        compressibility_parameters={},
         verbose=0,
     ):
 
-        self.mat_model = HolzapfelMaterial(**material_parameters)
         self.num_subdomains = 1
+        
+        
+        if material_model=="holzapfel":
+            mat_model = HolzapfelMaterial(**material_parameters)
+        elif material_model=="guccione":
+            mat_model = GuccioneMaterial(**material_parameters)
+        else:
+            print("Error: Uknown material model; please specify as 'holzapfel' or 'guccione'.")
+
+
+        if compressibility_model=="incompressible":
+            comp_model = IncompressibleMaterial()
+        elif compressibility_model=="nearly_incompressible":
+            comp_model = NearlyIncompressibleMaterial(**compressibility_parameters)
+        else:
+            print("Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'.")
+
+
+        self.mat_model, self.comp_model = mat_model, comp_model
 
         # necessesary for volume integrals etc.
         self.volumes = df.MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
@@ -48,6 +72,8 @@ class TissueModel(CardiacModel):
         super().__init__(
             mesh,
             experiment,
+            active_model,
+            compressibility_model,
             verbose,
         )
 

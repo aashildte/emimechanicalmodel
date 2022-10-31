@@ -33,6 +33,8 @@ class CardiacModel(ABC):
         self,
         mesh,
         experiment,
+        active_model,
+        compressibility_model,
         verbose=0,
     ):
         """
@@ -42,7 +44,9 @@ class CardiacModel(ABC):
 
         Args:
             mesh (df.Mesh): Domain to be used
-            experiment (str): Which experiment - "contr", "xstretch" or "ystretch"
+            experiment (str): Which experiment - "contraction", "stretch_ff, "strain_fs", ...
+            active_model (str): Active model - "active_stress" or "active_strain"
+            compressibility_model (str): Compressibility model - "incompressible" or "nearly_incompressible"
             verbose (int): Set to 0 (no verbose output; default), 1 (some),
                 or 2 (quite a bit)
 
@@ -50,17 +54,27 @@ class CardiacModel(ABC):
         
         self.mesh = mesh
         self.verbose = verbose
+        self.active_model = active_model
+        self.compressibility_model = compressibility_model
+        self.experiment_str = experiment
+
+        # set directions, assuming alignment with the Cartesian axes
+
+        self.fiber_dir = df.as_vector([1, 0, 0])
+        self.sheet_dir = df.as_vector([0, 1, 0])
+        self.normal_dir = df.as_vector([0, 0, 1])
 
         # define variational form
         self._define_active_strain()
         self._set_fenics_parameters()
-        self._define_state_space(experiment)
-        self._define_kinematic_variables(experiment)
+        self._define_state_space()
+        self._define_state_functions()
+        self._define_kinematic_variables()
 
         # boundary conditions
 
         exp_dict = {
-            "contr": Contraction,
+            "contraction": Contraction,
             "stretch_ff": StretchFF,
             "stretch_ss": StretchSS,
             "stretch_nn": StretchNN,
@@ -72,14 +86,8 @@ class CardiacModel(ABC):
             "shear_sn": ShearSN,
         }
 
-        self.experiment = exp_dict[experiment](mesh, self.V_CG)
-        self.bcs = self.experiment.bcs
-
-        # set directions, assuming alignment with the Cartesian axes
-
-        self.fiber_dir = df.as_vector([1, 0, 0])
-        self.sheet_dir = df.as_vector([0, 1, 0])
-        self.normal_dir = df.as_vector([0, 0, 1])
+        self.deformation = exp_dict[experiment](mesh, self.V_CG)
+        self.bcs = self.deformation.bcs
 
         # define solver and initiate tracked variables
         self._define_solver(verbose)
@@ -111,7 +119,8 @@ class CardiacModel(ABC):
         df.parameters["form_compiler"]["representation"] = "uflacs"
         df.parameters["form_compiler"]["quadrature_degree"] = 4
 
-    def _define_state_space(self, experiment):
+
+    def _define_state_space(self):
         """
 
         Defines function spaces for test and trial functions.
@@ -120,7 +129,7 @@ class CardiacModel(ABC):
 
         Args:
             experiment (str): what kind of experiment to be performed
-                (if this is "contr" we create a subspace for avoiding
+                (if this is "contraction" we create a subspace for avoiding
                 rigid motion using Lagrangian multipliers)
 
         """
@@ -129,19 +138,75 @@ class CardiacModel(ABC):
 
         P1 = df.FiniteElement("Lagrange", mesh.ufl_cell(), 1)
         P2 = df.VectorElement("Lagrange", mesh.ufl_cell(), 2)
+        P3 = df.VectorElement("Real", mesh.ufl_cell(), 0, 6)
 
-        if experiment == "contr":
-            P3 = df.VectorElement("Real", mesh.ufl_cell(), 0, 6)
-            state_space = df.FunctionSpace(mesh, df.MixedElement([P1, P2, P3]))
+        mixed_elements = [P2]
+
+        if self.compressibility_model == "incompressible":
+            mixed_elements += [P1]
+
+        if self.experiment_str == "contraction":
+            mixed_elements += [P3]
+
+        state_space = df.FunctionSpace(mesh, df.MixedElement(mixed_elements))
+
+        if len(mixed_elements) == 1:
+            self.V_CG = state_space
         else:
-            state_space = df.FunctionSpace(mesh, df.MixedElement([P1, P2]))
+            self.V_CG = state_space.sub(0)
 
-        self.V_CG = state_space.sub(1)
         self.state_space = state_space
 
         if self.verbose:
             dofs = len(state_space.dofmap().dofs())
             print("Degrees of freedom: ", dofs, flush=True)
+
+
+    def _define_state_functions(self):
+        """
+
+        Defines function spaces for test and trial functions.
+        This function needs to be called before defining boundary
+        conditions and weak form.
+
+        Args:
+            experiment (str): what kind of experiment to be performed
+                (if this is "contraction" we create a subspace for avoiding
+                rigid motion using Lagrangian multipliers)
+
+        """
+
+        state_space = self.state_space
+
+        state = df.Function(state_space, name="state")
+        test_state = df.TestFunction(state_space)
+
+        u = p = r = v = q = s = df.Constant(0)        # if these are declared they can be ufl variables!
+
+        if self.compressibility_model == "incompressible":
+            if self.experiment_str == "contraction":
+                u, p, r = df.split(state)
+                v, q, s = df.split(test_state)
+            else:
+                u, p = df.split(state)
+                v, q = df.split(test_state)
+            self.p = p
+        else:
+            if self.experiment_str == "contraction":
+                u, r = df.split(state)
+                v,  _ = df.split(test_state)
+            else:
+                u = state
+                v = test_state
+
+        self.state = state
+        self.test_state = test_state
+        
+        self.u, self.p, self.r, self.v, self.q, self.s = u, p, r, v, q, s
+
+        self.state_functions = [u, p, r]
+        self.test_state_functions = [v, q, s]
+
 
     def assign_stretch(self, stretch_value):
         """
@@ -155,7 +220,7 @@ class CardiacModel(ABC):
 
         """
 
-        self.experiment.assign_stretch(stretch_value)
+        self.deformation.assign_stretch(stretch_value)
 
     @abstractmethod
     def _define_active_strain(self):
@@ -182,6 +247,7 @@ class CardiacModel(ABC):
         """
         pass
 
+
     def _calculate_P(self, F):
         """
 
@@ -189,57 +255,64 @@ class CardiacModel(ABC):
         ..math::
             \mathbf{P} &=& \mathrm{det} (\mathbf{F_a}) \frac{\partial \psi (\mathbf{F_p})}{\partial \mathbf{F_p}} \mathbf{F_a}^{-T} + J p \mathbf{F}^{-T}
 
+        This is calculated either using an active strain or an active stress
+        approach. For all passive deformation modes, these should be equal.
+
         Args:
             F (ufl form) - deformation tensor
         """
 
-        active_fn, mat_model = self.active_fn, self.mat_model
+        active_fn, comp_model, active_model, mat_model = \
+                self.active_fn, self.comp_model, self.active_model, self.mat_model
 
-        sqrt_fun = (df.Constant(1) - active_fn) ** (-0.5)
-        F_a = df.as_tensor(
-            ((df.Constant(1) - active_fn, 0, 0), (0, sqrt_fun, 0), (0, 0, sqrt_fun))
-        )
+        assert active_model in ["active_stress", "active_strain"], \
+                "Error: Unknown active model, please specify as 'active_stress' or 'active_strain'."
+        
+        J = df.det(F)
 
-        F_e = df.variable(F * df.inv(F_a))
-        psi = mat_model.passive_component(F_e)
+        if active_model == "active_stress":
+            e1 = self.fiber_dir
+            
+            C = pow(J, -float(2) / 3) * F.T * F 
+            I4 = df.inner(C * e1, e1)
 
-        P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T) + self.p * df.det(
-            F
-        ) * df.inv(F.T)
+            psi_active = active_fn / 2.0 * (I4 - 1)
+            psi_passive = mat_model.get_strain_energy_term(F)
+            psi_comp = comp_model.get_strain_energy_term(F, self.p)
+ 
+            psi = psi_active + psi_passive + psi_comp
+            P = df.diff(psi, F)
+        else:
+
+            sqrt_fun = (df.Constant(1) - active_fn) ** (-0.5)
+            F_a = df.as_tensor(
+                ((df.Constant(1) - active_fn, 0, 0), (0, sqrt_fun, 0), (0, 0, sqrt_fun))
+            )
+
+            F_e = df.variable(F * df.inv(F_a))
+            psi_passive = mat_model.get_strain_energy_term(F_e)
+            psi_comp = comp_model.get_strain_energy_term(F_e, self.p)
+            psi = psi_passive + psi_comp
+
+            P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T)
 
         return P
+
 
     @abstractmethod
     def _define_projections(self):
         pass
 
-    def _define_kinematic_variables(self, experiment):
+    def _define_kinematic_variables(self):
         """
 
         Defines test and trial functions, as well as derived quantities
         and the weak form which we aim to solve.
 
-        Args:
-            experiment (str) - what kind of experiment to perform; main
-                difference her is whether it is "contr" or something else;
-                if yes, we add an extra term to the weak form
-
         """
 
-        state_space = self.state_space
-
-        state = df.Function(state_space, name="state")
-        test_state = df.TestFunction(state_space)
-
-        if experiment == "contr":
-            p, u, r = df.split(state)
-            q, v, _ = df.split(test_state)
-        else:
-            p, u = df.split(state)
-            q, v = df.split(test_state)
-
-        self.state = state
-        self.p = p
+        u, p, r = self.state_functions
+        v, q, _ = self.test_state_functions
 
         # Kinematics
         d = len(u)
@@ -254,9 +327,13 @@ class CardiacModel(ABC):
         sigma = (1 / df.det(F)) * P * F.T
 
         # then define the weak form
-        weak_form = self._elasticity_term(P, v) + self._pressure_term(q, F)
+        weak_form = self._elasticity_term(P, v)
 
-        if experiment == "contr":
+        if self.compressibility_model == "incompressible":
+            weak_form += self._pressure_term(q, F)
+
+        if self.experiment_str == "contraction":
+            state, test_state = self.state, self.test_state
             weak_form += self._remove_rigid_motion_term(u, r, state, test_state)
 
         (self.F, self.E, self.sigma, self.P, self.u, self.weak_form,) = (
@@ -285,6 +362,7 @@ class CardiacModel(ABC):
 
         return df.inner(P, df.grad(v)) * df.dx
 
+
     def _pressure_term(self, q, F):
         """
 
@@ -299,6 +377,7 @@ class CardiacModel(ABC):
 
         """
         return q * (df.det(F) - 1) * df.dx
+
 
     def _remove_rigid_motion_term(self, u, r, state, test_state):
         """
@@ -354,7 +433,7 @@ class CardiacModel(ABC):
         df.solve(
             self.weak_form == 0,
             self.state,
-            self.experiment.bcs,
+            self.bcs,
             solver_parameters={
                 "newton_solver": {
                     "absolute_tolerance": 1e-5,
@@ -438,7 +517,7 @@ class CardiacModel(ABC):
 
         """
 
-        return self.experiment.evaluate_normal_load(self.F, self.sigma)
+        return self.deformation.evaluate_normal_load(self.F, self.sigma)
 
     def evaluate_shear_load(self):
         """
@@ -451,7 +530,7 @@ class CardiacModel(ABC):
 
         """
 
-        return self.experiment.evaluate_shear_load(self.F, self.sigma)
+        return self.deformation.evaluate_shear_load(self.F, self.sigma)
 
     def evaluate_subdomain_stress_fibre_dir(self, subdomain_id):
         """
@@ -467,7 +546,7 @@ class CardiacModel(ABC):
         unit_vector = self.fiber_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_id)
 
-    def evaluate_subdomain_stress_transfibre_dir(self, subdomain_id):
+    def evaluate_subdomain_stress_sheet_dir(self, subdomain_id):
         """
 
         Args:
@@ -529,7 +608,7 @@ class CardiacModel(ABC):
         unit_vector = self.fiber_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_id)
 
-    def evaluate_subdomain_strain_transfibre_dir(self, subdomain_id):
+    def evaluate_subdomain_strain_sheet_dir(self, subdomain_id):
         """
 
         Args:

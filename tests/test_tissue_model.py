@@ -10,7 +10,7 @@ from emimechanicalmodel import TissueModel
 def test_tissue_active():
     mesh = df.UnitCubeMesh(1, 1, 1)
 
-    model = TissueModel(mesh, experiment="contr")
+    model = TissueModel(mesh, experiment="contraction")
 
     active_value = 0.001
 
@@ -23,7 +23,7 @@ def test_tissue_active():
 def test_tissue_proj_strain():
     mesh = df.UnitCubeMesh(1, 1, 1)
 
-    model = TissueModel(mesh, experiment="contr")
+    model = TissueModel(mesh, experiment="contraction")
 
     active_value = 0.001
 
@@ -36,7 +36,7 @@ def test_tissue_proj_strain():
 def test_tissue_proj_stress():
     mesh = df.UnitCubeMesh(1, 1, 1)
 
-    model = TissueModel(mesh, experiment="contr")
+    model = TissueModel(mesh, experiment="contraction")
 
     active_value = 0.001
 

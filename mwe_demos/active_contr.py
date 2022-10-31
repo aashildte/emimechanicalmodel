@@ -149,7 +149,7 @@ def psi_holzapfel(
 
     """
 
-    a, b, a_f, b_f, a_s, b_s, a_fs, b_fs = (
+    a, b, a_f, b_f = (
         mat_params["a"],
         mat_params["b"],
         mat_params["a_f"],
@@ -237,9 +237,9 @@ def elasticity_term(active_fun, F, J, p, v, mat_params):
     F_a = df.as_tensor(((1 - active_fun, 0, 0), (0, sqrt_fun, 0), (0, 0, sqrt_fun)))
 
     F_e = df.variable(F * df.inv(F_a))
-    psi = psi_holzapfel(F_e, mat_params)
+    psi = psi_holzapfel(F_e, mat_params) + p * (df.det(F_e) - 1)
 
-    P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T) + p * J * df.inv(F.T)
+    P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T)
 
     return df.inner(P, df.grad(v)) * df.dx
 
@@ -307,17 +307,17 @@ if __name__ == "__main__":
     weak_form, state, u = define_weak_form(mesh, active_fun, mat_params)
 
     # just for plotting purposes
-    disp_file = df.XDMFFile("contraction_example/u_emi.xdmf")
-    V_CG2 = df.VectorFunctionSpace(mesh, "CG", 2)
-    u_fun = df.Function(V_CG2, name="Displacement")
+    #disp_file = df.XDMFFile("contraction_example/u_emi.xdmf")
+    #V_CG2 = df.VectorFunctionSpace(mesh, "CG", 2)
+    #u_fun = df.Function(V_CG2, name="Displacement")
 
     for a in active_strain:
         assign_discrete_values(active_fun, volumes, a, 0)  # a in omega_i, 0 in omega_e
         df.solve(weak_form == 0, state)
 
         # plotting again
-        u_fun.assign(df.project(u, V_CG2))
+        #u_fun.assign(df.project(u, V_CG2))
 
-        disp_file.write_checkpoint(u_fun, "Displacement (µm)", a, append=True)
+        #disp_file.write_checkpoint(u_fun, "Displacement (µm)", a, append=True)
 
-    disp_file.close()
+    #disp_file.close()

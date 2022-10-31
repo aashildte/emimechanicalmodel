@@ -97,7 +97,7 @@ model = EMIModel(
     mesh,
     volumes,
     material_parameters=material_params,
-    experiment="contr",
+    experiment="contraction",
     verbose=verbose,
 )
 
