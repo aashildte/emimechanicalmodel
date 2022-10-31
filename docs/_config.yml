@@ -1,0 +1,42 @@
+# Book settings
+
+title: EMI Mechanical model
+author: Åshild Telle
+copyright: "2022"
+
+# Force re-execution of notebooks on each build.
+# See https://jupyterbook.org/content/execute.html
+execute:
+  execute_notebooks: cache
+
+# Information about where the book exists on the web
+repository:
+  url: https://github.com/aashildte/emimechanicalmodel-tutorial
+
+launch_buttons:
+  notebook_interface: "jupyterlab" # The interface interactive links will activate ["classic", "jupyterlab"]
+  binderhub_url: "https://mybinder.org"
+
+html:
+  use_issues_button: true
+  use_repository_button: true
+
+parse:
+  myst_enable_extensions:
+    - amsmath
+    - dollarmath
+    - linkify
+    - "amsmath"
+    - "colon_fence"
+    - "deflist"
+    - "dollarmath"
+    - "html_admonition"
+    - "html_image"
+    - "linkify"
+    - "replacements"
+    - "smartquotes"
+    - "substitution"
+
+sphinx:
+  config:
+    html_extra_path: ["part1/cardiac_anisotropy.png"]
