@@ -45,6 +45,8 @@ jobs:
       - name: Install dependencies and build docs
         run: |
           pip install .
+          pip install jupyter
+          pip install jupyter-book
           jupyter book build -W docs
 
       - name: Upload artifact
