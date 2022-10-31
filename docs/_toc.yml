@@ -10,3 +10,4 @@ parts:
   - caption: Running the model
     chapters:
     - file: "part2/meshes_geometries"
+    - file: "part2/active_contraction"

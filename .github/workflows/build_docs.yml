@@ -47,7 +47,7 @@ jobs:
           pip install .
           pip install jupyter
           pip install jupyter-book
-          jupyter book build -W docs
+          jupyter book build docs
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
