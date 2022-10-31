@@ -10,5 +10,3 @@ dependencies:
     - matplotlib
     - mpi4py
     - salib
-    - jupyter
-    - jupyter-book
