@@ -1,11 +1,10 @@
 # Simple workflow for deploying static content to GitHub Pages
 name: Deploy static content to Pages
 
-on: push
-  #on:
+on:
   # Runs on pushes targeting the default branch
-  #push:
-  #  branches: ["main"]
+  push:
+    branches: ["main", "master"]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
