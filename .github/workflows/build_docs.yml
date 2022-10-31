@@ -40,7 +40,7 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies and build docs
-        run: ||
+        run: |
           conda env create -f environment.yml
           conda activate emimechanicalmodel
           pip install .
