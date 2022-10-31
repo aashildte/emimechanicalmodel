@@ -39,4 +39,4 @@ parse:
 
 sphinx:
   config:
-    html_extra_path: ["part1/cardiac_anisotropy.png", "part1/reference_current.png", "part1/strain_stress_load_concepts.png", "part2/subdomains_meshes_tile_connected_10p0.png", "tile_connected_10p0.h5"]
+    html_extra_path: ["part1/cardiac_anisotropy.png", "part1/reference_current.png", "part1/strain_stress_load_concepts.png", "part2/subdomains_meshes_tile_connected_10p0.png"]
