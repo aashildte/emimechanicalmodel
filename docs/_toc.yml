@@ -10,5 +10,12 @@ parts:
   
   - caption: Running the model
     chapters:
-    - file: "part1/meshes_geometries"
-    - file: "part1/active_contraction"
+    - file: "running_the_model/meshes_geometries"
+    - file: "running_the_model/active_contraction"
+    - file: "running_the_model/stretch_and_shear_experiments"
+
+  - caption: Model options
+    chapters:
+    - file: "model_options/contractility"
+    - file: "model_options/material_models"
+    - file: "model_options/compressibility"
