@@ -29,12 +29,12 @@ class EMIGuccioneMaterial():
         self,
         U,
         subdomain_map,
-        C_i=df.Constant(2),
+        C_i=df.Constant(4),
         C_e=df.Constant(2),
-        b_if=df.Constant(8),
-        b_it=df.Constant(2),
-        b_ift=df.Constant(4),
-        b_e=df.Constant(4),
+        b_if=df.Constant(40),
+        b_it=df.Constant(5),
+        b_ift=df.Constant(5),
+        b_e=df.Constant(10),
     ):
 
         self.C_i = C_i
