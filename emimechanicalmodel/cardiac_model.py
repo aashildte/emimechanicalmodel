@@ -411,7 +411,7 @@ class CardiacModel(ABC):
 
         return df.derivative(Pi, state, test_state)
 
-    def solve(self, project=True):
+    def solve(self, project=False):
         """
 
         The main function to make anything happen; this will solve the

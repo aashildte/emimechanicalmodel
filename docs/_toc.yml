@@ -5,9 +5,10 @@ root: index
 parts:
   - caption: Preliminaries
     chapters:
-    - file: "part1/mechanical_concepts"
+    - file: "preliminaries/cardiac_structure"
+    - file: "preliminaries/mechanical_concepts"
   
   - caption: Running the model
     chapters:
-    - file: "part2/meshes_geometries"
-    - file: "part2/active_contraction"
+    - file: "part1/meshes_geometries"
+    - file: "part1/active_contraction"
