@@ -24,7 +24,6 @@ def compute_active_component(time: np.ndarray):
 
     Returns:
         np.ndarray, computed active stress over a single contraction
-        float, max computed value for a full cycle
 
     """
 
@@ -34,7 +33,4 @@ def compute_active_component(time: np.ndarray):
 
     active_fn = interp1d(time_ipdata, active_ipdata)
 
-    # compute max for one cycle regardless of time
-    scaling_value = max(active_ipdata)
-
-    return active_fn(time), scaling_value
+    return active_fn(time)

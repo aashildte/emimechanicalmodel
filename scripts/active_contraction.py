@@ -74,8 +74,8 @@ def read_cl_args():
 # compute active stress, given from the Rice model
 
 time = np.linspace(0, time_max, num_time_steps)  # ms
-active_values, scaling_value = compute_active_component(time)
-active_values *= 0.28 / scaling_value  # max 0.28
+active_values = compute_active_component(time)
+active_values *= 2
 peak_index = np.argmax(active_values)
 
 # load mesh, subdomains

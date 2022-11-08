@@ -147,5 +147,11 @@ class EMIModel(CardiacModel):
         sigma_proj = ProjectionFunction(self.sigma, sigma_DG)
         P_proj = ProjectionFunction(self.P, P_DG)
 
+        self.u_DG = u_DG
+        self.p_DG = p_DG
+        self.E_DG = E_DG
+        self.sigma_DG = sigma_DG
+        self.PiolaKirchhoff_DG = P_DG
+
         self.tracked_variables = [u_DG, p_DG, E_DG, sigma_DG, P_DG]
         self.projections = [u_proj, p_proj, E_proj, sigma_proj, P_proj]
