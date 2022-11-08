@@ -15,6 +15,7 @@ execute:
 # Information about where the book exists on the web
 repository:
   url: https://github.com/aashildte/emimechanicalmodel-tutorial
+  branch: main
 
 launch_buttons:
   notebook_interface: "jupyterlab" # The interface interactive links will activate ["classic", "jupyterlab"]
