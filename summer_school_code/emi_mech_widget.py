@@ -57,7 +57,7 @@ class EMI_mech_widget:
         axes[-1][1].set_xlabel("Time (ms)")
         
         axes[0][0].set_ylabel("Aktive tension (kPa)")
-        axes[1][0].set_ylabel("[Ca] (M)")
+        axes[1][0].set_ylabel("[Ca] (nM)")
         axes[2][0].set_ylabel("Strain (-)")
         axes[3][0].set_ylabel("Stress (kPa)")
 
