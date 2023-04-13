@@ -10,7 +10,7 @@ with one or more of the cells replaced with matrix material.
 import numpy as np
 import dolfin as df
 from mpi4py import MPI
-
+import matplotlib.pyplot as plt
 
 from emimechanicalmodel import (
     load_mesh,
@@ -33,16 +33,14 @@ def replace_cell_with_matrix(volumes, cell_idt):
 
 # simulate 500 ms with active contraction from the Rice model
 
-num_time_steps = 250
+num_time_steps = 125
 
 time = np.linspace(0, 500, num_time_steps)  # ms
-active_values, scaling_value = compute_active_component(time)
-print(scaling_value)
-active_values *= 0.28 / scaling_value
+active_values = compute_active_component(time)
 
 # load mesh, subdomains
 
-mesh_file = "meshes/tile_connected_10p0_1_3_3.h5"
+mesh_file = "meshes/tile_connected_10p0_1_2_2.h5"
 mesh, volumes = load_mesh(mesh_file)
 
 # specifiy list of cells to remove, by their identities
@@ -57,7 +55,7 @@ for cell_idt in cells_to_be_removed:
 model = EMIModel(
     mesh,
     volumes,
-    experiment="contr",
+    experiment="contraction",
 )
 
 # track stresses in the remaining cells
@@ -67,7 +65,7 @@ cell_idts.remove(0)
 
 stress_per_cell = {}
 
-for cell_idt in cell_its:
+for cell_idt in cell_idts:
     stress_per_cell[cell_idt] = np.zeros_like(time)
 
 # then run the simulation
@@ -79,12 +77,12 @@ for i in range(num_time_steps):
     model.update_active_fn(a_str)
     model.solve()
 
-    for cell_idt in cell_its:
+    for cell_idt in cell_idts:
         stress_per_cell[cell_idt][i] = model.evaluate_subdomain_stress_fibre_dir(
             cell_idt
         )
 
-for cell_idt in cell_its:
+for cell_idt in cell_idts:
     plt.plot(time, stress_per_cell[cell_idt])
 
 plt.legend([f"Cell nr. {c}" for c in cell_idts])
