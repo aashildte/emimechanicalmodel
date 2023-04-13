@@ -23,12 +23,9 @@ from emimechanicalmodel import (
 num_time_steps = 125
 
 time = np.linspace(0, 500, num_time_steps)  # ms
-active_values, scaling_value = compute_active_component(time)
+active_values = compute_active_component(time)
 
-# scale such that we get approx 20 % contraction
-# adjust this value to get more or less contraction
-
-active_values *= 0.28 / scaling_value
+plt.plot(time, active_values)
 
 # load mesh, subdomains
 
@@ -62,7 +59,7 @@ for i, scale in enumerate(stiffness_scaling):
     model = EMIModel(
         mesh,
         volumes,
-        experiment="contr",
+        experiment="contraction",
         material_parameters=material_parameters,
     )
 
@@ -84,6 +81,6 @@ for i, scale in enumerate(stiffness_scaling):
     plt.plot(time, stress_fiber_dir)
 
 plt.xlabel("Time (ms)")
-plt.ylabel(f"Cardiomyocyte stress ($\overline{\sigma_{ff}, \Omega_i$)")
+plt.ylabel(r"Cardiomyocyte stress ($\overline{\sigma_{ff}}, \Omega_i$)")
 plt.legend(stiffness_scaling)
 plt.show()
