@@ -57,6 +57,10 @@ class EMIModel(CardiacModel):
             mpi_comm.allreduce(max(volumes.array()), op=MPI.MAX) + 1
         )
 
+        # this might not work in parallel, #TODO fix
+        self.subdomains = set(volumes.array())
+        print(self.subdomains)
+
         if verbose == 2:
             print("Number of subdomains: ", self.num_subdomains)
 

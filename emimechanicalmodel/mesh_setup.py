@@ -18,8 +18,7 @@ def load_mesh(mesh_file: str, verbose=1):
 
     Args:
         mesh_file - h5 file
-        path_vtu_file - path, where to save subdomain file;
-            default None = no output subdomain file will be saved
+        verbose - 0 or 1, print more information for 1
 
     Returns:
         mesh - dolfin mesh

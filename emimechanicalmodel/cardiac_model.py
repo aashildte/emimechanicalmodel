@@ -11,6 +11,7 @@ specified in classes implementing CardiacModel through heritage.
 
 from abc import ABC, abstractmethod
 import dolfin as df
+import numpy as np
 
 from emimechanicalmodel.deformation_experiments import (
     Contraction,
@@ -450,12 +451,12 @@ class CardiacModel(ABC):
             for proj_fun in self.projections:
                 proj_fun.project()
 
-    def integrate_subdomain(self, fun, subdomain_id):
+    def integrate_subdomain(self, fun, subdomain_ids):
         """
 
         Args:
             fun (ufl form): function f that we want to integrate
-            subdomain_id (int): cell idt or ECM idt
+            subdomain_ids (integer or list of integers): cell idt(s) or/and ECM idt
 
         Returns:
             ..math::
@@ -463,14 +464,23 @@ class CardiacModel(ABC):
 
         """
 
+        if isinstance(subdomain_ids, int) or isinstance(subdomain_ids, np.uint64):
+            subdomain_ids = [subdomain_ids]
+        
         dx = df.Measure("dx", domain=self.mesh, subdomain_data=self.volumes)
-        return df.assemble(fun * dx(int(subdomain_id)))
 
-    def calculate_volume(self, subdomain_id):
+        integral = 0
+        for subdomain_id in subdomain_ids:
+            integral += df.assemble(fun * dx(int(subdomain_id)))
+
+        return integral
+
+
+    def calculate_volume(self, subdomain_ids):
         """
 
         Args:
-            subdomain_id (int): cell idt or ECM idt
+            subdomain_ids (integer or list of integers): cell idt(s) or/and ECM idt
 
         Returns:
             ..math::
@@ -478,19 +488,19 @@ class CardiacModel(ABC):
 
         """
 
-        return self.integrate_subdomain(1, subdomain_id)
+        return self.integrate_subdomain(1, subdomain_ids)
 
-    def evaluate_subdomain_stress(self, unit_vector, subdomain_id):
+    def evaluate_subdomain_stress(self, unit_vector, subdomain_ids):
         """
 
         Args:
             unit_vector (dolfin vector): vector e determining the direction to
                evaluate the Cauchy stress in
-            subdomain_id (int): cell idt or ECM idt
+            subdomain_ids (integer or list of integers): cell idt(s) or/and ECM idt
 
         Returns:
             ..math::
-            \int_{\Omega_subdomain_id} v \cdot \sigma v dx
+            \sum \int_{\Omega_subdomain_id} v \cdot \sigma v dx
 
         where
             ..math::
@@ -502,9 +512,44 @@ class CardiacModel(ABC):
         v = self.F * unit_vector
         v /= df.sqrt(df.dot(v, v))
         stress = df.inner(v, self.sigma * v)
-        return self.integrate_subdomain(stress, subdomain_id) / self.calculate_volume(
-            subdomain_id
+        return self.integrate_subdomain(stress, subdomain_ids) / self.calculate_volume(
+            subdomain_ids
         )
+
+    def evaluate_load(self, wall_idts):
+        """
+
+        idts according to:
+        boundaries = {
+            "x_min": {"subdomain": Wall(0, "min", dimensions), "idt": 1},
+            "x_max": {"subdomain": Wall(0, "max", dimensions), "idt": 2},
+            "y_min": {"subdomain": Wall(1, "min", dimensions), "idt": 3},
+            "y_max": {"subdomain": Wall(1, "max", dimensions), "idt": 4},
+            "z_min": {"subdomain": Wall(2, "min", dimensions), "idt": 5},
+            "z_max": {"subdomain": Wall(2, "max", dimensions), "idt": 6},
+        }
+
+        """
+
+        F, P = self.F, self.P
+        
+        unit_vector = df.FacetNormal(self.mesh)
+
+        load = df.inner(P * unit_vector, unit_vector)
+
+        total_load = 0
+        area = 0
+
+        for wall_idt in wall_idts:
+            total_load += df.assemble(load * self.deformation.ds(wall_idt))
+            area += df.assemble(
+                df.det(F)
+                * df.inner(df.inv(F).T * unit_vector, unit_vector)
+                * self.deformation.ds(wall_idt)
+            )
+
+        return total_load / area
+
 
     def evaluate_normal_load(self):
         """
@@ -532,11 +577,11 @@ class CardiacModel(ABC):
 
         return self.deformation.evaluate_shear_load(self.F, self.sigma)
 
-    def evaluate_subdomain_stress_fibre_dir(self, subdomain_id):
+    def evaluate_subdomain_stress_fibre_dir(self, subdomain_ids):
         """
 
         Args:
-            subdomain_id (int): cell idt or ECM idt
+            subdomain_ids (integer or list of integers): cell idt(s) or/and ECM idt
 
         Returns:
             ..math:: \overline{\sigma_{ff}}
@@ -544,13 +589,13 @@ class CardiacModel(ABC):
 
         """
         unit_vector = self.fiber_dir
-        return self.evaluate_subdomain_stress(unit_vector, subdomain_id)
+        return self.evaluate_subdomain_stress(unit_vector, subdomain_ids)
 
-    def evaluate_subdomain_stress_sheet_dir(self, subdomain_id):
+    def evaluate_subdomain_stress_sheet_dir(self, subdomain_ids):
         """
 
         Args:
-            subdomain_id (int): cell idt or ECM idt
+            subdomain_ids (integer or list of integers): cell idt(s) or/and ECM idt
 
         Returns:
             ..math:: \overline{\sigma_{ss}}
@@ -558,13 +603,13 @@ class CardiacModel(ABC):
 
         """
         unit_vector = self.sheet_dir
-        return self.evaluate_subdomain_stress(unit_vector, subdomain_id)
+        return self.evaluate_subdomain_stress(unit_vector, subdomain_ids)
 
-    def evaluate_subdomain_stress_normal_dir(self, subdomain_id):
+    def evaluate_subdomain_stress_normal_dir(self, subdomain_ids):
         """
 
         Args:
-            subdomain_id (int): cell idt or ECM idt
+            subdomain_ids (integer or list of integers): cell idt(s) or/and ECM idt
 
         Returns:
             ..math:: \overline{\sigma_{nn}}
@@ -572,15 +617,15 @@ class CardiacModel(ABC):
 
         """
         unit_vector = self.normal_dir
-        return self.evaluate_subdomain_stress(unit_vector, subdomain_id)
+        return self.evaluate_subdomain_stress(unit_vector, subdomain_ids)
 
-    def evaluate_subdomain_strain(self, unit_vector, subdomain_id):
+    def evaluate_subdomain_strain(self, unit_vector, subdomain_ids):
         """
 
         Args:
             unit_vector (dolfin vector): vector e determining the direction to
                evaluate the Cauchy stress in
-            subdomain_id (int): cell idt or ECM idt
+            subdomain_ids (integer or list of integers): cell idt(s) or/and ECM idt
 
         Returns:
             ..math::
@@ -590,15 +635,15 @@ class CardiacModel(ABC):
 
         """
         strain = df.inner(unit_vector, self.E * unit_vector)
-        return self.integrate_subdomain(strain, subdomain_id) / self.calculate_volume(
-            subdomain_id
+        return self.integrate_subdomain(strain, subdomain_ids) / self.calculate_volume(
+            subdomain_ids
         )
 
-    def evaluate_subdomain_strain_fibre_dir(self, subdomain_id):
+    def evaluate_subdomain_strain_fibre_dir(self, subdomain_ids):
         """
 
         Args:
-            subdomain_id (int): cell idt or ECM idt
+            subdomain_ids (integer or list of integers): cell idt(s) or/and ECM idt
 
         Returns:
             ..math:: \overline{E_{ff}}
@@ -606,13 +651,13 @@ class CardiacModel(ABC):
 
         """
         unit_vector = self.fiber_dir
-        return self.evaluate_subdomain_strain(unit_vector, subdomain_id)
+        return self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
 
-    def evaluate_subdomain_strain_sheet_dir(self, subdomain_id):
+    def evaluate_subdomain_strain_sheet_dir(self, subdomain_ids):
         """
 
         Args:
-            subdomain_id (int): cell idt or ECM idt
+            subdomain_ids (integer or list of integers): cell idt(s) or/and ECM idt
 
         Returns:
             ..math:: \overline{E_{ss}}
@@ -620,13 +665,13 @@ class CardiacModel(ABC):
 
         """
         unit_vector = self.sheet_dir
-        return self.evaluate_subdomain_strain(unit_vector, subdomain_id)
+        return self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
 
-    def evaluate_subdomain_strain_normal_dir(self, subdomain_id):
+    def evaluate_subdomain_strain_normal_dir(self, subdomain_ids):
         """
 
         Args:
-            subdomain_id (int): cell idt or ECM idt
+            subdomain_ids (integer or list of integers): cell idt(s) or/and ECM idt
 
         Returns:
             ..math:: \overline{E_{nn}}
@@ -634,4 +679,4 @@ class CardiacModel(ABC):
 
         """
         unit_vector = self.normal_dir
-        return self.evaluate_subdomain_strain(unit_vector, subdomain_id)
+        return self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
