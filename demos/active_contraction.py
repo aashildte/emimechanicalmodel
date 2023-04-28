@@ -21,7 +21,6 @@ from emimechanicalmodel import (
     Monitor,
 )
 
-
 # compute active stress, pre-computed from the Rice model
 
 time_max = 500
@@ -38,6 +37,7 @@ mesh, volumes = load_mesh(mesh_file)
 model = EMIModel(
     mesh,
     volumes,
+    verbose=2,
     experiment="contraction",
 )
 
@@ -51,8 +51,7 @@ monitor = Monitor(model, output_folder)
 for i in range(num_time_steps):
     time_pt, a_str = time[i], active_values[i]
 
-    if verbose >= 1 and MPI.COMM_WORLD.Get_rank() == 0:
-        print(f"Time step {i+1} / {num_time_steps}", flush=True)
+    print(f"Time step {i+1} / {num_time_steps}", flush=True)
 
     model.update_active_fn(a_str)
     model.solve(project=True)

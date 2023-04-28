@@ -34,7 +34,7 @@ class Monitor:
         self,
         cardiac_model,
         output_folder,
-        param_space,
+        param_space = {},
     ):
 
         self.cardiac_model = cardiac_model
