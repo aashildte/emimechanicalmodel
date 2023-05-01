@@ -51,7 +51,6 @@ def read_cl_args():
         pp.num_steps,
         pp.plot_at_peak,
         pp.plot_all_steps,
-        pp.project_to_subspaces,
         pp.verbose,
     )
 
@@ -72,7 +71,6 @@ def read_cl_args():
     num_steps,
     plot_at_peak,
     plot_all_steps,
-    project_to_subspaces,
     verbose,
 ) = read_cl_args()
 
@@ -103,7 +101,6 @@ model = EMIModel(
     material_parameters=material_params,
     experiment=experiment,
     verbose=verbose,
-    project_to_subspaces=project_to_subspaces,
 )
 
 # setup parameters - define the parameter space to explore
