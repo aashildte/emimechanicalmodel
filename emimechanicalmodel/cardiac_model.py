@@ -138,23 +138,26 @@ class CardiacModel(ABC):
         mesh = self.mesh
 
         P1 = df.FiniteElement("Lagrange", mesh.ufl_cell(), 1)
-        P2 = df.VectorElement("Lagrange", mesh.ufl_cell(), 2)
+        B = df.FiniteElement("Bubble", mesh.ufl_cell(), 4)
+        V = df.VectorElement(df.NodalEnrichedElement(P1, B))
+        Q = P1
+
         P3 = df.VectorElement("Real", mesh.ufl_cell(), 0, 6)
 
-        mixed_elements = [P2]
-
         if self.compressibility_model == "incompressible":
-            mixed_elements += [P1]
-
-        if self.experiment_str == "contraction":
-            mixed_elements += [P3]
-
-        state_space = df.FunctionSpace(mesh, df.MixedElement(mixed_elements))
-
-        if len(mixed_elements) == 1:
-            self.V_CG = state_space
+            if self.experiment_str == "contraction":
+                state_space = df.FunctionSpace(mesh, df.MixedElement([V, Q, P3]))
+                self.V_CG = state_space.sub(0)
+            else:
+                state_space = df.FunctionSpace(mesh, V*Q)
+                self.V_CG = state_space.sub(0)
         else:
-            self.V_CG = state_space.sub(0)
+            if self.experiment_str == "contraction":
+                state_space = df.FunctionSpace(mesh, df.MixedElement([V, P3]))
+                self.V_CG = state_space.sub(0)
+            else:
+                state_space = df.FunctionSpace(mesh, V)
+                self.V_CG = V
 
         self.state_space = state_space
 
