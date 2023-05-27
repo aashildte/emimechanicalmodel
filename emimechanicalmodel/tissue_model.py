@@ -51,6 +51,8 @@ class TissueModel(CardiacModel):
         self.volumes = df.MeshFunction("size_t", mesh, dim, 0)
         self.volumes.array()[:] = 0
 
+        material_parameters["dim"] = dim
+
         if material_model=="holzapfel":
             mat_model = HolzapfelMaterial(**material_parameters)
         elif material_model=="guccione":

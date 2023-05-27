@@ -35,7 +35,7 @@ class HolzapfelMaterial:
     ):
         
         self.dim = dim
-
+        
         self.a, self.b, self.a_f, self.b_f, self.a_s, self.b_s, self.a_fs, self.b_fs = (
             a,
             b,
