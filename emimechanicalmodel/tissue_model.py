@@ -43,9 +43,11 @@ class TissueModel(CardiacModel):
         compressibility_parameters={},
         verbose=0,
     ):
-
+        
         self.num_subdomains = 1
         self.subdomains = [0]
+        
+        dim = mesh.topology().dim()
         self.volumes = df.MeshFunction("size_t", mesh, dim, 0)
         self.volumes.array()[:] = 0
 

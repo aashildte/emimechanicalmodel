@@ -6,6 +6,7 @@ Material model; the Holzapfel-Odgen model adapted to the EMI framework.
 
 """
 
+import numpy as np
 import dolfin as df
 import ufl
 
@@ -46,6 +47,8 @@ class EMIHolzapfelMaterial:
             b_if,
         )
 
+        self.dim = U.mesh().topology().dim()
+
         # assign material paramters via characteristic functions
         xi_i = df.Function(U)
         assign_discrete_values(xi_i, subdomain_map, 1, 0)
@@ -70,7 +73,8 @@ class EMIHolzapfelMaterial:
             self._b_f,
         )
 
-        e1 = df.as_vector([1.0, 0.0, 0.0])
+        e1 = df.as_vector(np.zeros(self.dim))
+        e1[0] = 1.0
 
         J = df.det(F)
         C = pow(J, -float(2) / 3) * F.T * F
@@ -80,7 +84,7 @@ class EMIHolzapfelMaterial:
 
         cond = lambda a: ufl.conditional(a > 0, a, 0)
 
-        W_hat = a / (2 * b) * (df.exp(b * (IIFx - 3)) - 1)
+        W_hat = a / (2 * b) * (df.exp(b * (IIFx - self.dim)) - 1)
         W_f = a_f / (2 * b_f) * (df.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
 
         return W_hat + W_f
