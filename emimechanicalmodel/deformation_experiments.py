@@ -1,14 +1,18 @@
 """
 
-Åshild Telle / Simula Research Laboratory / 2022
+Åshild Telle / University of Washington, Simula Research Laboratory / 2023–2022
 
 Implementation of boundary conditions ++ for different passive deformation modes.
+
+TODO:
+    - Maybe deformations in the normal direction might make sense if we
+      consider a cross-section in this direction?
 
 """
 
 import dolfin as df
 from mpi4py import MPI
-
+import numpy as np
 
 class DeformationExperiment:
     """
@@ -53,27 +57,36 @@ class DeformationExperiment:
         return -1
 
     def get_dimensions(self, mesh):
+
+        self.dim = mesh.topology().dim()
+
         mpi_comm = mesh.mpi_comm()
         coords = mesh.coordinates()[:]
 
         xcoords = coords[:, 0]
         ycoords = coords[:, 1]
-        zcoords = coords[:, 2]
 
         xmin = mpi_comm.allreduce(min(xcoords), op=MPI.MIN)
         xmax = mpi_comm.allreduce(max(xcoords), op=MPI.MAX)
         ymin = mpi_comm.allreduce(min(ycoords), op=MPI.MIN)
         ymax = mpi_comm.allreduce(max(ycoords), op=MPI.MAX)
-        zmin = mpi_comm.allreduce(min(zcoords), op=MPI.MIN)
-        zmax = mpi_comm.allreduce(max(zcoords), op=MPI.MAX)
-
+        
         length = xmax - xmin
         width = ymax - ymin
-        height = zmax - zmin
+        
+        if self.dim > 2:
+            zcoords = coords[:, 2]
+            
+            zmin = mpi_comm.allreduce(min(zcoords), op=MPI.MIN)
+            zmax = mpi_comm.allreduce(max(zcoords), op=MPI.MAX)
+            height = zmax - zmin
+            
+            print(f"Domain length={length}, " + f"width={width}, " + f"height={height}")
+            dimensions = [[xmin, xmax], [ymin, ymax], [zmin, zmax]]
 
-        print(f"length={length}, " + f"width={width}, " + f"height={height}")
-
-        dimensions = [[xmin, xmax], [ymin, ymax], [zmin, zmax]]
+        else:    
+            print(f"Domain length={length}, " + f"width={width}")
+            dimensions = [[xmin, xmax], [ymin, ymax]]
 
         return dimensions
 
@@ -85,9 +98,11 @@ class DeformationExperiment:
             "x_max": {"subdomain": Wall(0, "max", dimensions), "idt": 2},
             "y_min": {"subdomain": Wall(1, "min", dimensions), "idt": 3},
             "y_max": {"subdomain": Wall(1, "max", dimensions), "idt": 4},
-            "z_min": {"subdomain": Wall(2, "min", dimensions), "idt": 5},
-            "z_max": {"subdomain": Wall(2, "max", dimensions), "idt": 6},
         }
+
+        if self.dim > 2:
+            boundaries["z_min"] = {"subdomain": Wall(2, "min", dimensions), "idt": 5}
+            boundaries["z_max"] = {"subdomain": Wall(2, "max", dimensions), "idt": 6}
 
         # Mark boundary subdomains
 
@@ -128,13 +143,20 @@ class StretchFF(DeformationExperiment):
         min_v, max_v = self.dimensions[0]
         L = max_v - min_v
 
-        self.bcsfun = df.Expression(("k*L", 0, 0), L=L, k=0, degree=2)
+        if self.dim == 2:
+            self.bcsfun = df.Expression(("k*L", 0), L=L, k=0, degree=2)
+        else:
+            self.bcsfun = df.Expression(("k*L", 0, 0), L=L, k=0, degree=2)
 
     def assign_stretch(self, stretch_value):
         self.bcsfun.k = stretch_value
 
-    def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector([1.0, 0.0, 0.0])
+    def evaluate_normal_load(self, F, P):        
+        if self.dim == 3:
+            unit_vector = df.as_vector([1.0, 0.0, 0.0])
+        else:
+            unit_vector = df.as_vector([1.0, 0.0])
+        
         wall_idt = self.boundaries["x_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
@@ -151,8 +173,10 @@ class StretchFF(DeformationExperiment):
         xmin = boundaries["x_min"]["subdomain"]
         xmax = boundaries["x_max"]["subdomain"]
 
+        const = df.Constant(np.zeros(self.dim))
+
         bcs = [
-            df.DirichletBC(V_CG2, df.Constant((0.0, 0.0, 0.0)), xmin),
+            df.DirichletBC(V_CG2, const, xmin),
             df.DirichletBC(V_CG2, self.bcsfun, xmax),
         ]
 
@@ -165,13 +189,20 @@ class StretchSS(DeformationExperiment):
         min_v, max_v = self.dimensions[1]
         L = max_v - min_v
 
-        self.bcsfun = df.Expression((0, "k*L", 0), L=L, k=0, degree=2)
+        if self.dim == 2:
+            self.bcsfun = df.Expression((0, "k*L"), L=L, k=0, degree=2)
+        else:
+            self.bcsfun = df.Expression((0, "k*L", 0), L=L, k=0, degree=2)
 
     def assign_stretch(self, stretch_value):
         self.bcsfun.k = stretch_value
 
     def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector([0.0, 1.0, 0.0])
+        if self.dim == 3:
+            unit_vector = df.as_vector([0.0, 1.0, 0.0])
+        else:
+            unit_vector = df.as_vector([0.0, 1.0])
+
         wall_idt = self.boundaries["y_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
@@ -187,9 +218,11 @@ class StretchSS(DeformationExperiment):
 
         ymin = boundaries["y_min"]["subdomain"]
         ymax = boundaries["y_max"]["subdomain"]
+       
+        const = df.Constant(np.zeros(self.dim))
 
         bcs = [
-            df.DirichletBC(V_CG2, df.Constant((0.0, 0.0, 0.0)), ymin),
+            df.DirichletBC(V_CG2, const, ymin),
             df.DirichletBC(V_CG2, self.bcsfun, ymax),
         ]
 
@@ -201,6 +234,8 @@ class StretchNN(DeformationExperiment):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[2]
         L = max_v - min_v
+
+        assert self.dim == 3, "Error: This deformation only makes sense in three dimensions."
 
         self.bcsfun = df.Expression((0, 0, "k*L"), L=L, k=0, degree=2)
 
@@ -238,6 +273,8 @@ class ShearNS(DeformationExperiment):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[2]
         L = max_v - min_v
+        
+        assert self.dim == 3, "Error: This deformation only makes sense in three dimensions."
 
         self.bcsfun = df.Expression(
             (0, "k*(x[2] - min_v)", 0), min_v=min_v, k=0, degree=2
@@ -278,6 +315,8 @@ class ShearNF(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
         min_v, max_v = self.dimensions[2]
+        
+        assert self.dim == 3, "Error: This deformation only makes sense in three dimensions."
 
         self.bcsfun = df.Expression(
             ("k*(x[2] - min_v)", 0, 0), min_v=min_v, k=0, degree=2
@@ -322,6 +361,8 @@ class ShearFN(DeformationExperiment):
         self.bcsfun = df.Expression(
             (0, 0, "k*(x[0] - min_v)"), min_v=min_v, k=0, degree=2
         )
+        
+        assert self.dim == 3, "Error: This deformation only makes sense in three dimensions."
 
     def assign_stretch(self, stretch_value):
         self.bcsfun.k = stretch_value
@@ -367,13 +408,21 @@ class ShearFS(DeformationExperiment):
         self.bcsfun.k = stretch_value
 
     def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector([1.0, 0.0, 0.0])
+        if self.dim == 3:
+            unit_vector = df.as_vector([1.0, 0.0, 0.0])
+        else:
+            unit_vector = df.as_vector([1.0, 0.0])
+        
         wall_idt = self.boundaries["x_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
 
     def evaluate_shear_load(self, F, P):
-        unit_vector = df.as_vector([0.0, 1.0, 0.0])
+        if self.dim == 3:
+            unit_vector = df.as_vector([0.0, 1.0, 0.0])
+        else:
+            unit_vector = df.as_vector([0.0, 1.0])
+        
         wall_idt = self.boundaries["x_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
@@ -407,13 +456,21 @@ class ShearSF(DeformationExperiment):
         self.bcsfun.k = stretch_value
 
     def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector([0.0, 1.0, 0.0])
+        if self.dim == 2:
+            unit_vector = df.as_vector([0.0, 1.0])
+        elif self.dim == 3:
+            unit_vector = df.as_vector([0.0, 1.0, 0.0])
+ 
         wall_idt = self.boundaries["y_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
 
     def evaluate_shear_load(self, F, P):
-        unit_vector = df.as_vector([1.0, 0.0, 0.0])
+        if self.dim == 2:
+            unit_vector = df.as_vector([1.0, 0.0])
+        elif self.dim == 3:
+            unit_vector = df.as_vector([1.0, 0.0, 0.0])
+        
         wall_idt = self.boundaries["y_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
@@ -428,7 +485,6 @@ class ShearSF(DeformationExperiment):
         zmax = boundaries["z_max"]["subdomain"]
 
         boundaries = [ymin, ymax]
-        # boundaries = [ymin, ymax, zmin, zmax]
         bcs = [df.DirichletBC(V_CG2, self.bcsfun, bnd) for bnd in boundaries]
 
         return bcs
@@ -442,6 +498,8 @@ class ShearSN(DeformationExperiment):
         self.bcsfun = df.Expression(
             (0, 0, "k*(x[1] - min_v)"), min_v=min_v, k=0, degree=2
         )
+        
+        assert self.dim == 3, "Error: This deformation only makes sense in three dimensions."
 
     def assign_stretch(self, stretch_value):
         self.bcsfun.k = stretch_value

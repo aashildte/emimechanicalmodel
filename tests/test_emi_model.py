@@ -114,6 +114,6 @@ def test_emi_deformation(deformation_mode):
 if __name__ == "__main__":
     test_emi_active_stress()
     test_emi_active_strain()
-    # test_emi_proj_strain()
-    # test_emi_proj_stress()
-    # test_emi_deformation("shear_fs")
+    test_emi_proj_strain()
+    test_emi_proj_stress()
+    test_emi_deformation("shear_fs")

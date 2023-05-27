@@ -6,6 +6,7 @@ Material model based on the Holzapfel-Odgen model (2009).
 
 """
 
+import numpy as np
 import dolfin as df
 import ufl
 
@@ -30,8 +31,11 @@ class HolzapfelMaterial:
         b_s=df.Constant(3.002),
         a_fs=df.Constant(0.062),
         b_fs=df.Constant(3.476),
+        dim=3,
     ):
-
+        
+        self.dim = dim
+        
         self.a, self.b, self.a_f, self.b_f, self.a_s, self.b_s, self.a_fs, self.b_fs = (
             a,
             b,
@@ -54,9 +58,13 @@ class HolzapfelMaterial:
             self.a_fs,
             self.b_fs,
         )
-
-        e1 = df.as_vector([1.0, 0.0, 0.0])
-        e2 = df.as_vector([0.0, 1.0, 0.0])
+        
+        if self.dim == 3:
+            e1 = df.as_vector([1.0, 0.0, 0.0])
+            e2 = df.as_vector([0.0, 1.0, 0.0])
+        else:
+            e1 = df.as_vector([1.0, 0.0])
+            e2 = df.as_vector([0.0, 1.0])
 
         J = df.det(F)
         C = pow(J, -float(2) / 3) * F.T * F

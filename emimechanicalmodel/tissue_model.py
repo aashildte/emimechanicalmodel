@@ -43,10 +43,16 @@ class TissueModel(CardiacModel):
         compressibility_parameters={},
         verbose=0,
     ):
-
+        
         self.num_subdomains = 1
+        self.subdomains = [0]
         
-        
+        dim = mesh.topology().dim()
+        self.volumes = df.MeshFunction("size_t", mesh, dim, 0)
+        self.volumes.array()[:] = 0
+
+        material_parameters["dim"] = dim
+
         if material_model=="holzapfel":
             mat_model = HolzapfelMaterial(**material_parameters)
         elif material_model=="guccione":
