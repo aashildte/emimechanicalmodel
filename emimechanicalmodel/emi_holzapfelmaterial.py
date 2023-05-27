@@ -73,8 +73,10 @@ class EMIHolzapfelMaterial:
             self._b_f,
         )
 
-        e1 = df.as_vector(np.zeros(self.dim))
-        e1[0] = 1.0
+        if self.dim == 2:
+            e1 = df.as_vector([1.0, 0.0])
+        elif self.dim == 3:
+            e1 = df.as_vector([1.0, 0.0, 0.0])
 
         J = df.det(F)
         C = pow(J, -float(2) / 3) * F.T * F
