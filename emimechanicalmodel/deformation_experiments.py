@@ -152,8 +152,10 @@ class StretchFF(DeformationExperiment):
         self.bcsfun.k = stretch_value
 
     def evaluate_normal_load(self, F, P):        
-        unit_vector = df.as_vector(np.zeros(self.dim))
-        unit_vector[0] = 1.0
+        if self.dim == 3:
+            unit_vector = df.as_vector([1.0, 0.0, 0.0])
+        else:
+            unit_vector = df.as_vector([1.0, 0.0])
         
         wall_idt = self.boundaries["x_max"]["idt"]
 
@@ -196,8 +198,10 @@ class StretchSS(DeformationExperiment):
         self.bcsfun.k = stretch_value
 
     def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector(np.zeros(self.dim))
-        unit_vector[1] = 1.0
+        if self.dim == 3:
+            unit_vector = df.as_vector([0.0, 1.0, 0.0])
+        else:
+            unit_vector = df.as_vector([0.0, 1.0])
 
         wall_idt = self.boundaries["y_max"]["idt"]
 
@@ -404,16 +408,20 @@ class ShearFS(DeformationExperiment):
         self.bcsfun.k = stretch_value
 
     def evaluate_normal_load(self, F, P):
-        unit_vector = df.as_vector(np.zeros(self.dim))
-        unit_vector[0] = 1.0
+        if self.dim == 3:
+            unit_vector = df.as_vector([1.0, 0.0, 0.0])
+        else:
+            unit_vector = df.as_vector([1.0, 0.0])
         
         wall_idt = self.boundaries["x_max"]["idt"]
 
         return self._evaluate_load(F, P, wall_idt, unit_vector)
 
     def evaluate_shear_load(self, F, P):
-        unit_vector = df.as_vector(np.zeros(self.dim))
-        unit_vector[1] = 1.0
+        if self.dim == 3:
+            unit_vector = df.as_vector([0.0, 1.0, 0.0])
+        else:
+            unit_vector = df.as_vector([0.0, 1.0])
         
         wall_idt = self.boundaries["x_max"]["idt"]
 
