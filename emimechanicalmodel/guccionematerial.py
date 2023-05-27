@@ -24,25 +24,34 @@ class GuccioneMaterial():
         b_f=df.Constant(8),
         b_t=df.Constant(2),
         b_ft=df.Constant(4),
+        dim=3,
     ):
 
         self.C = C
         self.b_s = b_f
         self.b_t = b_t
         self.b_ft = b_ft
+        self.dim = dim
 
         self._C, self._b_f, self._b_t, self._b_ft = C, b_f, b_t, b_ft
 
     def get_strain_energy_term(self, F):
         C_ss, b_f, b_t, b_ft = self.C, self.b_f, self.b_t, self.b_ft
 
-        e1 = df.as_vector([1.0, 0.0, 0.0])
-        e2 = df.as_vector([0.0, 1.0, 0.0])
-        e3 = df.as_vector([0.0, 0.0, 1.0])
+        if self.dim == 2:
+            e1 = df.as_vector([1.0, 0.0])
+            e2 = df.as_vector([0.0, 1.0])
+        else:
+            e1 = df.as_vector([1.0, 0.0, 0.0])
+            e2 = df.as_vector([0.0, 1.0, 0.0])
+            e3 = df.as_vector([0.0, 0.0, 1.0])
 
-        I = df.Identity(3)
+        I = df.Identity(self.dim)
+        
         J = df.det(F)
-        C = pow(J, -float(2) / 3) * F.T * F
+        J_iso = pow(J, -1.0 / float(self.dim))
+        C = J_iso**2 * F.T * F
+        
         E = 0.5 * (C - I)
         
         E11, E12 = (
