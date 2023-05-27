@@ -125,27 +125,58 @@ class Monitor:
 
         for subdomain_id in model.subdomains:
             scalar_functions[f"stress_xdir_subdomain_{subdomain_id}"] = partial(
-                model.evaluate_subdomain_stress_fibre_dir, subdomain_ids=subdomain_id
+                model.evaluate_subdomain_stress_fibre_dir,
+                subdomain_ids=subdomain_id
             )
             scalar_functions[f"stress_ydir_subdomain_{subdomain_id}"] = partial(
                 model.evaluate_subdomain_stress_sheet_dir,
                 subdomain_ids=subdomain_id,
             )
             scalar_functions[f"stress_zdir_subdomain_{subdomain_id}"] = partial(
-                model.evaluate_subdomain_stress_normal_dir, subdomain_ids=subdomain_id
+                model.evaluate_subdomain_stress_normal_dir,
+                subdomain_ids=subdomain_id
             )
 
             scalar_functions[f"strain_xdir_subdomain_{subdomain_id}"] = partial(
-                model.evaluate_subdomain_strain_fibre_dir, subdomain_ids=subdomain_id
+                model.evaluate_subdomain_strain_fibre_dir,
+                subdomain_ids=subdomain_id
             )
             scalar_functions[f"strain_ydir_subdomain_{subdomain_id}"] = partial(
                 model.evaluate_subdomain_strain_sheet_dir,
                 subdomain_ids=subdomain_id,
             )
             scalar_functions[f"strain_zdir_subdomain_{subdomain_id}"] = partial(
-                model.evaluate_subdomain_strain_normal_dir, subdomain_ids=subdomain_id
+                model.evaluate_subdomain_strain_normal_dir,
+                subdomain_ids=subdomain_id
             )
+            
+        # then across all subdomains:
+        scalar_functions[f"stress_xdir_whole_domain"] = partial(
+            model.evaluate_subdomain_stress_fibre_dir,
+            subdomain_ids=model.subdomains
+        )
+        scalar_functions[f"stress_ydir_whole_domain"] = partial(
+            model.evaluate_subdomain_stress_sheet_dir,
+            subdomain_ids=subdomain_id,
+        )
+        scalar_functions[f"stress_zdir_whole_domain"] = partial(
+            model.evaluate_subdomain_stress_normal_dir,
+            subdomain_ids=model.subdomains
+        )
 
+        scalar_functions[f"strain_xdir_whole_domain"] = partial(
+            model.evaluate_subdomain_strain_fibre_dir,
+            subdomain_ids=model.subdomains
+        )
+        scalar_functions[f"strain_ydir_whole_domain"] = partial(
+            model.evaluate_subdomain_strain_sheet_dir,
+            subdomain_ids=model.subdomains,
+        )
+        scalar_functions[f"strain_zdir_whole_domain"] = partial(
+            model.evaluate_subdomain_strain_normal_dir,
+            subdomain_ids=model.subdomains
+        )
+            
         scalar_values = {"states": []}
 
         for key in scalar_functions.keys():

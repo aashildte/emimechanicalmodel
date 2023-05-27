@@ -45,8 +45,10 @@ class TissueModel(CardiacModel):
     ):
 
         self.num_subdomains = 1
-        
-        
+        self.subdomains = [0]
+        self.volumes = df.MeshFunction("size_t", mesh, dim, 0)
+        self.volumes.array()[:] = 0
+
         if material_model=="holzapfel":
             mat_model = HolzapfelMaterial(**material_parameters)
         elif material_model=="guccione":

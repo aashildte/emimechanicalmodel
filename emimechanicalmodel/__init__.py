@@ -7,6 +7,7 @@ from .monitor import Monitor
 
 from .holzapfelmaterial import HolzapfelMaterial
 from .emi_holzapfelmaterial import EMIHolzapfelMaterial
+from .fibrotic_tissue_model import FibrosisModel
 
 from .mesh_setup import (
     load_mesh,

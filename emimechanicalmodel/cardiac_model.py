@@ -1,6 +1,6 @@
 """
 
-Åshild Telle, James D. Trotter / Simula Research Laboratory / 2022
+Åshild Telle / University of Washington, Simula Research Laboratory / 2022–2023
 
 This is the main implementation; all continuum mechanics is defined through this code.
 We employ an active strain formulation, through an active function, and  express the
@@ -54,16 +54,13 @@ class CardiacModel(ABC):
         """
         
         self.mesh = mesh
+        self.dim = mesh.topology().dim()
         self.verbose = verbose
         self.active_model = active_model
         self.compressibility_model = compressibility_model
         self.experiment_str = experiment
 
-        # set directions, assuming alignment with the Cartesian axes
-
-        self.fiber_dir = df.as_vector([1, 0, 0])
-        self.sheet_dir = df.as_vector([0, 1, 0])
-        self.normal_dir = df.as_vector([0, 0, 1])
+        self._set_direction_vectors()
 
         # define variational form
         self._define_active_strain()
@@ -93,6 +90,22 @@ class CardiacModel(ABC):
         # define solver and initiate tracked variables
         self._define_solver(verbose)
         self._define_projections()
+
+    def _set_direction_vectors(self):
+        dim = self.dim
+
+        # set directions, assuming alignment with the Cartesian axes
+        if dim == 3:
+            self.fiber_dir = df.as_vector([1, 0, 0])
+            self.sheet_dir = df.as_vector([0, 1, 0])
+            self.normal_dir = df.as_vector([0, 0, 1])
+        
+        elif dim == 2:
+            self.fiber_dir = df.as_vector([1, 0])
+            self.sheet_dir = df.as_vector([0, 1])
+        else:
+            raise NotImplementedError
+
 
     def _define_solver(self, verbose):
         """
@@ -139,7 +152,11 @@ class CardiacModel(ABC):
 
         P1 = df.FiniteElement("Lagrange", mesh.ufl_cell(), 1)
         P2 = df.VectorElement("Lagrange", mesh.ufl_cell(), 2)
-        P3 = df.VectorElement("Real", mesh.ufl_cell(), 0, 6)
+        
+        if self.dim == 3:
+            P3 = df.VectorElement("Real", mesh.ufl_cell(), 0, 6)
+        else:
+            P3 = df.VectorElement("Real", mesh.ufl_cell(), 0, 3)
 
         mixed_elements = [P2]
 
@@ -182,7 +199,7 @@ class CardiacModel(ABC):
         state = df.Function(state_space, name="state")
         test_state = df.TestFunction(state_space)
 
-        u = p = r = v = q = s = df.Constant(0)        # if these are declared they can be ufl variables!
+        u = p = r = v = q = s = df.Constant(0)        # if these are not declared they can be ufl variables!
 
         if self.compressibility_model == "incompressible":
             if self.experiment_str == "contraction":
@@ -286,9 +303,15 @@ class CardiacModel(ABC):
         else:
 
             sqrt_fun = (df.Constant(1) - active_fn) ** (-0.5)
-            F_a = df.as_tensor(
-                ((df.Constant(1) - active_fn, 0, 0), (0, sqrt_fun, 0), (0, 0, sqrt_fun))
-            )
+
+            if self.dim == 3:
+                F_a = df.as_tensor(
+                    ((df.Constant(1) - active_fn, 0, 0), (0, sqrt_fun, 0), (0, 0, sqrt_fun))
+                )
+            else:
+                F_a = df.as_tensor(
+                    ((df.Constant(1) - active_fn, 0), (0, sqrt_fun))
+                )
 
             F_e = df.variable(F * df.inv(F_a))
             psi_passive = mat_model.get_strain_energy_term(F_e)
@@ -399,14 +422,21 @@ class CardiacModel(ABC):
 
         position = df.SpatialCoordinate(self.mesh)
 
-        RM = [
-            df.Constant((1, 0, 0)),
-            df.Constant((0, 1, 0)),
-            df.Constant((0, 0, 1)),
-            df.cross(position, df.Constant((1, 0, 0))),
-            df.cross(position, df.Constant((0, 1, 0))),
-            df.cross(position, df.Constant((0, 0, 1))),
-        ]
+        if self.dim == 3:
+            RM = [
+                df.Constant((1, 0, 0)),
+                df.Constant((0, 1, 0)),
+                df.Constant((0, 0, 1)),
+                df.cross(position, df.Constant((1, 0, 0))),
+                df.cross(position, df.Constant((0, 1, 0))),
+                df.cross(position, df.Constant((0, 0, 1))),
+            ]
+        else:
+            RM = [
+                df.Constant((1, 0)),
+                df.Constant((0, 1)),
+                df.Expression(("-x[1]", "x[0]"), degree=1),
+            ]
 
         Pi = sum(df.dot(u, zi) * r[i] * df.dx for i, zi in enumerate(RM))
 
@@ -438,7 +468,7 @@ class CardiacModel(ABC):
             solver_parameters={
                 "newton_solver": {
                     "absolute_tolerance": 1e-5,
-                    "maximum_iterations": 10,
+                    "maximum_iterations": 30,
                 }
             },
             form_compiler_parameters={"optimize": True},
@@ -616,6 +646,9 @@ class CardiacModel(ABC):
             (see eq. (17) in the paper)
 
         """
+        if self.dim == 2:
+            return 0
+
         unit_vector = self.normal_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_ids)
 
@@ -678,5 +711,9 @@ class CardiacModel(ABC):
             (see eq. (16) in the paper)
 
         """
+        
+        if self.dim == 2:
+            return 0
+
         unit_vector = self.normal_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
