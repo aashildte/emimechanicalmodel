@@ -33,9 +33,8 @@ class HolzapfelMaterial:
         b_fs=df.Constant(3.476),
         dim=3,
     ):
-        
         self.dim = dim
-        
+
         self.a, self.b, self.a_f, self.b_f, self.a_s, self.b_s, self.a_fs, self.b_fs = (
             a,
             b,
@@ -77,7 +76,7 @@ class HolzapfelMaterial:
 
         cond = lambda a: ufl.conditional(a > 0, a, 0)
 
-        W_hat = a / (2 * b) * (df.exp(b * (IIFx - 3)) - 1)
+        W_hat = a / (2 * b) * (df.exp(b * (IIFx - self.dim)) - 1)
         W_f = a_f / (2 * b_f) * (df.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
         W_s = a_s / (2 * b_s) * (df.exp(b_s * cond(I4e2 - 1) ** 2) - 1)
         W_fs = a_fs / (2 * b_fs) * (df.exp(b_fs * (I8e1e2**2)) - 1)

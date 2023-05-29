@@ -92,10 +92,9 @@ class Monitor:
         )
         # also write subdomains to file
 
-        if isinstance(self.cardiac_model, EMIModel):
-            f_subdomains = df.XDMFFile(os.path.join(path_xdmf_files, "subdomains.xdmf"))
-            f_subdomains.write(self.cardiac_model.volumes)
-            f_subdomains.close()
+        f_subdomains = df.XDMFFile(os.path.join(path_xdmf_files, "subdomains.xdmf"))
+        f_subdomains.write(self.cardiac_model.volumes)
+        f_subdomains.close()
 
     def update_xdmf_files(self, it_number):
         """
