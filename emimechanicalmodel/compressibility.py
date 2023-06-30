@@ -36,14 +36,14 @@ class IncompressibleMaterial(CompressibleMaterial):
 
 class EMINearlyIncompressibleMaterial(CompressibleMaterial):
     def __init__(
-            self,
-            U,
-            subdomain_map,
-            kappa_i=df.Constant(10000),
-            kappa_e=df.Constant(100),
-            ):
+        self,
+        U,
+        subdomain_map,
+        kappa_i=df.Constant(10000),
+        kappa_e=df.Constant(100),
+    ):
         """
-        
+
         Args:
             U - function space for discrete function; DG-0 is a good choice
             subdomain_map - mapping from volume array to U; for DG-0 this is trivial
@@ -54,12 +54,11 @@ class EMINearlyIncompressibleMaterial(CompressibleMaterial):
         """
         xi_i = df.Function(U)
         assign_discrete_values(xi_i, subdomain_map, 1, 0)
-        
+
         xi_e = df.Function(U)
         assign_discrete_values(xi_e, subdomain_map, 0, 1)
 
-        self.kappa = kappa_i*xi_i + kappa_e*xi_e
-
+        self.kappa = kappa_i * xi_i + kappa_e * xi_e
 
     def get_strain_energy_term(self, F, p=None):
         """
@@ -72,7 +71,7 @@ class EMINearlyIncompressibleMaterial(CompressibleMaterial):
 
         """
         J = ufl.det(F)
-        return self.kappa * (J*df.ln(J) - J + 1)
+        return self.kappa * (J * df.ln(J) - J + 1)
 
 
 class NearlyIncompressibleMaterial(CompressibleMaterial):
@@ -82,6 +81,7 @@ class NearlyIncompressibleMaterial(CompressibleMaterial):
     in cases where kappa_i = kappa_e = a constant.
 
     """
+
     def __init__(self, kappa=df.Constant(1000)):
         """
         Args:
@@ -89,7 +89,6 @@ class NearlyIncompressibleMaterial(CompressibleMaterial):
 
         """
         self.kappa = kappa
-
 
     def get_strain_energy_term(self, F, p=None):
         """
@@ -102,4 +101,4 @@ class NearlyIncompressibleMaterial(CompressibleMaterial):
 
         """
         J = ufl.det(F)
-        return self.kappa * (J*df.ln(J) - J + 1)
+        return self.kappa * (J * df.ln(J) - J + 1)

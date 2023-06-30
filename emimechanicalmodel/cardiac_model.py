@@ -12,6 +12,7 @@ specified in classes implementing CardiacModel through heritage.
 from abc import ABC, abstractmethod
 import dolfin as df
 import numpy as np
+from mpi4py import MPI
 
 from emimechanicalmodel.deformation_experiments import (
     Contraction,
@@ -52,7 +53,7 @@ class CardiacModel(ABC):
                 or 2 (quite a bit)
 
         """
-        
+
         self.mesh = mesh
         self.dim = mesh.topology().dim()
         self.verbose = verbose
@@ -83,7 +84,6 @@ class CardiacModel(ABC):
             "shear_sf": ShearSF,
             "shear_sn": ShearSN,
         }
-
         self.deformation = exp_dict[experiment](mesh, self.V_CG)
         self.bcs = self.deformation.bcs
 
@@ -99,13 +99,12 @@ class CardiacModel(ABC):
             self.fiber_dir = df.as_vector([1, 0, 0])
             self.sheet_dir = df.as_vector([0, 1, 0])
             self.normal_dir = df.as_vector([0, 0, 1])
-        
+
         elif dim == 2:
             self.fiber_dir = df.as_vector([1, 0])
             self.sheet_dir = df.as_vector([0, 1])
         else:
             raise NotImplementedError
-
 
     def _define_solver(self, verbose):
         """
@@ -133,7 +132,6 @@ class CardiacModel(ABC):
         df.parameters["form_compiler"]["representation"] = "uflacs"
         df.parameters["form_compiler"]["quadrature_degree"] = 4
 
-
     def _define_state_space(self):
         """
 
@@ -152,7 +150,7 @@ class CardiacModel(ABC):
 
         P1 = df.FiniteElement("Lagrange", mesh.ufl_cell(), 1)
         P2 = df.VectorElement("Lagrange", mesh.ufl_cell(), 2)
-        
+
         if self.dim == 3:
             P3 = df.VectorElement("Real", mesh.ufl_cell(), 0, 6)
         else:
@@ -179,7 +177,6 @@ class CardiacModel(ABC):
             dofs = len(state_space.dofmap().dofs())
             print("Degrees of freedom: ", dofs, flush=True)
 
-
     def _define_state_functions(self):
         """
 
@@ -199,7 +196,9 @@ class CardiacModel(ABC):
         state = df.Function(state_space, name="state")
         test_state = df.TestFunction(state_space)
 
-        u = p = r = v = q = s = df.Constant(0)        # if these are not declared they can be ufl variables!
+        u = p = r = v = q = s = df.Constant(
+            0
+        )  # if these are not declared they can be ufl variables!
 
         if self.compressibility_model == "incompressible":
             if self.experiment_str == "contraction":
@@ -212,19 +211,18 @@ class CardiacModel(ABC):
         else:
             if self.experiment_str == "contraction":
                 u, r = df.split(state)
-                v,  _ = df.split(test_state)
+                v, _ = df.split(test_state)
             else:
                 u = state
                 v = test_state
 
         self.state = state
         self.test_state = test_state
-        
+
         self.u, self.p, self.r, self.v, self.q, self.s = u, p, r, v, q, s
 
         self.state_functions = [u, p, r]
         self.test_state_functions = [v, q, s]
-
 
     def assign_stretch(self, stretch_value):
         """
@@ -265,7 +263,6 @@ class CardiacModel(ABC):
         """
         pass
 
-
     def _calculate_P(self, F):
         """
 
@@ -280,24 +277,30 @@ class CardiacModel(ABC):
             F (ufl form) - deformation tensor
         """
 
-        active_fn, comp_model, active_model, mat_model = \
-                self.active_fn, self.comp_model, self.active_model, self.mat_model
+        active_fn, comp_model, active_model, mat_model = (
+            self.active_fn,
+            self.comp_model,
+            self.active_model,
+            self.mat_model,
+        )
 
-        assert active_model in ["active_stress", "active_strain"], \
-                "Error: Unknown active model, please specify as 'active_stress' or 'active_strain'."
-        
+        assert active_model in [
+            "active_stress",
+            "active_strain",
+        ], "Error: Unknown active model, please specify as 'active_stress' or 'active_strain'."
+
         J = df.det(F)
 
         if active_model == "active_stress":
             e1 = self.fiber_dir
-            
-            C = pow(J, -float(2) / 3) * F.T * F 
+
+            C = pow(J, -float(2) / 3) * F.T * F
             I4 = df.inner(C * e1, e1)
 
             psi_active = active_fn / 2.0 * (I4 - 1)
             psi_passive = mat_model.get_strain_energy_term(F)
             psi_comp = comp_model.get_strain_energy_term(F, self.p)
- 
+
             psi = psi_active + psi_passive + psi_comp
             P = df.diff(psi, F)
         else:
@@ -306,12 +309,14 @@ class CardiacModel(ABC):
 
             if self.dim == 3:
                 F_a = df.as_tensor(
-                    ((df.Constant(1) - active_fn, 0, 0), (0, sqrt_fun, 0), (0, 0, sqrt_fun))
+                    (
+                        (df.Constant(1) - active_fn, 0, 0),
+                        (0, sqrt_fun, 0),
+                        (0, 0, sqrt_fun),
+                    )
                 )
             else:
-                F_a = df.as_tensor(
-                    ((df.Constant(1) - active_fn, 0), (0, sqrt_fun))
-                )
+                F_a = df.as_tensor(((df.Constant(1) - active_fn, 0), (0, sqrt_fun)))
 
             F_e = df.variable(F * df.inv(F_a))
             psi_passive = mat_model.get_strain_energy_term(F_e)
@@ -321,7 +326,6 @@ class CardiacModel(ABC):
             P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T)
 
         return P
-
 
     @abstractmethod
     def _define_projections(self):
@@ -386,7 +390,6 @@ class CardiacModel(ABC):
 
         return df.inner(P, df.grad(v)) * df.dx
 
-
     def _pressure_term(self, q, F):
         """
 
@@ -401,7 +404,6 @@ class CardiacModel(ABC):
 
         """
         return q * (df.det(F) - 1) * df.dx
-
 
     def _remove_rigid_motion_term(self, u, r, state, test_state):
         """
@@ -456,11 +458,10 @@ class CardiacModel(ABC):
             project (bool): If True, we update all projection after solving
 
         """
-
         # as per default we are using the manual implementation which
         # should be at least as fast; however, we will
         # just keep a simple version here for easy comparison:
-         
+        
         df.solve(
             self.weak_form == 0,
             self.state,
@@ -473,6 +474,7 @@ class CardiacModel(ABC):
             },
             form_compiler_parameters={"optimize": True},
         )
+        
         """
         self._solver.solve(self.problem, self.state.vector())
         """
@@ -480,6 +482,7 @@ class CardiacModel(ABC):
         if project:
             for proj_fun in self.projections:
                 proj_fun.project()
+
 
     def integrate_subdomain(self, fun, subdomain_ids):
         """
@@ -496,7 +499,7 @@ class CardiacModel(ABC):
 
         if isinstance(subdomain_ids, int) or isinstance(subdomain_ids, np.uint64):
             subdomain_ids = [subdomain_ids]
-        
+
         dx = df.Measure("dx", domain=self.mesh, subdomain_data=self.volumes)
 
         integral = 0
@@ -504,7 +507,6 @@ class CardiacModel(ABC):
             integral += df.assemble(fun * dx(int(subdomain_id)))
 
         return integral
-
 
     def calculate_volume(self, subdomain_ids):
         """
@@ -562,7 +564,7 @@ class CardiacModel(ABC):
         """
 
         F, P = self.F, self.P
-        
+
         unit_vector = df.FacetNormal(self.mesh)
 
         load = df.inner(P * unit_vector, unit_vector)
@@ -579,7 +581,6 @@ class CardiacModel(ABC):
             )
 
         return total_load / area
-
 
     def evaluate_normal_load(self):
         """
@@ -711,9 +712,48 @@ class CardiacModel(ABC):
             (see eq. (16) in the paper)
 
         """
-        
+
         if self.dim == 2:
             return 0
 
         unit_vector = self.normal_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
+
+
+    def evaluate_ds(self, f, wall_idt):
+        F = self.F
+        normal_vector = df.FacetNormal(self.mesh)
+        ds = self.deformation.ds
+
+        area = df.assemble(         # = total length in 2D
+            df.det(F)
+            * df.inner(df.inv(F).T * normal_vector, normal_vector)
+            * ds(wall_idt)
+        )
+        return df.assemble(f*ds(wall_idt)) / area
+
+
+    def evaluate_average_shortening(self):
+        """
+        
+        Taken as average displacement at the "xmax" wall minus the "xmin" wall,
+        divided by original domain length.
+
+        """
+        f0 = self.fiber_dir
+        
+        xcomp = df.inner(self.u, f0)
+        disp_min = self.evaluate_ds(xcomp, 1)
+        disp_max = self.evaluate_ds(xcomp, 2)
+        mpi_comm = self.mesh.mpi_comm()
+        coords = self.mesh.coordinates()[:]
+
+        xcoords = coords[:, 0]        
+        xmin = mpi_comm.allreduce(min(xcoords), op=MPI.MIN)
+        xmax = mpi_comm.allreduce(max(xcoords), op=MPI.MAX)
+        length = xmax - xmin
+        
+        relative_shortening = (disp_max - disp_min)/length
+        #print("relative shortening: ", relative_shortening*100)
+
+        return relative_shortening

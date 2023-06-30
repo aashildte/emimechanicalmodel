@@ -72,12 +72,12 @@ class EMIGuccioneMaterial:
             e2 = df.as_vector([0.0, 1.0, 0.0])
             e3 = df.as_vector([0.0, 0.0, 1.0])
 
-        I = df.Identity(self.dim) 
-        
+        I = df.Identity(self.dim)
+
         J = df.det(F)
         J_iso = pow(J, -1.0 / float(self.dim))
-        C = J_iso**2 * F.T * F
-        
+        C = J_iso ** 2 * F.T * F
+
         E = 0.5 * (C - I)
 
         E11, E12 = (

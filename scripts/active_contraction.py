@@ -75,9 +75,9 @@ def read_cl_args():
 
 time = np.linspace(0, time_max, num_time_steps)  # ms
 active_values = compute_active_component(time)
-active_values *= 2
+active_values *= 300
 peak_index = np.argmax(active_values)
-
+print(np.max(active_values))
 # load mesh, subdomains
 
 mesh, volumes = load_mesh(mesh_file, verbose)
@@ -98,6 +98,7 @@ model = EMIModel(
     volumes,
     material_parameters=material_params,
     experiment="contraction",
+    active_model="active_stress",
     verbose=verbose,
 )
 

@@ -57,7 +57,7 @@ class HolzapfelMaterial:
             self.a_fs,
             self.b_fs,
         )
-        
+
         if self.dim == 3:
             e1 = df.as_vector([1.0, 0.0, 0.0])
             e2 = df.as_vector([0.0, 1.0, 0.0])
@@ -67,7 +67,7 @@ class HolzapfelMaterial:
 
         J = df.det(F)
         J_iso = pow(J, -1.0 / float(self.dim))
-        C = J_iso**2 * F.T * F
+        C = J_iso ** 2 * F.T * F
 
         IIFx = df.tr(C)
         I4e1 = df.inner(C * e1, e1)
@@ -79,7 +79,7 @@ class HolzapfelMaterial:
         W_hat = a / (2 * b) * (df.exp(b * (IIFx - self.dim)) - 1)
         W_f = a_f / (2 * b_f) * (df.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
         W_s = a_s / (2 * b_s) * (df.exp(b_s * cond(I4e2 - 1) ** 2) - 1)
-        W_fs = a_fs / (2 * b_fs) * (df.exp(b_fs * (I8e1e2**2)) - 1)
+        W_fs = a_fs / (2 * b_fs) * (df.exp(b_fs * (I8e1e2 ** 2)) - 1)
         W_ani = W_f + W_s + W_fs
 
         return W_hat + W_ani

@@ -34,7 +34,7 @@ class Monitor:
         self,
         cardiac_model,
         output_folder,
-        param_space = {},
+        param_space={},
     ):
 
         self.cardiac_model = cardiac_model
@@ -102,7 +102,6 @@ class Monitor:
         Write checkpoint for all xdmf files.
 
         """
-
         functions, xdmf_files = (
             self.functions,
             self.xdmf_files,
@@ -110,6 +109,7 @@ class Monitor:
 
         # save to paraview files
         for name in xdmf_files.keys():
+            #print(name, it_number, flush=True)
             xdmf_files[name].write_checkpoint(
                 functions[name], name, it_number, append=True
             )
@@ -124,63 +124,57 @@ class Monitor:
 
         for subdomain_id in model.subdomains:
             scalar_functions[f"stress_xdir_subdomain_{subdomain_id}"] = partial(
-                model.evaluate_subdomain_stress_fibre_dir,
-                subdomain_ids=subdomain_id
+                model.evaluate_subdomain_stress_fibre_dir, subdomain_ids=subdomain_id
             )
             scalar_functions[f"stress_ydir_subdomain_{subdomain_id}"] = partial(
                 model.evaluate_subdomain_stress_sheet_dir,
                 subdomain_ids=subdomain_id,
             )
             scalar_functions[f"stress_zdir_subdomain_{subdomain_id}"] = partial(
-                model.evaluate_subdomain_stress_normal_dir,
-                subdomain_ids=subdomain_id
+                model.evaluate_subdomain_stress_normal_dir, subdomain_ids=subdomain_id
             )
 
             scalar_functions[f"strain_xdir_subdomain_{subdomain_id}"] = partial(
-                model.evaluate_subdomain_strain_fibre_dir,
-                subdomain_ids=subdomain_id
+                model.evaluate_subdomain_strain_fibre_dir, subdomain_ids=subdomain_id
             )
             scalar_functions[f"strain_ydir_subdomain_{subdomain_id}"] = partial(
                 model.evaluate_subdomain_strain_sheet_dir,
                 subdomain_ids=subdomain_id,
             )
             scalar_functions[f"strain_zdir_subdomain_{subdomain_id}"] = partial(
-                model.evaluate_subdomain_strain_normal_dir,
-                subdomain_ids=subdomain_id
+                model.evaluate_subdomain_strain_normal_dir, subdomain_ids=subdomain_id
             )
-            
+
         # then across all subdomains:
         scalar_functions[f"stress_xdir_whole_domain"] = partial(
-            model.evaluate_subdomain_stress_fibre_dir,
-            subdomain_ids=model.subdomains
+            model.evaluate_subdomain_stress_fibre_dir, subdomain_ids=model.subdomains
         )
         scalar_functions[f"stress_ydir_whole_domain"] = partial(
             model.evaluate_subdomain_stress_sheet_dir,
             subdomain_ids=subdomain_id,
         )
         scalar_functions[f"stress_zdir_whole_domain"] = partial(
-            model.evaluate_subdomain_stress_normal_dir,
-            subdomain_ids=model.subdomains
+            model.evaluate_subdomain_stress_normal_dir, subdomain_ids=model.subdomains
         )
 
         scalar_functions[f"strain_xdir_whole_domain"] = partial(
-            model.evaluate_subdomain_strain_fibre_dir,
-            subdomain_ids=model.subdomains
+            model.evaluate_subdomain_strain_fibre_dir, subdomain_ids=model.subdomains
         )
         scalar_functions[f"strain_ydir_whole_domain"] = partial(
             model.evaluate_subdomain_strain_sheet_dir,
             subdomain_ids=model.subdomains,
         )
         scalar_functions[f"strain_zdir_whole_domain"] = partial(
-            model.evaluate_subdomain_strain_normal_dir,
-            subdomain_ids=model.subdomains
+            model.evaluate_subdomain_strain_normal_dir, subdomain_ids=model.subdomains
         )
-            
+
+        scalar_functions[f"relative_shortening"] = model.evaluate_average_shortening
+
         scalar_values = {"states": []}
 
         for key in scalar_functions.keys():
             scalar_values[key] = []
-
+        
         self.scalar_functions, self.scalar_values = scalar_functions, scalar_values
 
     def update_scalar_functions(self, state_pt):

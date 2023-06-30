@@ -15,7 +15,10 @@ from emimechanicalmodel.cardiac_model import CardiacModel
 from emimechanicalmodel.mesh_setup import assign_discrete_values
 from emimechanicalmodel.emi_holzapfelmaterial import EMIHolzapfelMaterial
 from emimechanicalmodel.emi_guccionematerial import EMIGuccioneMaterial
-from emimechanicalmodel.compressibility import IncompressibleMaterial, EMINearlyIncompressibleMaterial
+from emimechanicalmodel.compressibility import (
+    IncompressibleMaterial,
+    EMINearlyIncompressibleMaterial,
+)
 from emimechanicalmodel.proj_fun import ProjectionFunction
 
 
@@ -59,7 +62,6 @@ class EMIModel(CardiacModel):
 
         # this might not work in parallel, #TODO fix
         self.subdomains = set(volumes.array())
-        print(self.subdomains)
 
         if verbose == 2:
             print("Number of subdomains: ", self.num_subdomains)
@@ -67,25 +69,32 @@ class EMIModel(CardiacModel):
         U = df.FunctionSpace(mesh, "DG", 0)
         subdomain_map = volumes.array()  # only works for DG-0
 
-
-        if material_model=="holzapfel":
+        if material_model == "holzapfel":
             mat_model = EMIHolzapfelMaterial(U, subdomain_map, **material_parameters)
-        elif material_model=="guccione":
+        elif material_model == "guccione":
             mat_model = EMIGuccioneMaterial(U, subdomain_map, **material_parameters)
         else:
-            print("Error: Uknown material model; please specify as 'holzapfel' or 'guccione'.")
+            print(
+                "Error: Uknown material model; please specify as 'holzapfel' or 'guccione'."
+            )
 
-
-        if compressibility_model=="incompressible":
+        if compressibility_model == "incompressible":
             comp_model = IncompressibleMaterial()
-        elif compressibility_model=="nearly_incompressible":
-            comp_model = EMINearlyIncompressibleMaterial(U, subdomain_map, **compressibility_parameters)
+        elif compressibility_model == "nearly_incompressible":
+            comp_model = EMINearlyIncompressibleMaterial(
+                U, subdomain_map, **compressibility_parameters
+            )
         else:
-            print("Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'.")
+            print(
+                "Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'."
+            )
 
-
-        self.U, self.subdomain_map, self.mat_model, self.comp_model = \
-                U, subdomain_map, mat_model, comp_model
+        self.U, self.subdomain_map, self.mat_model, self.comp_model = (
+            U,
+            subdomain_map,
+            mat_model,
+            comp_model,
+        )
 
         super().__init__(
             mesh,

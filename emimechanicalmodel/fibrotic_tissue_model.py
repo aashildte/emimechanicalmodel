@@ -16,7 +16,10 @@ from emimechanicalmodel.cardiac_model import CardiacModel
 from emimechanicalmodel.mesh_setup import assign_discrete_values
 from emimechanicalmodel.holzapfelmaterial import HolzapfelMaterial
 from emimechanicalmodel.guccionematerial import GuccioneMaterial
-from emimechanicalmodel.compressibility import IncompressibleMaterial, NearlyIncompressibleMaterial
+from emimechanicalmodel.compressibility import (
+    IncompressibleMaterial,
+    NearlyIncompressibleMaterial,
+)
 from emimechanicalmodel.proj_fun import ProjectionFunction
 
 
@@ -66,26 +69,32 @@ class FibrosisModel(CardiacModel):
         U = df.FunctionSpace(mesh, "DG", 0)
         subdomain_map = volumes.array()  # only works for DG-0
 
-        material_parameters["dim"] = 2      # TODO make separate classes for fibrosis
+        material_parameters["dim"] = 2  # TODO make separate classes for fibrosis
 
-        if material_model=="holzapfel":
+        if material_model == "holzapfel":
             mat_model = HolzapfelMaterial(**material_parameters)
-        elif material_model=="guccione":
+        elif material_model == "guccione":
             mat_model = GuccioneMaterial(**material_parameters)
         else:
-            print("Error: Uknown material model; please specify as 'holzapfel' or 'guccione'.")
+            print(
+                "Error: Uknown material model; please specify as 'holzapfel' or 'guccione'."
+            )
 
-
-        if compressibility_model=="incompressible":
+        if compressibility_model == "incompressible":
             comp_model = IncompressibleMaterial()
-        elif compressibility_model=="nearly_incompressible":
-            comp_model = NearlyIncompressibleMaterial() 
+        elif compressibility_model == "nearly_incompressible":
+            comp_model = NearlyIncompressibleMaterial()
         else:
-            print("Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'.")
+            print(
+                "Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'."
+            )
 
-
-        self.U, self.subdomain_map, self.mat_model, self.comp_model = \
-                U, subdomain_map, mat_model, comp_model
+        self.U, self.subdomain_map, self.mat_model, self.comp_model = (
+            U,
+            subdomain_map,
+            mat_model,
+            comp_model,
+        )
 
         super().__init__(
             mesh,

@@ -80,7 +80,7 @@ class EMIHolzapfelMaterial:
 
         J = df.det(F)
         J_iso = pow(J, -1.0 / float(self.dim))
-        C = J_iso**2 * F.T * F
+        C = J_iso ** 2 * F.T * F
 
         IIFx = df.tr(C)
         I4e1 = df.inner(C * e1, e1)

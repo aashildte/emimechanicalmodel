@@ -35,7 +35,7 @@ def load_mesh(mesh_file: str, verbose=1):
     volumes = df.MeshFunction("size_t", mesh, dim, 0)
 
     # this needs to match whatever the subdomain is called in the mesh file
-    if dim==3:
+    if dim == 3:
         h5_file.read(volumes, "volumes")
     else:
         h5_file.read(volumes, "subdomains")

@@ -31,7 +31,9 @@ def run_install():
         packages=find_packages("."),
         package_data={"emimechanicalmodel": ["active.npy"]},
         package_dir={"emimechanicalmodel" : "emimechanicalmodel"},
-        install_requires=[],
+        install_requires = [
+            'virtualss @ git+ssh://github.com/aashildte/virtualss'
+            ]
         zip_safe=False,
     )
 

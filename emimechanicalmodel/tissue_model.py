@@ -13,7 +13,10 @@ import dolfin as df
 from emimechanicalmodel.cardiac_model import CardiacModel
 from emimechanicalmodel.holzapfelmaterial import HolzapfelMaterial
 from emimechanicalmodel.guccionematerial import GuccioneMaterial
-from emimechanicalmodel.compressibility import IncompressibleMaterial, NearlyIncompressibleMaterial
+from emimechanicalmodel.compressibility import (
+    IncompressibleMaterial,
+    NearlyIncompressibleMaterial,
+)
 from emimechanicalmodel.proj_fun import ProjectionFunction
 
 
@@ -43,31 +46,33 @@ class TissueModel(CardiacModel):
         compressibility_parameters={},
         verbose=0,
     ):
-        
+
         self.num_subdomains = 1
         self.subdomains = [0]
-        
+
         dim = mesh.topology().dim()
         self.volumes = df.MeshFunction("size_t", mesh, dim, 0)
         self.volumes.array()[:] = 0
 
         material_parameters["dim"] = dim
 
-        if material_model=="holzapfel":
+        if material_model == "holzapfel":
             mat_model = HolzapfelMaterial(**material_parameters)
-        elif material_model=="guccione":
+        elif material_model == "guccione":
             mat_model = GuccioneMaterial(**material_parameters)
         else:
-            print("Error: Uknown material model; please specify as 'holzapfel' or 'guccione'.")
+            print(
+                "Error: Uknown material model; please specify as 'holzapfel' or 'guccione'."
+            )
 
-
-        if compressibility_model=="incompressible":
+        if compressibility_model == "incompressible":
             comp_model = IncompressibleMaterial()
-        elif compressibility_model=="nearly_incompressible":
+        elif compressibility_model == "nearly_incompressible":
             comp_model = NearlyIncompressibleMaterial(**compressibility_parameters)
         else:
-            print("Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'.")
-
+            print(
+                "Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'."
+            )
 
         self.mat_model, self.comp_model = mat_model, comp_model
 
@@ -83,7 +88,6 @@ class TissueModel(CardiacModel):
             verbose,
         )
 
-
     def _define_active_strain(self):
         """
 
@@ -94,7 +98,6 @@ class TissueModel(CardiacModel):
         """
 
         self.active_fn = df.Constant(0.0, name="Active strain (-)")
-
 
     def update_active_fn(self, value):
         """
@@ -107,7 +110,6 @@ class TissueModel(CardiacModel):
         """
 
         self.active_fn.assign(value)
-
 
     def _define_projections(self):
         """
