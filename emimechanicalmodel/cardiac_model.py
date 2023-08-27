@@ -68,8 +68,7 @@ class CardiacModel(ABC):
         self._set_fenics_parameters()
         self._define_state_space()
         self._define_state_functions()
-        self._define_kinematic_variables()
-
+        
         # boundary conditions
 
         exp_dict = {
@@ -85,6 +84,9 @@ class CardiacModel(ABC):
             "shear_sn": ShearSN,
         }
         self.deformation = exp_dict[experiment](mesh, self.V_CG)
+        
+        self._define_kinematic_variables()
+
         self.bcs = self.deformation.bcs
 
         # define solver and initiate tracked variables
@@ -354,8 +356,21 @@ class CardiacModel(ABC):
 
         sigma = (1 / df.det(F)) * P * F.T
 
+        N = df.FacetNormal(self.mesh)
+
+        xmin_idt = 1
+        xmax_idt = 2
+        ds = self.deformation.ds
+
+        pressure_fun = df.Expression("-k", k=0, degree=2)
+        Gext1 = pressure_fun * df.inner(v, df.det(F) * df.inv(F) * N) * ds(xmax_idt)
+        Gext2 = pressure_fun * df.inner(v, df.det(F) * df.inv(F) * N) * ds(xmin_idt)
+
+        Gext = Gext1 + Gext2
+        self.pressure_fun = pressure_fun
+
         # then define the weak form
-        weak_form = self._elasticity_term(P, v)
+        weak_form = self._elasticity_term(P, v) + Gext
 
         if self.compressibility_model == "incompressible":
             weak_form += self._pressure_term(q, F)
@@ -593,7 +608,7 @@ class CardiacModel(ABC):
 
         """
 
-        return self.deformation.evaluate_normal_load(self.F, self.sigma)
+        return self.deformation.evaluate_normal_load(self.F, self.P)
 
     def evaluate_shear_load(self):
         """
@@ -726,9 +741,9 @@ class CardiacModel(ABC):
         ds = self.deformation.ds
 
         area = df.assemble(         # = total length in 2D
-            df.det(F)
-            * df.inner(df.inv(F).T * normal_vector, normal_vector)
-            * ds(wall_idt)
+            #df.det(F)
+            #* df.inner(df.inv(F).T * normal_vector, normal_vector)
+            df.Constant(1) * ds(wall_idt)
         )
         return df.assemble(f*ds(wall_idt)) / area
 
