@@ -61,7 +61,7 @@ where the first part gives the mesh resolution (20p0 = 20.0, 10p0 = 10.0, etc; n
 
 # Publications
 The code in this repo has been used for a few publications. The code is always evolving and results as reported in one paper might potentially not be reproducable using the most recent version of the code (although I try to minimize the differences). There are frozen versions at Zenodo which might be downloaded to get the code as it was:
-- Åshild Telle, Joakim Sundnes, Samuel Wall: *Modeling Cardiac Mechanics on a Sub-Cellular Scale*. *Modeling Excitable Tissue*, 2021: [Publication](https://link.springer.com/chapter/10.1007/978-3-030-61157-6_3) - [code (Zenodo)](0https://zenodo.org/records/3769029)
+- Åshild Telle, Joakim Sundnes, Samuel Wall: *Modeling Cardiac Mechanics on a Sub-Cellular Scale*. *Modeling Excitable Tissue*, 2021: [Publication](https://link.springer.com/chapter/10.1007/978-3-030-61157-6_3) - [code (Zenodo)](https://zenodo.org/records/3769029)
 - Åshild Telle, James D. Trotter, Xing Cai, Henrik Finsberg, Miroslav Kuchta, Joakim Sundnes & Samuel T. Wall: *A cell-based framework for modeling cardiac mechanics*. *Biomech Model Mechanobiol*, 2023: [Publication](https://link.springer.com/article/10.1007/s10237-022-01660-8) - [code (Zenodo)](https://zenodo.org/records/7137689)
 
 # Contributors, issues, questions
