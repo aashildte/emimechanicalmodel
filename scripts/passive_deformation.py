@@ -139,7 +139,9 @@ for (i, st_val) in enumerate(stretch):
         monitor.update_scalar_functions(st_val)
         if project:
             monitor.update_xdmf_files(i)
-    
+
+    s_ev = model.evaluate_average_shortening()
+    load_ev = model.evaluate_normal_load()
 
 if enable_monitor:
     monitor.save_and_close()
