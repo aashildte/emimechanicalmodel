@@ -167,12 +167,8 @@ class CardiacModel(ABC):
             mixed_elements += [P3]
 
         state_space = df.FunctionSpace(mesh, df.MixedElement(mixed_elements))
-
-        if len(mixed_elements) == 1:
-            self.V_CG = state_space
-        else:
-            self.V_CG = state_space.sub(0)
-
+        
+        self.V_CG = state_space.extract_sub_space([0])
         self.state_space = state_space
 
         if self.verbose:
