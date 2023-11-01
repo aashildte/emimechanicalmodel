@@ -32,7 +32,7 @@ The scripts folder contains various scripts relevant for different kinds of expe
 - simple\_demo.py: Small simple example of how one can use the code; simulates a contraction using a fairly coarse mesh, with no output saved.
 - find\_optimal\_params\_experimental.py: Scheme for finding optimal material parameters in the EMI model based on experimental data; note that we do not provide the underlying data (however the data we used can be downloaded [from here](https://dataverse.tdl.org/dataverse/RVMechanics).
 - active\_contraction.py: Extended code for contraction with options for choosing the mesh, varying material properties, with output optionally being saved as npy and xdmf files.
-- passive\_deformation.py: Code for running the stretching or shearing experiments, with options for choosing the deformation direction, the mesh, varying material properties, with output optionally being saved as npy and xdmf files.
+- passive\_deformation.py: Code for running the stretch or shear experiments, with options for choosing the deformation direction ("stretch_ff", "shear_fs", "shear_fn", "shear_sf", "stretch_ss", "shear_sn", "shear_nf", "shear_ns, or "stretch_nn"), the mesh, varying material properties, with output optionally being saved as npy and xdmf files.
 - sa\_step1.py, sa\_step2.py, sa\_step3.py: The three-phase scripts used for Sobol analysis. Here, it is beneficial to split them in three phases where the first generates the parameter space, the second performs the individual experiments (~15 min running time per each, for each parameter combination and each deformation mode), then the third one calculates the Sobol indices.
 
 The script parameter\_setup.py is not used directly, but is used to add command line arguments to most of the above scripts.
@@ -59,10 +59,12 @@ tile_connected_5p0_1_2_2.h5
 
 where the first part gives the mesh resolution (20p0 = 20.0, 10p0 = 10.0, etc; numbers corresponding to Gmsh's characteristic length), and the 3 last numbers denotes the number of cardiac cells; so "1\_2\_2" means we have a multicellular domain consisiting of 1 x 2 x 2 cells.
 
+There are also a number of 2D meshes (look for the prefix "2D").
+
 # Publications
 The code in this repo has been used for a few publications. The code is always evolving and results as reported in one paper might potentially not be reproducable using the most recent version of the code (although I try to minimize the differences). There are frozen versions at Zenodo which might be downloaded to get the code as it was:
-- Åshild Telle, Joakim Sundnes, Samuel Wall: *Modeling Cardiac Mechanics on a Sub-Cellular Scale*. *Modeling Excitable Tissue*, 2021: [Publication][https://link.springer.com/chapter/10.1007/978-3-030-61157-6_3] - [code][https://zenodo.org/records/3769029]
-- Åshild Telle, James D. Trotter, Xing Cai, Henrik Finsberg, Miroslav Kuchta, Joakim Sundnes & Samuel T. Wall: *A cell-based framework for modeling cardiac mechanics*. *Biomech Model Mechanobiol*, 2023: [Publication][https://link.springer.com/article/10.1007/s10237-022-01660-8] - [code][https://zenodo.org/records/7137689]
+- Åshild Telle, Joakim Sundnes, Samuel T. Wall: *Modeling Cardiac Mechanics on a Sub-Cellular Scale*. *Modeling Excitable Tissue*, 2021: [Publication](https://link.springer.com/chapter/10.1007/978-3-030-61157-6_3) - [code (Zenodo)](https://zenodo.org/records/3769029)
+- Åshild Telle, James D. Trotter, Xing Cai, Henrik Finsberg, Miroslav Kuchta, Joakim Sundnes & Samuel T. Wall: *A cell-based framework for modeling cardiac mechanics*. *Biomech Model Mechanobiol*, 2023: [Publication](https://link.springer.com/article/10.1007/s10237-022-01660-8) - [code (Zenodo)](https://zenodo.org/records/7137689)
 
 # Contributors, issues, questions
 
