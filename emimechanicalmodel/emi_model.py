@@ -1,6 +1,6 @@
 """
 
-Åshild Telle / Simula Research Laboratory / 2022
+Åshild Telle / Simula Research Laboratory & University of Washington / 2022–2023
 
 Implementation of the EMI model; mostly defined through heritage.
 Whatever is implemented here is unique for EMI; compare to the corresponding
@@ -10,15 +10,14 @@ TissueModel for homogenized version.
 
 import dolfin as df
 from mpi4py import MPI
+import numpy as np
 
 from emimechanicalmodel.cardiac_model import CardiacModel
 from emimechanicalmodel.mesh_setup import assign_discrete_values
 from emimechanicalmodel.emi_holzapfelmaterial import EMIHolzapfelMaterial
+from emimechanicalmodel.emi_holzapfelmaterial_collagen import EMIMatrixHolzapfelMaterial
 from emimechanicalmodel.emi_guccionematerial import EMIGuccioneMaterial
-from emimechanicalmodel.compressibility import (
-    IncompressibleMaterial,
-    EMINearlyIncompressibleMaterial,
-)
+from emimechanicalmodel.compressibility import IncompressibleMaterial, EMINearlyIncompressibleMaterial
 from emimechanicalmodel.proj_fun import ProjectionFunction
 
 
@@ -68,33 +67,29 @@ class EMIModel(CardiacModel):
 
         U = df.FunctionSpace(mesh, "DG", 0)
         subdomain_map = volumes.array()  # only works for DG-0
+        self.xi_i = df.Function(U)
+        assign_discrete_values(self.xi_i, subdomain_map, 1, 0)
 
-        if material_model == "holzapfel":
+        if material_model=="holzapfel":
             mat_model = EMIHolzapfelMaterial(U, subdomain_map, **material_parameters)
-        elif material_model == "guccione":
+        elif material_model=="holzapfel_collagen":
+            mat_model = EMIMatrixHolzapfelMaterial(U, subdomain_map, **material_parameters)
+        elif material_model=="guccione":
             mat_model = EMIGuccioneMaterial(U, subdomain_map, **material_parameters)
         else:
-            print(
-                "Error: Uknown material model; please specify as 'holzapfel' or 'guccione'."
-            )
+            print("Error: Uknown material model; please specify as 'holzapfel', 'holzapfel_collagen', or 'guccione'.")
 
-        if compressibility_model == "incompressible":
+
+        if compressibility_model=="incompressible":
             comp_model = IncompressibleMaterial()
-        elif compressibility_model == "nearly_incompressible":
-            comp_model = EMINearlyIncompressibleMaterial(
-                U, subdomain_map, **compressibility_parameters
-            )
+        elif compressibility_model=="nearly_incompressible":
+            comp_model = EMINearlyIncompressibleMaterial(U, subdomain_map, **compressibility_parameters)
         else:
-            print(
-                "Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'."
-            )
+            print("Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'.")
 
-        self.U, self.subdomain_map, self.mat_model, self.comp_model = (
-            U,
-            subdomain_map,
-            mat_model,
-            comp_model,
-        )
+
+        self.U, self.subdomain_map, self.mat_model, self.comp_model = \
+                U, subdomain_map, mat_model, comp_model
 
         super().__init__(
             mesh,
@@ -103,6 +98,7 @@ class EMIModel(CardiacModel):
             compressibility_model,
             verbose,
         )
+        
 
     def _define_active_strain(self):
         """
@@ -112,9 +108,20 @@ class EMIModel(CardiacModel):
         This function gives us "gamma" in the active strain approach.
 
         """
+        
+        d = len(self.u)
+        I = df.Identity(d)  # Identity tensor
+        F = df.variable(I + df.grad(self.u))  # Deformation gradient
+        
+        lambda_squared = df.inner(F*self.fiber_dir, F*self.fiber_dir)
+        beta = 4.27
+        tension_scale = (1 + beta*(lambda_squared**0.5 - 1))
 
-        self.active_fn = df.Function(self.U, name="Active strain (-)")
-        self.active_fn.vector()[:] = 0  # initial value
+        self.active_value = df.Function(self.U, name="Active strain (-)")
+        self.active_value.vector()[:] = 0  # initial value
+
+        self.active_fn = tension_scale*self.active_value
+
 
     def update_active_fn(self, value):
         """
@@ -126,8 +133,7 @@ class EMIModel(CardiacModel):
                defined as non-zero over the intracellular domain
 
         """
-
-        assign_discrete_values(self.active_fn, self.subdomain_map, value, 0)
+        assign_discrete_values(self.active_value, self.subdomain_map, value, 0) 
 
     def _define_projections(self):
         """
@@ -153,12 +159,14 @@ class EMIModel(CardiacModel):
         E_DG = df.Function(T_DG, name="Strain")
         sigma_DG = df.Function(T_DG, name="Cauchy stress (kPa)")
         P_DG = df.Function(T_DG, name="Piola-Kirchhoff stress (kPa)")
+        a_DG = df.Function(U_DG, name="Active tension")
 
         p_proj = ProjectionFunction(self.p, p_DG)
         u_proj = ProjectionFunction(self.u, u_DG)
         E_proj = ProjectionFunction(self.E, E_DG)
         sigma_proj = ProjectionFunction(self.sigma, sigma_DG)
         P_proj = ProjectionFunction(self.P, P_DG)
+        active_proj = ProjectionFunction(self.active_fn, a_DG)
 
         self.u_DG = u_DG
         self.p_DG = p_DG
@@ -166,5 +174,5 @@ class EMIModel(CardiacModel):
         self.sigma_DG = sigma_DG
         self.PiolaKirchhoff_DG = P_DG
 
-        self.tracked_variables = [u_DG, p_DG, E_DG, sigma_DG, P_DG]
-        self.projections = [u_proj, p_proj, E_proj, sigma_proj, P_proj]
+        self.tracked_variables = [u_DG, p_DG, E_DG, sigma_DG, P_DG, a_DG]
+        self.projections = [u_proj, p_proj, E_proj, sigma_proj, P_proj, active_proj]

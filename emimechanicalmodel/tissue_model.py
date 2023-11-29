@@ -13,6 +13,7 @@ import dolfin as df
 from emimechanicalmodel.cardiac_model import CardiacModel
 from emimechanicalmodel.holzapfelmaterial import HolzapfelMaterial
 from emimechanicalmodel.guccionematerial import GuccioneMaterial
+from emimechanicalmodel.fomovskymaterial import FomovskyMaterial
 from emimechanicalmodel.compressibility import (
     IncompressibleMaterial,
     NearlyIncompressibleMaterial,
@@ -60,9 +61,11 @@ class TissueModel(CardiacModel):
             mat_model = HolzapfelMaterial(**material_parameters)
         elif material_model == "guccione":
             mat_model = GuccioneMaterial(**material_parameters)
+        elif material_model == "fomovsky":
+            mat_model = FomovskyMaterial(**material_parameters)
         else:
             print(
-                "Error: Uknown material model; please specify as 'holzapfel' or 'guccione'."
+                "Error: Uknown material model; please specify as 'holzapfel' or 'guccione' or 'fomovsky'."
             )
 
         if compressibility_model == "incompressible":
@@ -110,7 +113,7 @@ class TissueModel(CardiacModel):
         """
 
         self.active_fn.assign(value)
-
+    
     def _define_projections(self):
         """
 

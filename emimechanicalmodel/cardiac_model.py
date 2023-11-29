@@ -64,11 +64,11 @@ class CardiacModel(ABC):
         self._set_direction_vectors()
 
         # define variational form
-        self._define_active_strain()
-        self._set_fenics_parameters()
         self._define_state_space()
         self._define_state_functions()
-        
+        self._define_active_strain()
+        self._set_fenics_parameters()
+
         # boundary conditions
 
         exp_dict = {
@@ -84,7 +84,8 @@ class CardiacModel(ABC):
             "shear_sn": ShearSN,
         }
         self.deformation = exp_dict[experiment](mesh, self.V_CG)
-        
+        self._define_external_load()
+
         self._define_kinematic_variables()
 
         self.bcs = self.deformation.bcs
@@ -225,6 +226,40 @@ class CardiacModel(ABC):
 
         self.state_functions = [u, p, r]
         self.test_state_functions = [v, q, s]
+    
+    def _define_external_load(self):
+        """
+
+        Defines functions for external load, which later might be updated
+        in order to apply a force in a given direction.
+
+        Functions are ordered in a dictionary with wall idts as key values.
+
+        """
+
+        self.Gext = {}
+
+        for idt in [1, 2, 3, 4]:
+            self.Gext[idt] = df.Constant(0)
+
+        #if self.dim == 3:
+        #    self.Gext[5] = df.Constant(0)
+        #    self.Gext[6] = df.Constant(0)
+
+
+    def update_external_load(self, load_values):
+        """
+
+        Args:
+            load_values: assumed dictionary with wall indices as key values.
+
+        """
+
+        for wall_idt in load_values.keys():
+            load_value = load_values[wall_idt]
+            self.Gext[wall_idt].assign(load_value)
+
+
 
     def assign_stretch(self, stretch_value):
         """
@@ -358,19 +393,14 @@ class CardiacModel(ABC):
 
         N = df.FacetNormal(self.mesh)
 
-        xmin_idt = 1
-        xmax_idt = 2
         ds = self.deformation.ds
+        Gext_sum = 0
 
-        pressure_fun = df.Expression("-k", k=0, degree=2)
-        Gext1 = pressure_fun * df.inner(v, df.det(F) * df.inv(F) * N) * ds(xmax_idt)
-        Gext2 = pressure_fun * df.inner(v, df.det(F) * df.inv(F) * N) * ds(xmin_idt)
-
-        Gext = Gext1 + Gext2
-        self.pressure_fun = pressure_fun
+        for wall_idt in self.Gext.keys():
+            Gext_sum -= self.Gext[wall_idt] * df.inner(v, df.det(F) * df.inv(F) * N) * ds(wall_idt)
 
         # then define the weak form
-        weak_form = self._elasticity_term(P, v) + Gext
+        weak_form = self._elasticity_term(P, v) + Gext_sum
 
         if self.compressibility_model == "incompressible":
             weak_form += self._pressure_term(q, F)
@@ -594,7 +624,7 @@ class CardiacModel(ABC):
                 * df.inner(df.inv(F).T * unit_vector, unit_vector)
                 * self.deformation.ds(wall_idt)
             )
-
+        
         return total_load / area
 
     def evaluate_normal_load(self):
@@ -607,7 +637,6 @@ class CardiacModel(ABC):
             normal load L (float)
 
         """
-
         return self.deformation.evaluate_normal_load(self.F, self.P)
 
     def evaluate_shear_load(self):
@@ -734,6 +763,16 @@ class CardiacModel(ABC):
         unit_vector = self.normal_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
 
+    
+    def evaluate_active_tension(self, subdomain_ids):
+        
+        f = self.active_fn
+
+        return self.integrate_subdomain(f, subdomain_ids) / self.calculate_volume(
+            subdomain_ids
+        )
+
+
 
     def evaluate_ds(self, f, wall_idt):
         F = self.F
@@ -769,6 +808,6 @@ class CardiacModel(ABC):
         length = xmax - xmin
         
         relative_shortening = (disp_max - disp_min)/length
-        #print("relative shortening: ", relative_shortening*100)
+        print("relative shortening: ", relative_shortening*100)
 
         return relative_shortening
