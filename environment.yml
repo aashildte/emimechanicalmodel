@@ -10,3 +10,5 @@ dependencies:
     - matplotlib
     - mpi4py
     - salib
+    - pip:
+      - git+https://github.com/aashildte/virtualss

@@ -3,7 +3,7 @@
 Åshild Telle / Simula Research Laboratory / 2022
 
 Script for simulating active contraction; over (parts of) one cardiac cycle,
-with increasing extracellular stiffness, meant to resemble interstinial fibrosis.
+with increasing extracellular stiffness.
 
 """
 

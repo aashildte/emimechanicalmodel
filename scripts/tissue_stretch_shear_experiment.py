@@ -15,8 +15,7 @@ from mpi4py import MPI
 
 
 from emimechanicalmodel import (
-    load_mesh,
-    EMIModel,
+    TissueModel,
 )
 
 from parameter_setup import (
@@ -82,22 +81,38 @@ peak_index = num_steps - 1
 
 # load mesh, subdomains
 
-mesh, volumes = load_mesh(mesh_file, verbose)
+mesh = df.UnitSquareMesh(3, 3)
+#mesh = df.UnitCubeMesh(3, 3, 3)
 
-# initiate EMI model
+# initiate model
+        
+"""
+material_params = {
+    "a": 2.113,
+    "b": 4.319,
+    "a_f": 6.595,
+    "b_f": 4.340, #4.340,
+    "a_s": 0.00082, #0.00082,
+    "b_s": 0.004,
+    "a_fs": 0.393,
+    "b_fs": 1.154,
+}
+"""
 
 material_params = {
-    "a_i": a_i,
-    "b_i": b_i,
-    "a_e": a_e,
-    "b_e": b_e,
-    "a_if": a_f,
-    "b_if": b_f,
+    "a": 0.059,
+    "b": 8.023,
+    "a_f": 18.472,
+    "b_f": 16.026,
+    "a_s": 2.481,
+    "b_s": 11.120,
+    "a_fs": 0.216,
+    "b_fs": 11.436,
 }
 
-model = EMIModel(
+
+model = TissueModel(
     mesh,
-    volumes,
     material_parameters=material_params,
     experiment=experiment,
     verbose=verbose,
@@ -105,43 +120,19 @@ model = EMIModel(
 
 # setup parameters - define the parameter space to explore
 
-enable_monitor = bool(output_folder)  # save output if != None
-
-if enable_monitor:
-    monitor = setup_monitor(
-        f"passive_{experiment}",
-        output_folder,
-        model,
-        mesh_file,
-        material_params,
-        num_steps,
-        strain,
-    )
-else:
-    monitor = None
-
-if verbose < 2:
-    df.set_log_level(60)  # remove information about convergence
-
 # then run the simulation
+
+load = np.zeros_like(stretch)
 
 for (i, st_val) in enumerate(stretch):
 
-    if verbose >= 1 and MPI.COMM_WORLD.Get_rank() == 0:
-        print(f"Step {i+1} / {num_steps}", flush=True)
+    print(f"Step {i+1} / {num_steps}", flush=True)
 
     model.assign_stretch(st_val)
 
     project = (plot_all_steps) or (plot_at_peak and i == peak_index)
     model.solve(project=project)
-
-    if enable_monitor:
-        monitor.update_scalar_functions(st_val)
-        if project:
-            monitor.update_xdmf_files(i)
-
-    s_ev = model.evaluate_average_shortening()
-    load_ev = model.evaluate_normal_load()
-
-if enable_monitor:
-    monitor.save_and_close()
+    
+    load[i] = model.evaluate_normal_load()
+    print(load[i])
+np.save(f"schematics_2D/holzapfel_{experiment}.npy", load)

@@ -12,9 +12,7 @@ def test_emi_active_strain():
     volumes = df.MeshFunction("size_t", mesh, 3)
     volumes.array()[0] = 1
 
-    model = EMIModel(mesh,
-                     volumes,
-                     experiment="contraction")
+    model = EMIModel(mesh, volumes, experiment="contraction")
 
     active_value = 0.001
 
@@ -27,15 +25,15 @@ def test_emi_active_strain():
     assert abs(np.min(model.active_fn.vector()[:]) - 0) < 1e-10
     assert np.linalg.norm(u.vector()[:]) > 0
 
+
 def test_emi_active_stress():
     mesh = df.UnitCubeMesh(1, 1, 1)
     volumes = df.MeshFunction("size_t", mesh, 3)
     volumes.array()[0] = 1
 
-    model = EMIModel(mesh,
-                     volumes,
-                     active_model="active_stress",
-                     experiment="contraction")
+    model = EMIModel(
+        mesh, volumes, active_model="active_stress", experiment="contraction"
+    )
 
     active_value = 0.001
 
@@ -95,16 +93,12 @@ def test_emi_deformation(deformation_mode):
     volumes = df.MeshFunction("size_t", mesh, 3)
     volumes.array()[0] = 1
 
-    model = EMIModel(
-        mesh,
-        volumes,
-        experiment=deformation_mode,
-    )
-
+    model = EMIModel(mesh, volumes, experiment=deformation_mode)
+    
     stretch_value = 0.05
     model.assign_stretch(stretch_value)
     model.solve()
-
+    
     if "stretch" in deformation_mode:
         assert model.evaluate_normal_load() > 0
     else:
@@ -116,4 +110,15 @@ if __name__ == "__main__":
     test_emi_active_strain()
     test_emi_proj_strain()
     test_emi_proj_stress()
-    test_emi_deformation("shear_fs")
+    for deformation_mode in [
+        "stretch_ff",
+        "shear_fs",
+        "shear_fn",
+        "shear_sf",
+        "stretch_ss",
+        "shear_sn",
+        "shear_nf",
+        "shear_ns",
+        "stretch_nn",
+    ]:
+        test_emi_deformation(deformation_mode)
