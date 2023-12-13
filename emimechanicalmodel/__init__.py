@@ -12,6 +12,8 @@ from .fibrotic_tissue_model import FibrosisModel
 from .mesh_setup import (
     load_mesh,
     assign_discrete_values,
+    load_mesh_with_collagen_structure,
+    write_collagen_to_file,
 )
 
 from .deformation_experiments import (

@@ -30,7 +30,6 @@ class EMIMatrixHolzapfelMaterial:
     def __init__(
         self,
         U,
-        V,
         subdomain_map,
         collagen_dist,
         a_i=df.Constant(5.70),
@@ -55,9 +54,14 @@ class EMIMatrixHolzapfelMaterial:
         )
 
         self.dim = U.mesh().topology().dim()
+        
+        if self.dim == 2:
+            self.e1 = df.as_vector([1.0, 0.0])
+        elif self.dim == 3:
+            self.e1 = df.as_vector([1.0, 0.0, 0.0])
 
         self.U = U
-        self.V = V
+        #self.V = V
         self.mesh = U.mesh()
 
         # assign material paramters via characteristic functions
@@ -69,15 +73,10 @@ class EMIMatrixHolzapfelMaterial:
 
         self.collagen_field = self.calculate_collagen_fiber_direction(collagen_dist)
 
+
         self.xi_i, self.xi_e = xi_i, xi_e
 
-    def calculate_collagen_fiber_direction(self, collagen_dist):
-        if self.dim == 2:
-            e1 = df.as_vector([1.0, 0.0])
-        elif self.dim == 3:
-            e1 = df.as_vector([1.0, 0.0, 0.0])
-        
-
+    def calculate_collagen_fiber_direction(self, theta):
         R = df.as_matrix(
             (
                 (df.cos(theta), -df.sin(theta)),
@@ -85,14 +84,14 @@ class EMIMatrixHolzapfelMaterial:
             )
         )
 
-        return R*e1
+        return R*self.e1
 
 
     def get_strain_energy_term(self, F):
         
         a_i, a_e, b_i, b_e, a_if, b_if, a_ef, b_ef = self.a_i, self.a_e, self.b_i, self.b_e, self.a_if, self.b_if, self.a_ef, self.b_ef
         xi_i, xi_e = self.xi_i, self.xi_e
-
+       
         ecm_f = self.collagen_field
 
         J = df.det(F)
@@ -100,7 +99,7 @@ class EMIMatrixHolzapfelMaterial:
         C = J_iso**2 * F.T * F
 
         IIFx = df.tr(C)
-        I4_myocytes = df.inner(C * e1, e1)
+        I4_myocytes = df.inner(C * self.e1, self.e1)
         I4_matrix = df.inner(C * ecm_f, ecm_f)
 
         cond = lambda a: ufl.conditional(a > 0, a, 0)

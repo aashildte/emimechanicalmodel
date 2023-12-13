@@ -51,19 +51,9 @@ class EMIModel(CardiacModel):
         verbose=0,
     ):
         # mesh properties, subdomains
+        self.verbose = verbose
         self.volumes = volumes
-
-        mpi_comm = mesh.mpi_comm()
-
-        self.num_subdomains = int(
-            mpi_comm.allreduce(max(volumes.array()), op=MPI.MAX) + 1
-        )
-
-        # this might not work in parallel, #TODO fix
-        self.subdomains = set(volumes.array())
-
-        if verbose == 2:
-            print("Number of subdomains: ", self.num_subdomains)
+        self.set_subdomains(volumes)
 
         U = df.FunctionSpace(mesh, "DG", 0)
         subdomain_map = volumes.array()  # only works for DG-0
@@ -99,6 +89,30 @@ class EMIModel(CardiacModel):
             verbose,
         )
         
+
+    def set_subdomains(self, volumes):
+        mpi_comm = MPI.COMM_WORLD
+        rank = mpi_comm.Get_rank()
+        
+        local_subdomains = set(volumes.array())
+        subdomains = mpi_comm.gather(local_subdomains, root=0)
+
+        if rank == 0:
+            global_subdomains = []
+            for s in subdomains:
+                global_subdomains += s
+            global_subdomains = list(set(global_subdomains))
+        else:
+            global_subdomains = None
+
+        self.subdomains = mpi_comm.bcast(global_subdomains, root=0)
+        self.num_subdomains = max(self.subdomains) 
+
+        if self.verbose == 2:
+            print(f"Local subdomains (rank {rank}):{local_subdomains}")  
+            print("Number of subdomains in total: ", self.num_subdomains)
+            print(f"Global subdomains:{self.subdomains}")  
+
 
     def _define_active_strain(self):
         """

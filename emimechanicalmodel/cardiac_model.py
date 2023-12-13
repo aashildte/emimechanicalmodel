@@ -546,6 +546,7 @@ class CardiacModel(ABC):
         integral = 0
         for subdomain_id in subdomain_ids:
             integral += df.assemble(fun * dx(int(subdomain_id)))
+        
 
         return integral
 
@@ -709,6 +710,7 @@ class CardiacModel(ABC):
 
         """
         strain = df.inner(unit_vector, self.E * unit_vector)
+       
         return self.integrate_subdomain(strain, subdomain_ids) / self.calculate_volume(
             subdomain_ids
         )
@@ -738,6 +740,10 @@ class CardiacModel(ABC):
             (see eq. (16) in the paper)
 
         """
+        
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        
         unit_vector = self.sheet_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
 
@@ -761,7 +767,7 @@ class CardiacModel(ABC):
 
     
     def evaluate_active_tension(self, subdomain_ids):
-        
+    
         f = self.active_fn
 
         return self.integrate_subdomain(f, subdomain_ids) / self.calculate_volume(
@@ -792,15 +798,21 @@ class CardiacModel(ABC):
         """
         f0 = self.fiber_dir
         
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        
+        
         xcomp = df.inner(self.u, f0)
         disp_min = self.evaluate_ds(xcomp, 1)
         disp_max = self.evaluate_ds(xcomp, 2)
+
         mpi_comm = self.mesh.mpi_comm()
         coords = self.mesh.coordinates()[:]
-
+        
         xcoords = coords[:, 0]        
         xmin = mpi_comm.allreduce(min(xcoords), op=MPI.MIN)
         xmax = mpi_comm.allreduce(max(xcoords), op=MPI.MAX)
+         
         length = xmax - xmin
         
         relative_shortening = (disp_max - disp_min)/length

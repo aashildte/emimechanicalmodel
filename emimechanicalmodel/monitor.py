@@ -98,7 +98,6 @@ class Monitor:
 
         # save to paraview files
         for name in xdmf_files.keys():
-            # print(name, it_number, flush=True)
             xdmf_files[name].write_checkpoint(
                 functions[name], name, it_number, append=True
             )
@@ -140,16 +139,18 @@ class Monitor:
 
         # intracellular/extracellular/both:
 
-        intracellular_subdomains = [1] # list(model.subdomains)[:]
-        #intracellular_subdomains.remove(0)
+        intracellular_subdomains = list(model.subdomains)[:]
+        if 0 in intracellular_subdomains:
+            intracellular_subdomains.remove(0)
         extracellular_subdomain = [0]
 
-        descriptions = ["intracellular"] #, "intracellular", "whole_domain"]
+        descriptions = ["intracellular", "extracellular", "whole_domain"]
         subdomains = [
-            #extracellular_subdomain,
+            extracellular_subdomain,
             intracellular_subdomains,
-            #model.subdomains,
+            model.subdomains,
         ]
+        
 
         for (desc, subdomain) in zip(descriptions, subdomains):
             # then across all subdomains:
@@ -168,7 +169,7 @@ class Monitor:
             )
             scalar_functions[f"strain_ydir_{desc}"] = partial(
                 model.evaluate_subdomain_strain_sheet_dir,
-                subdomain_ids=model.subdomains,
+                subdomain_ids=subdomain,
             )
             scalar_functions[f"strain_zdir_{desc}"] = partial(
                 model.evaluate_subdomain_strain_normal_dir, subdomain_ids=subdomain
@@ -177,6 +178,7 @@ class Monitor:
             scalar_functions[f"active_tension_{desc}"] = partial(
                 model.evaluate_active_tension, subdomain_ids=subdomain
             )
+        
 
         scalar_functions[f"relative_shortening"] = model.evaluate_average_shortening
 
@@ -194,6 +196,7 @@ class Monitor:
         weak form solve.
 
         """
+
         scalar_functions, scalar_values = self.scalar_functions, self.scalar_values
 
         for key in scalar_functions.keys():
