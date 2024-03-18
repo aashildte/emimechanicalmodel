@@ -51,8 +51,6 @@ def load_mesh(mesh_file: str, verbose=1):
 
 
 def write_collagen_to_file(mesh_file):
-    # do this in a serial script!
-
     comm = MPI.COMM_WORLD
     h5_file = df.HDF5File(comm, mesh_file, "r")
     mesh = df.Mesh()
@@ -72,6 +70,7 @@ def write_collagen_to_file(mesh_file):
     fid.write(theta, "collagen_dist")
     fid.close()
     print("Done!")
+
 
 def load_mesh_with_collagen_structure(mesh_file, verbose=1):
     """
@@ -96,49 +95,40 @@ def load_mesh_with_collagen_structure(mesh_file, verbose=1):
 
     dim = mesh.topology().dim()
     volumes = df.MeshFunction("size_t", mesh, dim, 0)
-    #collagen_dist = df.MeshFunction("double", mesh, 0)
+    collagen_dist = df.MeshFunction("double", mesh, 0)
     
     # this needs to match whatever the subdomain is called in the mesh file
     if dim == 3:
         raise NotImplementedError("TODO")
     h5_file.read(volumes, "subdomains")
-    #h5_file.read(collagen_dist, "collagen_dist")
+    h5_file.read(collagen_dist, "collagen_dist")
 
     V = df.FunctionSpace(mesh, "CG", 1)
     theta = df.Function(V)
 
-    # PARALLEL DISTRIBUTION OF VALUES!
-    dofs_local = df.dof_to_vertex_map(V)
-    
-    Istart, Iend = V.dofmap().ownership_range()
-    dofs = filter(lambda dof: dof in range(my_last-my_first), dofs_local)
-
+    # in parallel 
     rank = comm.Get_rank()
-    ranks = []                                                                 
+    values = []                                        
     visited = []                                                     
 
     v = theta.vector()
     dofmap = V.dofmap()
     node_min, node_max = v.local_range()                                            
+   
+    values = theta.vector()[:]
 
     for cell in df.cells(mesh):                                                        
-        nodes = dofmap.cell_dofs(cell.index())                                        
-        for node in nodes:                                                            
-            if (node not in visited) and node_min <= node <= node_max:                  
-                visited.append(node)                                                      
-                ranks.append(float(rank))                                                    
+        dofs = dofmap.cell_dofs(cell.index())
+        for dof in dofs:
+            global_dof = dofmap.local_to_global_index(dof)
+            if dof not in visited and node_min <= global_dof <= node_max:
+                values[dof] = collagen_dist[dof]
+                visited.append(dof)
 
-    ranks = np.array(ranks)                                                            
-    v.set_local(ranks)
+    theta.vector().set_local(values)
+    #df.File("collagen_distribution.pvd") << theta
+    #exit()
     
-    #theta.vector()[:] = collagen_dist.array()[:]
-    """
-    name = mesh_file.split(".")[0]
-    fid = df.HDF5File(comm, f"{name}_collagen.h5", "r")
-    fid.read(theta, "collagen_dist")
-    fid.close()
-    """
-
     if verbose > 0:
         print("Mesh and subdomains loaded successfully.")
         print(

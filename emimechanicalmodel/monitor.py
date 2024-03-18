@@ -146,11 +146,10 @@ class Monitor:
 
         descriptions = ["intracellular", "extracellular", "whole_domain"]
         subdomains = [
-            extracellular_subdomain,
-            intracellular_subdomains,
+            intracellular_subdomain,
+            extracellular_subdomains,
             model.subdomains,
         ]
-        
 
         for (desc, subdomain) in zip(descriptions, subdomains):
             # then across all subdomains:

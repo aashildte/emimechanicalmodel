@@ -71,7 +71,7 @@ class Contraction(DeformationExperiment):
 class StretchFF(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
-        self.bcs, self.bcsfun = vss.stretch_xx_fixed_sides(V_CG, self.boundary_markers)
+        self.bcs, self.bcsfun = vss.stretch_xx_comp(V_CG, self.boundary_markers)
 
     def evaluate_normal_load(self, F, P):
         return vss.evaluate_normal_load(F, P, self.mesh, self.ds, 2)
@@ -80,7 +80,7 @@ class StretchFF(DeformationExperiment):
 class StretchSS(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
-        self.bcs, self.bcsfun = vss.stretch_yy_fixed_sides(V_CG, self.boundary_markers)
+        self.bcs, self.bcsfun = vss.stretch_yy_comp(V_CG, self.boundary_markers)
 
     def evaluate_normal_load(self, F, P):
         return vss.evaluate_normal_load(F, P, self.mesh, self.ds, 4)
@@ -89,7 +89,7 @@ class StretchSS(DeformationExperiment):
 class StretchNN(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
-        self.bcs, self.bcsfun = vss.stretch_zz_fixed_sides(V_CG, self.boundary_markers)
+        self.bcs, self.bcsfun = vss.stretch_zz_comp(V_CG, self.boundary_markers)
 
     def evaluate_normal_load(self, F, P):
         return vss.evaluate_normal_load(F, P, self.mesh, self.ds, 6)

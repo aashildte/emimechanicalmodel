@@ -589,9 +589,9 @@ class CardiacModel(ABC):
         return self.integrate_subdomain(stress, subdomain_ids) / self.calculate_volume(
             subdomain_ids
         )
-
-    def evaluate_load(self, wall_idts):
+    
         """
+        def evaluate_load(self, wall_idts):
 
         idts according to:
         boundaries = {
@@ -603,7 +603,6 @@ class CardiacModel(ABC):
             "z_max": {"subdomain": Wall(2, "max", dimensions), "idt": 6},
         }
 
-        """
 
         F, P = self.F, self.P
 
@@ -623,6 +622,7 @@ class CardiacModel(ABC):
             )
         
         return total_load / area
+        """
 
     def evaluate_normal_load(self):
         """
@@ -647,7 +647,7 @@ class CardiacModel(ABC):
 
         """
 
-        return self.deformation.evaluate_shear_load(self.F, self.sigma)
+        return self.deformation.evaluate_shear_load(self.F, self.P)
 
     def evaluate_subdomain_stress_fibre_dir(self, subdomain_ids):
         """
