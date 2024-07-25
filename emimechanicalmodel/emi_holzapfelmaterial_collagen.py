@@ -97,13 +97,15 @@ class EMIMatrixHolzapfelMaterial:
        
         ecm_f = self.collagen_field
 
+        
         J = df.det(F)
+        C = J ** 2 * F.T * F
         J_iso = pow(J, -1.0 / float(self.dim))
-        C = J_iso**2 * F.T * F
+        C_iso = J_iso ** 2 * F.T * F
 
         IIFx = df.tr(C)
-        I4_myocytes = df.inner(C * self.e1, self.e1)
-        I4_matrix = df.inner(C * ecm_f, ecm_f)
+        I4_myocytes = df.inner(C_iso * self.e1, self.e1)
+        I4_matrix = df.inner(C_iso * ecm_f, ecm_f)
 
         cond = lambda a: ufl.conditional(a > 0, a, 0)
 
