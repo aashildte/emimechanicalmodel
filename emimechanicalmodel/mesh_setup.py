@@ -95,20 +95,21 @@ def load_mesh_with_collagen_structure(mesh_file, verbose=1):
 
     dim = mesh.topology().dim()
     volumes = df.MeshFunction("size_t", mesh, dim, 0)
-    collagen_dist = df.MeshFunction("double", mesh, 0)
-    
+    #collagen_dist = df.MeshFunction("double", mesh, 0)
+        
     # this needs to match whatever the subdomain is called in the mesh file
     if dim == 3:
         raise NotImplementedError("TODO")
     h5_file.read(volumes, "subdomains")
-    h5_file.read(collagen_dist, "collagen_dist")
+    #h5_file.read(collagen_dist, "collagen_dist")
+    """
 
     V = df.FunctionSpace(mesh, "CG", 1)
     theta = df.Function(V)
 
-    # in parallel 
+        # in parallel 
     rank = comm.Get_rank()
-    values = []                                        
+    values = []                           
     visited = []                                                     
 
     v = theta.vector()
@@ -122,13 +123,21 @@ def load_mesh_with_collagen_structure(mesh_file, verbose=1):
         for dof in dofs:
             global_dof = dofmap.local_to_global_index(dof)
             if dof not in visited and node_min <= global_dof <= node_max:
+                #print(dof)
                 values[dof] = collagen_dist[dof]
                 visited.append(dof)
 
     theta.vector().set_local(values)
     #df.File("collagen_distribution.pvd") << theta
-    #exit()
-    
+    """
+    V = df.FunctionSpace(mesh, "CG", 1)
+    theta = df.Function(V)
+
+    name = mesh_file.split(".")[0]
+    fid = df.HDF5File(comm, f"{name}_collagen.h5", "r")
+    fid.read(theta, "collagen_dist")
+    fid.close()
+
     if verbose > 0:
         print("Mesh and subdomains loaded successfully.")
         print(

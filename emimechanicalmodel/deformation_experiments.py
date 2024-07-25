@@ -38,6 +38,7 @@ class DeformationExperiment:
         self.mesh = mesh
         self.normal_vector = df.FacetNormal(mesh)
         self.boundary_markers, self.ds = vss.get_boundary_markers(mesh)
+        self.CG = df.FunctionSpace(mesh, "CG", 2)    # for projection of load
 
     def _evaluate_load(self, F, P, wall_idt, unit_vector):
         return -1
@@ -74,7 +75,7 @@ class StretchFF(DeformationExperiment):
         self.bcs, self.bcsfun = vss.stretch_xx_comp(V_CG, self.boundary_markers)
 
     def evaluate_normal_load(self, F, P):
-        return vss.evaluate_normal_load(F, P, self.mesh, self.ds, 2)
+        return vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 2)
 
 
 class StretchSS(DeformationExperiment):
@@ -83,7 +84,7 @@ class StretchSS(DeformationExperiment):
         self.bcs, self.bcsfun = vss.stretch_yy_comp(V_CG, self.boundary_markers)
 
     def evaluate_normal_load(self, F, P):
-        return vss.evaluate_normal_load(F, P, self.mesh, self.ds, 4)
+        return vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 4)
 
 
 class StretchNN(DeformationExperiment):
@@ -92,7 +93,7 @@ class StretchNN(DeformationExperiment):
         self.bcs, self.bcsfun = vss.stretch_zz_comp(V_CG, self.boundary_markers)
 
     def evaluate_normal_load(self, F, P):
-        return vss.evaluate_normal_load(F, P, self.mesh, self.ds, 6)
+        return vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 6)
 
 
 class ShearFS(DeformationExperiment):
@@ -101,10 +102,10 @@ class ShearFS(DeformationExperiment):
         self.bcs, self.bcsfun = vss.shear_xy_fixed_sides(V_CG, self.boundary_markers)
 
     def evaluate_normal_load(self, F, P):
-        return vss.evaluate_normal_load(F, P, self.mesh, self.ds, 2)
+        return vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 2)
 
     def evaluate_shear_load(self, F, P):
-        return vss.evaluate_shear_load(F, P, self.mesh, self.ds, 2, "ydir")
+        return vss.evaluate_shear_load(F, P, self.CG, self.mesh, self.ds, 2, "ydir")
 
 
 class ShearFN(DeformationExperiment):
@@ -113,10 +114,10 @@ class ShearFN(DeformationExperiment):
         self.bcs, self.bcsfun = vss.shear_xz_fixed_sides(V_CG, self.boundary_markers)
 
     def evaluate_normal_load(self, F, P):
-        return vss.evaluate_normal_load(F, P, self.mesh, self.ds, 2)
+        return vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 2)
 
     def evaluate_shear_load(self, F, P):
-        return vss.evaluate_shear_load(F, P, self.mesh, self.ds, 2, "zdir")
+        return vss.evaluate_shear_load(F, P, self.CG, self.mesh, self.ds, 2, "zdir")
 
 
 class ShearSF(DeformationExperiment):
@@ -125,10 +126,10 @@ class ShearSF(DeformationExperiment):
         self.bcs, self.bcsfun = vss.shear_yx_fixed_sides(V_CG, self.boundary_markers)
 
     def evaluate_normal_load(self, F, P):
-        return vss.evaluate_normal_load(F, P, self.mesh, self.ds, 4)
+        return vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 4)
 
     def evaluate_shear_load(self, F, P):
-        return vss.evaluate_shear_load(F, P, self.mesh, self.ds, 4, "xdir")
+        return vss.evaluate_shear_load(F, P, self.CG, self.mesh, self.ds, 4, "xdir")
 
 
 class ShearSN(DeformationExperiment):
@@ -137,10 +138,10 @@ class ShearSN(DeformationExperiment):
         self.bcs, self.bcsfun = vss.shear_yz_fixed_sides(V_CG, self.boundary_markers)
     
     def evaluate_normal_load(self, F, P):
-        return vss.evaluate_normal_load(F, P, self.mesh, self.ds, 4)
+        return vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 4)
     
     def evaluate_shear_load(self, F, P):
-        return vss.evaluate_shear_load(F, P, self.mesh, self.ds, 4, "zdir")
+        return vss.evaluate_shear_load(F, P, self.CG, self.mesh, self.ds, 4, "zdir")
 
 
 class ShearNF(DeformationExperiment):
@@ -149,10 +150,10 @@ class ShearNF(DeformationExperiment):
         self.bcs, self.bcsfun = vss.shear_zx_fixed_sides(V_CG, self.boundary_markers)
 
     def evaluate_normal_load(self, F, P):
-        return vss.evaluate_normal_load(F, P, self.mesh, self.ds, 6)
+        return vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 6)
 
     def evaluate_shear_load(self, F, P):
-        return vss.evaluate_shear_load(F, P, self.mesh, self.ds, 6, "xdir")
+        return vss.evaluate_shear_load(F, P, self.CG, self.mesh, self.ds, 6, "xdir")
 
 
 class ShearNS(DeformationExperiment):
@@ -161,8 +162,8 @@ class ShearNS(DeformationExperiment):
         self.bcs, self.bcsfun = vss.shear_zy_fixed_sides(V_CG, self.boundary_markers)
 
     def evaluate_normal_load(self, F, P):
-        return vss.evaluate_normal_load(F, P, self.mesh, self.ds, 6)
+        return vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 6)
 
     def evaluate_shear_load(self, F, P):
-        return vss.evaluate_shear_load(F, P, self.mesh, self.ds, 6, "ydir")
+        return vss.evaluate_shear_load(F, P, self.CG, self.mesh, self.ds, 6, "ydir")
 

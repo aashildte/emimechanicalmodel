@@ -112,7 +112,7 @@ class Monitor:
 
         # per subdomain; not actively used but let's keep it here in case we
         # need it again
-        """        
+               
         for subdomain_id in model.subdomains:
             scalar_functions[f"stress_xdir_subdomain_{subdomain_id}"] = partial(
                 model.evaluate_subdomain_stress_fibre_dir, subdomain_ids=subdomain_id
@@ -135,8 +135,7 @@ class Monitor:
             scalar_functions[f"strain_zdir_subdomain_{subdomain_id}"] = partial(
                 model.evaluate_subdomain_strain_normal_dir, subdomain_ids=subdomain_id
             )
-        """
-
+    
         # intracellular/extracellular/both:
 
         intracellular_subdomains = list(model.subdomains)[:]
@@ -144,10 +143,10 @@ class Monitor:
             intracellular_subdomains.remove(0)
         extracellular_subdomain = [0]
 
-        descriptions = ["intracellular", "extracellular", "whole_domain"]
+        descriptions = ["extracellular", "intracellular", "whole_domain"]
         subdomains = [
-            intracellular_subdomain,
             extracellular_subdomains,
+            intracellular_subdomain,            
             model.subdomains,
         ]
 

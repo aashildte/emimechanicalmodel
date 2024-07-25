@@ -634,7 +634,9 @@ class CardiacModel(ABC):
             normal load L (float)
 
         """
-        return self.deformation.evaluate_normal_load(self.F, self.P)
+        l = self.deformation.evaluate_normal_load(self.F, self.P)
+        print("load: ", l)
+        return l
 
     def evaluate_shear_load(self):
         """
