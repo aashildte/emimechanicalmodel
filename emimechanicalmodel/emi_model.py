@@ -114,27 +114,17 @@ class EMIModel(CardiacModel):
             print(f"Global subdomains:{self.subdomains}")  
 
 
-    def _define_active_strain(self):
+    def _define_active_fn(self):
         """
 
-        Defines an active strain function for active contraction;
+        Defines an active strain/stress function for active contraction;
         supposed to be updated by update_active_fn step by step.
-        This function gives us "gamma" in the active strain approach.
+        This function gives us "gamma" in the active strain approach,
+        and "T_a" in the active stress approach.
 
         """
-        """
-        d = len(self.u)
-        I = df.Identity(d)  # Identity tensor
-        F = df.variable(I + df.grad(self.u))  # Deformation gradient
-        
-        lambda_squared = df.inner(F*self.fiber_dir, F*self.fiber_dir)
-        beta = 4.27
-        tension_scale = (1 + beta*(lambda_squared**0.5 - 1))
-        """
-        self.active_value = df.Function(self.U, name="Active strain (-)")
-        self.active_value.vector()[:] = 0  # initial value
-        
-        self.active_fn = self.active_value
+        self.active_fn = df.Function(self.U, name="Active tension")
+        self.active_fn.vector()[:] = 0  # initial value
 
 
     def update_active_fn(self, value):
@@ -148,6 +138,7 @@ class EMIModel(CardiacModel):
 
         """
         assign_discrete_values(self.active_value, self.subdomain_map, value, 0) 
+
 
     def _define_projections(self):
         """

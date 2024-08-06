@@ -91,7 +91,7 @@ class TissueModel(CardiacModel):
             verbose,
         )
 
-    def _define_active_strain(self):
+    def _define_active_fn(self):
         """
 
         Defines an active strain function for active contraction;

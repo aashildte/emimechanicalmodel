@@ -66,7 +66,7 @@ class CardiacModel(ABC):
         # define variational form
         self._define_state_space()
         self._define_state_functions()
-        self._define_active_strain()
+        self._define_active_fn()
         self._set_fenics_parameters()
 
         # boundary conditions
@@ -272,14 +272,14 @@ class CardiacModel(ABC):
         self.deformation.assign_stretch(stretch_value)
 
     @abstractmethod
-    def _define_active_strain(self):
+    def _define_active_fn(self):
         """
 
         Defines an active strain function for active contraction;
         supposed to be updated by update_active_fn step by step.
         This function gives us "gamma" in the active strain approach,
-        and will be differently defined for tissue and emi models
-        respectively.
+        / T_a in the active stress approach, and will be differently
+        defined for tissue and emi models respectively.
 
         """
         pass
@@ -330,10 +330,7 @@ class CardiacModel(ABC):
             C = pow(J, -float(2) / 3) * F.T * F
             I4 = df.inner(C * e1, e1)
 
-            #psi_active = active_fn / 2.0 * (I4 - 1)
-            beta = 4.27
-            psi_active = active_fn*(beta*df.sqrt(I4) + (1 - beta)/2*df.ln(I4))
-
+            psi_active = active_fn / 2.0 * (I4 - 1)
             psi_passive = mat_model.get_strain_energy_term(F)
             psi_comp = comp_model.get_strain_energy_term(F, self.p)
 
