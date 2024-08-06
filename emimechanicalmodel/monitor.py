@@ -145,8 +145,8 @@ class Monitor:
 
         descriptions = ["extracellular", "intracellular", "whole_domain"]
         subdomains = [
-            extracellular_subdomains,
-            intracellular_subdomain,            
+            extracellular_subdomain,
+            intracellular_subdomains,            
             model.subdomains,
         ]
 

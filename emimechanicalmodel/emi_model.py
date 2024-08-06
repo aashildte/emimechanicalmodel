@@ -122,7 +122,7 @@ class EMIModel(CardiacModel):
         This function gives us "gamma" in the active strain approach.
 
         """
-        
+        """
         d = len(self.u)
         I = df.Identity(d)  # Identity tensor
         F = df.variable(I + df.grad(self.u))  # Deformation gradient
@@ -130,11 +130,11 @@ class EMIModel(CardiacModel):
         lambda_squared = df.inner(F*self.fiber_dir, F*self.fiber_dir)
         beta = 4.27
         tension_scale = (1 + beta*(lambda_squared**0.5 - 1))
-
+        """
         self.active_value = df.Function(self.U, name="Active strain (-)")
         self.active_value.vector()[:] = 0  # initial value
-
-        self.active_fn = tension_scale*self.active_value
+        
+        self.active_fn = self.active_value
 
 
     def update_active_fn(self, value):

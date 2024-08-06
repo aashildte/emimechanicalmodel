@@ -330,7 +330,10 @@ class CardiacModel(ABC):
             C = pow(J, -float(2) / 3) * F.T * F
             I4 = df.inner(C * e1, e1)
 
-            psi_active = active_fn / 2.0 * (I4 - 1)
+            #psi_active = active_fn / 2.0 * (I4 - 1)
+            beta = 4.27
+            psi_active = active_fn*(beta*df.sqrt(I4) + (1 - beta)/2*df.ln(I4))
+
             psi_passive = mat_model.get_strain_energy_term(F)
             psi_comp = comp_model.get_strain_energy_term(F, self.p)
 
