@@ -96,13 +96,14 @@ def test_emi_deformation_2D(deformation_mode):
 
     model = EMIModel(mesh, volumes, experiment=deformation_mode)
     
-    stretch_value = 0.05
+    stretch_value = 0.01
     model.assign_stretch(stretch_value)
     model.solve()
     
     if "stretch" in deformation_mode:
         assert model.evaluate_normal_load() > 0
     else:
+        print("load: ", model.evaluate_shear_load())
         assert model.evaluate_shear_load() > 0
 
 
@@ -121,13 +122,13 @@ def test_emi_deformation_2D(deformation_mode):
     ],
 )
 def test_emi_deformation_3D(deformation_mode):
-    mesh = df.UnitSquareMesh(1, 1, 1)
+    mesh = df.UnitCubeMesh(1, 1, 1)
     volumes = df.MeshFunction("size_t", mesh, 3)
     volumes.array()[0] = 1
 
     model = EMIModel(mesh, volumes, experiment=deformation_mode)
     
-    stretch_value = 0.05
+    stretch_value = 0.01
     model.assign_stretch(stretch_value)
     model.solve()
     
@@ -147,10 +148,10 @@ if __name__ == "__main__":
         #"shear_fs",
         #"shear_fn",
         #"shear_sf",
-        #"stretch_ss",
+        "stretch_ss",
         #"shear_sn",
         #"shear_nf",
         #"shear_ns",
-        #"stretch_nn",
+        "stretch_nn",
     ]:
-        test_emi_deformation_2D(deformation_mode)
+        test_emi_deformation_3D(deformation_mode)

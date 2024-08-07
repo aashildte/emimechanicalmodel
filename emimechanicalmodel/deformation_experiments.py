@@ -105,6 +105,8 @@ class ShearFS(DeformationExperiment):
         return vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 2)
 
     def evaluate_shear_load(self, F, P):
+        print("HER!")
+
         return vss.evaluate_shear_load(F, P, self.CG, self.mesh, self.ds, 2, "ydir")
 
 
