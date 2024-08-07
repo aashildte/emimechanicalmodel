@@ -137,7 +137,7 @@ class EMIModel(CardiacModel):
                defined as non-zero over the intracellular domain
 
         """
-        assign_discrete_values(self.active_value, self.subdomain_map, value, 0) 
+        assign_discrete_values(self.active_fn, self.subdomain_map, value, 0) 
 
     
     def evaluate_collagen_stress_fiber_direction(self):

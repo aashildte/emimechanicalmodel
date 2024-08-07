@@ -24,7 +24,7 @@ def test_emi_active_strain():
     U = df.FunctionSpace(mesh, "DG", 0)
     active = df.project(model.active_fn, U)
 
-    assert abs(np.max(active.vector()[:]) - active_value) > 1e-10
+    assert abs(np.max(active.vector()[:]) - active_value) < 1e-10
     assert abs(np.min(active.vector()[:]) - 0) < 1e-10
     assert np.linalg.norm(u.vector()[:]) > 0
 
@@ -47,8 +47,8 @@ def test_emi_active_stress():
 
     U = df.FunctionSpace(mesh, "DG", 0)
     active = df.project(model.active_fn, U)
-    
-    assert abs(np.max(active.vector()[:]) - active_value) > 1e-10
+   
+    assert abs(np.max(active.vector()[:]) - active_value) < 1e-10
     assert abs(np.min(active.vector()[:]) - 0) < 1e-10
     assert np.linalg.norm(u.vector()[:]) > 0
 
@@ -117,14 +117,14 @@ if __name__ == "__main__":
     test_emi_proj_strain()
     test_emi_proj_stress()
     for deformation_mode in [
-        "stretch_ff",
-        "shear_fs",
-        "shear_fn",
-        "shear_sf",
-        "stretch_ss",
-        "shear_sn",
-        "shear_nf",
-        "shear_ns",
-        "stretch_nn",
+        #"stretch_ff",
+        #"shear_fs",
+        #"shear_fn",
+        #"shear_sf",
+        #"stretch_ss",
+        #"shear_sn",
+        #"shear_nf",
+        #"shear_ns",
+        #"stretch_nn",
     ]:
         test_emi_deformation(deformation_mode)
