@@ -139,6 +139,58 @@ class EMIModel(CardiacModel):
         """
         assign_discrete_values(self.active_value, self.subdomain_map, value, 0) 
 
+    
+    def evaluate_collagen_stress_fiber_direction(self):
+        """
+
+        Evaluates the collagen fiber direction stress (fiber direction normal component).
+
+        """
+
+        assert isinstance(self.mat_model, EMIMatrixHolzapfelMaterial), "Error: Collagen fibers not defined."
+
+        unit_vector, _ = self.mat_model.collagen_field
+        return self.evaluate_subdomain_stress(unit_vector, 0)
+
+    
+    def evaluate_collagen_stress_transverse_direction(self):
+        """
+
+        Evaluates the collagen fiber direction stress (transverse fiber direction normal component).
+
+        """
+
+        assert isinstance(self.mat_model, EMIMatrixHolzapfelMaterial), "Error: Collagen fibers not defined."
+
+        _, unit_vector = self.mat_model.collagen_field
+        return self.evaluate_subdomain_stress(unit_vector, 0)
+    
+
+    def evaluate_collagen_strain_fiber_direction(self):
+        """
+
+        Evaluates the collagen fiber direction strain (fiber direction normal component).
+
+        """
+
+        assert isinstance(self.mat_model, EMIMatrixHolzapfelMaterial), "Error: Collagen fibers not defined."
+
+        unit_vector, _ = self.mat_model.collagen_field
+        return self.evaluate_subdomain_strain(unit_vector, 0)
+
+    
+    def evaluate_collagen_strain_transverse_direction(self):
+        """
+
+        Evaluates the collagen fiber direction strain (transverse fiber direction normal component).
+
+        """
+
+        assert isinstance(self.mat_model, EMIMatrixHolzapfelMaterial), "Error: Collagen fibers not defined."
+
+        _, unit_vector = self.mat_model.collagen_field
+        return self.evaluate_subdomain_strain(unit_vector, 0)
+
 
     def _define_projections(self):
         """
@@ -164,14 +216,21 @@ class EMIModel(CardiacModel):
         E_DG = df.Function(T_DG, name="Strain")
         sigma_DG = df.Function(T_DG, name="Cauchy stress (kPa)")
         P_DG = df.Function(T_DG, name="Piola-Kirchhoff stress (kPa)")
-        a_DG = df.Function(U_DG, name="Active tension")
+
 
         p_proj = ProjectionFunction(self.p, p_DG)
         u_proj = ProjectionFunction(self.u, u_DG)
         E_proj = ProjectionFunction(self.E, E_DG)
         sigma_proj = ProjectionFunction(self.sigma, sigma_DG)
         P_proj = ProjectionFunction(self.P, P_DG)
-        active_proj = ProjectionFunction(self.active_fn, a_DG)
+
+        if isinstance(self.mat_model, EMIMatrixHolzapfelMaterial):
+            sigma_collagen = df.Function(U_DG, name="Cauchy stress (kPa)")
+            E_collagen = df.Function(U_DG, name="Strain (-)")
+            e1, _ = self.mat_model.collagen_field
+
+            sigma_collagen_proj = ProjectionFunction(df.inner(self.sigma*e1, e1), sigma_collagen)
+            E_collagen_proj = ProjectionFunction(df.inner(self.E*e1, e1), E_collagen)
 
         self.u_DG = u_DG
         self.p_DG = p_DG
@@ -179,5 +238,10 @@ class EMIModel(CardiacModel):
         self.sigma_DG = sigma_DG
         self.PiolaKirchhoff_DG = P_DG
 
-        self.tracked_variables = [u_DG, p_DG, E_DG, sigma_DG, P_DG, a_DG]
-        self.projections = [u_proj, p_proj, E_proj, sigma_proj, P_proj, active_proj]
+        self.tracked_variables = [u_DG, p_DG, E_DG, sigma_DG, P_DG]
+        self.projections = [u_proj, p_proj, E_proj, sigma_proj, P_proj]
+
+        if isinstance(self.mat_model, EMIMatrixHolzapfelMaterial):
+            self.tracked_variables += [sigma_collagen, E_collagen]
+            self.projections += [sigma_collagen_proj, E_collagen_proj]
+

@@ -57,8 +57,10 @@ class EMIMatrixHolzapfelMaterial:
         
         if self.dim == 2:
             self.e1 = df.as_vector([1.0, 0.0])
+            self.e2 = df.as_vector([1.0, 0.0])
         elif self.dim == 3:
             self.e1 = df.as_vector([1.0, 0.0, 0.0])
+            self.e2 = df.as_vector([0.0, 1.0, 0.0])
 
         self.U = U
         #self.V = V
@@ -87,7 +89,7 @@ class EMIMatrixHolzapfelMaterial:
             )
         )
 
-        return R*self.e1
+        return R*self.e1, R*self.e1
 
 
     def get_strain_energy_term(self, F):
@@ -95,7 +97,7 @@ class EMIMatrixHolzapfelMaterial:
         a_i, a_e, b_i, b_e, a_if, b_if, a_ef, b_ef = self.a_i, self.a_e, self.b_i, self.b_e, self.a_if, self.b_if, self.a_ef, self.b_ef
         xi_i, xi_e = self.xi_i, self.xi_e
        
-        ecm_f = self.collagen_field
+        ecm_f, _ = self.collagen_field
 
         
         J = df.det(F)

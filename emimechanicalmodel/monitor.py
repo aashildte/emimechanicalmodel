@@ -177,6 +177,11 @@ class Monitor:
                 model.evaluate_active_tension, subdomain_ids=subdomain
             )
         
+        if isinstance(self.cardiac_model.mat_model, EMIMatrixHolzapfelMaterial):
+            scalar_functions[f"collagen_fiber_direction_stress"] = model.evaluate_collagen_stress_fiber_direction
+            scalar_functions[f"collagen_transfiber_direction_stress"] = model.evaluate_collagen_stress_fiber_direction
+            scalar_functions[f"collagen_fiber_direction_strain"] = model.evaluate_collagen_strain_fiber_direction
+            scalar_functions[f"collagen_transfiber_direction_strain"] = model.evaluate_collagen_strain_fiber_direction
 
         scalar_functions[f"relative_shortening"] = model.evaluate_average_shortening
 
