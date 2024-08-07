@@ -85,6 +85,32 @@ def test_emi_proj_stress():
     [
         ("stretch_ff"),
         ("stretch_ss"),
+        ("shear_fs"),
+        ("shear_sf"),
+    ],
+)
+def test_emi_deformation_2D(deformation_mode):
+    mesh = df.UnitSquareMesh(1, 1)
+    volumes = df.MeshFunction("size_t", mesh, 2)
+    volumes.array()[0] = 1
+
+    model = EMIModel(mesh, volumes, experiment=deformation_mode)
+    
+    stretch_value = 0.05
+    model.assign_stretch(stretch_value)
+    model.solve()
+    
+    if "stretch" in deformation_mode:
+        assert model.evaluate_normal_load() > 0
+    else:
+        assert model.evaluate_shear_load() > 0
+
+
+@pytest.mark.parametrize(
+    ("deformation_mode"),
+    [
+        ("stretch_ff"),
+        ("stretch_ss"),
         ("stretch_nn"),
         ("shear_fs"),
         ("shear_sf"),
@@ -94,8 +120,8 @@ def test_emi_proj_stress():
         ("shear_ns"),
     ],
 )
-def test_emi_deformation(deformation_mode):
-    mesh = df.UnitCubeMesh(1, 1, 1)
+def test_emi_deformation_3D(deformation_mode):
+    mesh = df.UnitSquareMesh(1, 1, 1)
     volumes = df.MeshFunction("size_t", mesh, 3)
     volumes.array()[0] = 1
 
@@ -112,12 +138,12 @@ def test_emi_deformation(deformation_mode):
 
 
 if __name__ == "__main__":
-    test_emi_active_stress()
-    test_emi_active_strain()
-    test_emi_proj_strain()
-    test_emi_proj_stress()
+    #test_emi_active_stress()
+    #test_emi_active_strain()
+    #test_emi_proj_strain()
+    #test_emi_proj_stress()
     for deformation_mode in [
-        #"stretch_ff",
+        "stretch_ff",
         #"shear_fs",
         #"shear_fn",
         #"shear_sf",
@@ -127,4 +153,4 @@ if __name__ == "__main__":
         #"shear_ns",
         #"stretch_nn",
     ]:
-        test_emi_deformation(deformation_mode)
+        test_emi_deformation_2D(deformation_mode)
