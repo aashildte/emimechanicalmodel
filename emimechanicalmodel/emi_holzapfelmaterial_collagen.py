@@ -75,9 +75,9 @@ class EMIMatrixHolzapfelMaterial:
 
         self.collagen_field = self.calculate_collagen_fiber_direction(collagen_dist)
 
-        V = df.VectorFunctionSpace(U.mesh(), "CG", 2)
-        output_folder = "conttraction_experiments_spatial"
-        df.File(f"{output_folder}/fiber_direction.pvd") << df.project(self.collagen_field, V)
+        #V = df.VectorFunctionSpace(U.mesh(), "CG", 2)
+        #output_folder = "contraction_experiments_spatial"
+        #df.File(f"{output_folder}/fiber_direction.pvd") << df.project(self.collagen_field[0], V)
 
         self.xi_i, self.xi_e = xi_i, xi_e
 

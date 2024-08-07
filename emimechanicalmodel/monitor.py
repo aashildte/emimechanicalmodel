@@ -12,7 +12,7 @@ from mpi4py import MPI
 import dolfin as df
 
 from .emi_model import EMIModel
-
+from .emi_holzapfelmaterial_collagen import EMIMatrixHolzapfelMaterial
 
 class Monitor:
     """
