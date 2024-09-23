@@ -182,7 +182,11 @@ class Monitor:
             scalar_functions[f"collagen_transfiber_direction_stress"] = model.evaluate_collagen_stress_fiber_direction
             scalar_functions[f"collagen_fiber_direction_strain"] = model.evaluate_collagen_strain_fiber_direction
             scalar_functions[f"collagen_transfiber_direction_strain"] = model.evaluate_collagen_strain_fiber_direction
-
+            scalar_functions[f"evaluate_collagen_stress_magnitude"] = model.evaluate_collagen_stress_magnitude
+            scalar_functions[f"evaluate_collagen_strain_magnitude"] = model.evaluate_collagen_strain_magnitude
+        
+        scalar_functions[f"evaluate_cellular_stress_magnitude"] = model.evaluate_cellular_stress_magnitude
+        scalar_functions[f"evaluate_cellular_strain_magnitude"] = model.evaluate_cellular_strain_magnitude 
         scalar_functions[f"relative_shortening"] = model.evaluate_average_shortening
 
         scalar_values = {"states": []}

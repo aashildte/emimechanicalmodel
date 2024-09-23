@@ -84,6 +84,7 @@ class CardiacModel(ABC):
             "shear_sn": ShearSN,
         }
         self.deformation = exp_dict[experiment](mesh, self.V_CG)
+        self.ds = self.deformation.ds
         self._define_external_load()
 
         self._define_kinematic_variables()
@@ -134,6 +135,7 @@ class CardiacModel(ABC):
         df.parameters["form_compiler"]["cpp_optimize"] = True
         df.parameters["form_compiler"]["representation"] = "uflacs"
         df.parameters["form_compiler"]["quadrature_degree"] = 4
+        df.parameters["ghost_mode"] = 'shared_facet'
 
     def _define_state_space(self):
         """
@@ -404,7 +406,9 @@ class CardiacModel(ABC):
         if self.experiment_str == "contraction":
             state, test_state = self.state, self.test_state
             weak_form += self._remove_rigid_motion_term(u, r, state, test_state)
-
+            #weak_form += self._add_robin_bnd_term()
+            #weak_form += df.inner(self.u, self.v)*self.ds
+        
         (self.F, self.E, self.sigma, self.P, self.u, self.weak_form,) = (
             F,
             E,
@@ -484,6 +488,19 @@ class CardiacModel(ABC):
         Pi = sum(df.dot(u, zi) * r[i] * df.dx for i, zi in enumerate(RM))
 
         return df.derivative(Pi, state, test_state)
+
+    def _add_robin_bnd_term(self):
+        """
+
+        Defines a Robin boundary condition for all sides, to model resistance from surrounding tissue during contraction.
+        Note that this should not be used combined with the term removing ridig motion as given above; but rather replace it.
+
+        """
+        robin_value = df.Constant(1.0)
+        robin_bcs_term = df.inner(robin_value * self.u, self.v) * self.ds(1)      # in all directions
+
+        return robin_bcs_term
+
 
     def solve(self, project=False):
         """
@@ -716,6 +733,7 @@ class CardiacModel(ABC):
         return self.integrate_subdomain(strain, subdomain_ids) / self.calculate_volume(
             subdomain_ids
         )
+
 
     def evaluate_subdomain_strain_fibre_dir(self, subdomain_ids):
         """

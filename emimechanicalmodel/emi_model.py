@@ -107,6 +107,8 @@ class EMIModel(CardiacModel):
 
         self.subdomains = mpi_comm.bcast(global_subdomains, root=0)
         self.num_subdomains = max(self.subdomains) 
+        self.intracellular_space = self.subdomains[:]
+        self.intracellular_space.remove(0)       # remove matrix space
 
         if self.verbose == 2:
             print(f"Local subdomains (rank {rank}):{local_subdomains}")  
@@ -139,6 +141,18 @@ class EMIModel(CardiacModel):
         """
         assign_discrete_values(self.active_fn, self.subdomain_map, value, 0) 
 
+    
+    def evaluate_collagen_stress_magnitude(self):
+        """
+
+        Evaluates the collagen fiber direction stress (fiber direction normal component).
+
+        """
+
+        assert isinstance(self.mat_model, EMIMatrixHolzapfelMaterial), "Error: Collagen fibers not defined."
+
+        unit_vector, _ = self.mat_model.collagen_field
+        return self.evaluate_subdomain_stress(unit_vector, 0)
     
     def evaluate_collagen_stress_fiber_direction(self):
         """
@@ -192,6 +206,86 @@ class EMIModel(CardiacModel):
         return self.evaluate_subdomain_strain(unit_vector, 0)
 
 
+    def evaluate_cellular_strain_magnitude(self):
+        """
+
+        Returns:
+            ..math:: || \overline{E} || integrated over the extracellular space
+        """
+        assert isinstance(self.mat_model, EMIMatrixHolzapfelMaterial), "Error: Collagen fibers not defined."
+       
+        e1, e2 = self.fiber_dir, self.sheet_dir
+
+        E11 = df.inner(e1, self.E * e1)**2
+        E12 = abs(df.inner(e1, self.E * e2))**2
+        E22 = df.inner(e2, self.E * e2)**2
+
+        total_strain = self.integrate_subdomain(E11, self.intracellular_space) #+ 2*self.integrate_subdomain(E12, self.intracellular_space) + self.integrate_subdomain(E22, self.intracellular_space)
+
+        return total_strain**0.5 / self.calculate_volume(self.intracellular_space)
+
+
+    def evaluate_cellular_stress_magnitude(self):
+        """
+
+        TODO define these functions in 3D as well!!!!
+        TODO generalize these to one function with subdomains as an argument
+
+        Returns:
+            ..math:: || \overline{E} || integrated over the extracellular space
+
+        """
+        assert isinstance(self.mat_model, EMIMatrixHolzapfelMaterial), "Error: Collagen fibers not defined."
+       
+        e1, e2 = self.fiber_dir, self.sheet_dir
+
+        sigma11 = df.inner(e1, self.sigma * e1)**2
+        sigma12 = abs(df.inner(e1, self.sigma * e2))**2
+        sigma22 = df.inner(e2, self.sigma * e2)**2
+
+        total_stress = self.integrate_subdomain(sigma11, self.intracellular_space) #+ 2*self.integrate_subdomain(sigma12, self.intracellular_space) + self.integrate_subdomain(sigma22, self.intracellular_space)
+
+        return total_stress**0.5 / self.calculate_volume(self.intracellular_space)
+
+    def evaluate_collagen_strain_magnitude(self):
+        """
+
+        Returns:
+            ..math:: || \overline{E} || integrated over the extracellular space
+        """
+        assert isinstance(self.mat_model, EMIMatrixHolzapfelMaterial), "Error: Collagen fibers not defined."
+       
+        e1, e2 = self.mat_model.collagen_field
+
+        E11 = df.inner(e1, self.E * e1)**2
+        E12 = abs(df.inner(e1, self.E * e2))**2
+        E22 = df.inner(e2, self.E * e2)**2
+
+        total_strain = self.integrate_subdomain(E11, 0) #+ 2*self.integrate_subdomain(E12, 0) + self.integrate_subdomain(E22, 0)
+
+        return total_strain**0.5 / self.calculate_volume(0)
+    
+
+    def evaluate_collagen_stress_magnitude(self):
+        """
+
+        Returns:
+            ..math:: || \overline{E} || integrated over the extracellular space
+        """
+        assert isinstance(self.mat_model, EMIMatrixHolzapfelMaterial), "Error: Collagen fibers not defined."
+       
+        e1, e2 = self.mat_model.collagen_field
+
+        sigma11 = df.inner(e1, self.sigma * e1)**2
+        sigma12 = abs(df.inner(e1, self.sigma * e2))**2
+        sigma22 = df.inner(e2, self.sigma * e2)**2
+
+        total_stress = self.integrate_subdomain(sigma11, 0) #+ 2*self.integrate_subdomain(sigma12, 0) + self.integrate_subdomain(sigma22, 0)
+
+        return total_stress**0.5 / self.calculate_volume(0)
+
+
+
     def _define_projections(self):
         """
 
@@ -225,8 +319,8 @@ class EMIModel(CardiacModel):
         P_proj = ProjectionFunction(self.P, P_DG)
 
         if isinstance(self.mat_model, EMIMatrixHolzapfelMaterial):
-            sigma_collagen = df.Function(U_DG, name="Cauchy stress (kPa)")
-            E_collagen = df.Function(U_DG, name="Strain (-)")
+            sigma_collagen = df.Function(U_DG, name="Collagen Cauchy stress (kPa)")
+            E_collagen = df.Function(U_DG, name="Collagen strain (-)")
             e1, _ = self.mat_model.collagen_field
 
             sigma_collagen_proj = ProjectionFunction(df.inner(self.sigma*e1, e1), sigma_collagen)

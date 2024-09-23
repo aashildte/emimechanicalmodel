@@ -67,6 +67,9 @@ class Contraction(DeformationExperiment):
     @property
     def bcs(self):
         return []
+    
+    def evaluate_normal_load(self, F, P):
+        return vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 2)
 
 
 class StretchFF(DeformationExperiment):
