@@ -43,4 +43,5 @@ parse:
 
 sphinx:
   config:
+    nb_execution_show_tb: True
     html_extra_path: ["preliminaries/geometries_meshes.png", "preliminaries/cardiac_anisotropy.png", "preliminaries/reference_current.png", "preliminaries/strain_stress_load_concepts.png", "running_the_model/subdomains_meshes_tile_connected_10p0.png", "running_the_model/deformation_modes.png"]
