@@ -12,7 +12,7 @@ from mpi4py import MPI
 df.parameters["form_compiler"]["cpp_optimize"] = True
 df.parameters["form_compiler"]["representation"] = "uflacs"
 df.parameters["form_compiler"]["quadrature_degree"] = 4
-
+df.parameters["ghost_mode"] = "shared_facet"
 
 def load_mesh(mesh_file):
     """
@@ -71,74 +71,26 @@ def assign_discrete_values(
     )
 
 
-def discrete_material_params(fun_space, subdomain_map):
-    """
-
-    Defines material parameters based on subdomain partition; instead
-    of using two strain energy functions we define each material parameter
-    as a discontinous function.
-
-    Args:
-        fun_space (df.FunctionSpace): function space in which each
-            parameter will live in
-        subdomain_map_(df.MeshFunction): corresponding subdomain partition
-
-    """
-
-    a_i = 5.7
-    b_i = 11.67
-    a_e = 1.52
-    b_e = 16.31
-    a_if = 19.83
-    b_if = 24.72
-
-    a_fun = df.Function(fun_space, name="a")
-    assign_discrete_values(a_fun, subdomain_map, a_i, a_e)
-
-    b_fun = df.Function(fun_space, name="b")
-    assign_discrete_values(b_fun, subdomain_map, b_i, b_e)
-
-    a_f_fun = df.Function(fun_space, name="a_f")
-    assign_discrete_values(a_f_fun, subdomain_map, a_if, 0)
-
-    b_f_fun = df.Function(fun_space, name="b_f")
-    assign_discrete_values(b_f_fun, subdomain_map, b_if, 1)
-
-    return {
-        "a": a_fun,
-        "b": b_fun,
-        "a_f": a_f_fun,
-        "b_f": b_f_fun,
-    }
-
-
 def psi_holzapfel(
     F,
-    mat_params,
+    a = 5.7,
+    b=11.67,
+    a_f=19.83,
+    b_f=24.72
 ):
     """
 
     Defines the discrete strain energy function as given by assigned
-    material parameters; note that the strain energy function is defined
-    over both subspaces, and that the two different strain energy
-    functions are given by defining each parameter discontinously.
+    material parameters.
 
     Args:
         F (ufl form): deformation tensor
-        mat_params (dict): material parameters
+        a, b, a_f, b_f - material parameters
 
     Returns:
         psi (ufl form)
 
     """
-
-    a, b, a_f, b_f = (
-        mat_params["a"],
-        mat_params["b"],
-        mat_params["a_f"],
-        mat_params["b_f"],
-    )
-
     cond = lambda a: ufl.conditional(a > 0, a, 0)
 
     e1 = df.as_vector([1.0, 0.0, 0.0])
@@ -155,7 +107,7 @@ def psi_holzapfel(
     return W_hat + W_f
 
 
-def define_weak_form(mesh, active_fun, mat_params):
+def define_weak_form(mesh, active_fun):
     """
 
     Defines function spaces (P1 x P2 x RM) and functions to solve for,
@@ -164,7 +116,6 @@ def define_weak_form(mesh, active_fun, mat_params):
     Args:
         mesh (df.Mesh): domain to solve equations over
         active_fun (ufl form): active strain function
-        mat_params (dict): material parameters
 
     Returns:
         weak form (ufl form), state, displacement
@@ -191,14 +142,14 @@ def define_weak_form(mesh, active_fun, mat_params):
 
     # Weak form
     weak_form = 0
-    weak_form += elasticity_term(active_fun, F, J, p, v, mat_params)
+    weak_form += elasticity_term(active_fun, F, J, p, v)
     weak_form += pressure_term(q, J)
     weak_form += robin_bnd_cond_term(u, v) 
 
     return weak_form, state, u
 
 
-def elasticity_term(active_fun, F, J, p, v, mat_params):
+def elasticity_term(active_fun, F, J, p, v):
     """
 
     First term of the weak form
@@ -209,7 +160,6 @@ def elasticity_term(active_fun, F, J, p, v, mat_params):
         J (ufl form): Jacobian
         p (df.Function): pressure
         v (df.TestFunction): test function for displacement
-        mat_params (dict): material parameters
 
     Returns:
         component of weak form (ufl form)
@@ -220,7 +170,7 @@ def elasticity_term(active_fun, F, J, p, v, mat_params):
     F_a = df.as_tensor(((1 - active_fun, 0, 0), (0, sqrt_fun, 0), (0, 0, sqrt_fun)))
 
     F_e = df.variable(F * df.inv(F_a))
-    psi = psi_holzapfel(F_e, mat_params) + p * (df.det(F_e) - 1)
+    psi = psi_holzapfel(F_e) + p * (df.det(F_e) - 1)
 
     P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T)
 
@@ -254,12 +204,10 @@ if __name__ == "__main__":
 
     U_DG0 = df.FunctionSpace(mesh, "DG", 0)
 
-    mat_params = discrete_material_params(U_DG0, volumes)
-
     active_fun = df.Function(U_DG0, name="Active strain")
     active_fun.vector()[:] = 0  # initial value
 
-    weak_form, state, u = define_weak_form(mesh, active_fun, mat_params)
+    weak_form, state, u = define_weak_form(mesh, active_fun)
 
     for a in active_strain:
         assign_discrete_values(active_fun, volumes, a, 0)  # a in omega_i, 0 in omega_e
