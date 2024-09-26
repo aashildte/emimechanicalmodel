@@ -14,63 +14,6 @@ df.parameters["form_compiler"]["representation"] = "uflacs"
 df.parameters["form_compiler"]["quadrature_degree"] = 4
 df.parameters["ghost_mode"] = "shared_facet"
 
-def load_mesh(mesh_file):
-    """
-
-    Loads mesh and subdomains from h5 file.
-
-    Args:
-        mesh_file (str): path to h5 file
-
-    Returns:
-        mesh (df.Mesh): Mesh to be used in simulation
-        volumes (df.MeshFunction): Subdomain partition
-
-    """
-
-    comm = MPI.COMM_WORLD
-    h5_file = df.HDF5File(comm, mesh_file, "r")
-    mesh = df.Mesh()
-    h5_file.read(mesh, "mesh", False)
-
-    volumes = df.MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
-    h5_file.read(volumes, "volumes")
-
-    print(
-        "Number of nodes: %g, number of elements: %g"
-        % (mesh.num_vertices(), mesh.num_cells())
-    )
-
-    return mesh, volumes
-
-
-def assign_discrete_values(
-    function, subdomain_map, intracellular_value, extracellular_value
-):
-    """
-
-    Assigns function values to a function based on a subdomain map; usually
-    just element by element in a DG-0 function.
-
-    Args:
-        function (df.Function): function to be changed
-        subdomain_map (df.MeshFunction): subdomain division,
-            extracellular space expected to have value 0,
-            intracellular space expected to have values >= 1
-        value1: to be assigned to omega_i
-        value2: to be assigned to omega_e
-
-    """
-
-    extracellular_domain_id = 0
-
-    function.vector()[:] = np.where(
-        subdomain_map.array()[:] == extracellular_domain_id,
-        extracellular_value,
-        intracellular_value,
-    )
-
-
 def psi_holzapfel(
     F,
     a = 5.7,
@@ -199,17 +142,14 @@ def robin_bnd_cond_term(u, v):
 
 
 if __name__ == "__main__":
-    mesh, volumes = load_mesh("cell_3D.h5")
+    mesh = df.UnitCubeMesh(3, 3, 3)
     active_strain = np.linspace(0, 0.02, 2)
 
-    U_DG0 = df.FunctionSpace(mesh, "DG", 0)
-
-    active_fun = df.Function(U_DG0, name="Active strain")
-    active_fun.vector()[:] = 0  # initial value
+    active_fun = df.Constant(0)
 
     weak_form, state, u = define_weak_form(mesh, active_fun)
 
     for a in active_strain:
-        assign_discrete_values(active_fun, volumes, a, 0)  # a in omega_i, 0 in omega_e
+        active_fun.assign(a)
         df.solve(weak_form == 0, state)
 
