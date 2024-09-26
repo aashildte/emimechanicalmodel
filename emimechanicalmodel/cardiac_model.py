@@ -405,8 +405,8 @@ class CardiacModel(ABC):
 
         if self.experiment_str == "contraction":
             state, test_state = self.state, self.test_state
-            #weak_form += self._remove_rigid_motion_term(u, r, state, test_state)
-            weak_form += self._add_robin_bnd_term()
+            weak_form += self._remove_rigid_motion_term(u, r, state, test_state)
+            #weak_form += self._add_robin_bnd_term()
         
         (self.F, self.E, self.sigma, self.P, self.u, self.weak_form,) = (
             F,
@@ -518,7 +518,7 @@ class CardiacModel(ABC):
         # as per default we are using the manual implementation which
         # should be at least as fast; however, we will
         # just keep a simple version here for easy comparison:
-        """ 
+        
         df.solve(
             self.weak_form == 0,
             self.state,
@@ -534,7 +534,7 @@ class CardiacModel(ABC):
         
         """
         self._solver.solve(self.problem, self.state.vector())
-        
+        """ 
         # save stress and strain to fenics functions
         if project:
             for proj_fun in self.projections:
