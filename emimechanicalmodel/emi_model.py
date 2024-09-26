@@ -212,8 +212,7 @@ class EMIModel(CardiacModel):
         Returns:
             ..math:: || \overline{E} || integrated over the extracellular space
         """
-        assert isinstance(self.mat_model, EMIMatrixHolzapfelMaterial), "Error: Collagen fibers not defined."
-       
+ 
         e1, e2 = self.fiber_dir, self.sheet_dir
 
         E11 = df.inner(e1, self.E * e1)**2
@@ -235,8 +234,7 @@ class EMIModel(CardiacModel):
             ..math:: || \overline{E} || integrated over the extracellular space
 
         """
-        assert isinstance(self.mat_model, EMIMatrixHolzapfelMaterial), "Error: Collagen fibers not defined."
-       
+ 
         e1, e2 = self.fiber_dir, self.sheet_dir
 
         sigma11 = df.inner(e1, self.sigma * e1)**2
