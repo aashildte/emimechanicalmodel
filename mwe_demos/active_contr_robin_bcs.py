@@ -6,7 +6,12 @@
 
 import numpy as np
 import dolfin as df
-import ufl
+
+try:
+    import ufl_legacy as ufl
+except ImportError:
+    import ufl
+
 from mpi4py import MPI
 
 df.parameters["form_compiler"]["cpp_optimize"] = True
@@ -16,7 +21,7 @@ df.parameters["ghost_mode"] = "shared_facet"
 
 def psi_holzapfel(
     F,
-    a = 5.7,
+    a=5.7,
     b=11.67,
     a_f=19.83,
     b_f=24.72
@@ -48,6 +53,19 @@ def psi_holzapfel(
     W_f = a_f / (2 * b_f) * (df.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
 
     return W_hat + W_f
+
+
+def rigig_body_motion(mesh, r, u):
+    X = df.SpatialCoordinate(mesh)
+    RM = [
+        df.Constant((1, 0, 0)),
+        df.Constant((0, 1, 0)),
+        df.Constant((0, 0, 1)),
+        df.cross(X, df.Constant((1, 0, 0))),
+        df.cross(X, df.Constant((0, 1, 0))),
+        df.cross(X, df.Constant((0, 0, 1))),
+    ]
+    return sum(ufl.dot(u, zi) * r[i] * ufl.dx for i, zi in enumerate(RM))
 
 
 def define_weak_form(mesh, active_fun):
@@ -87,7 +105,8 @@ def define_weak_form(mesh, active_fun):
     weak_form = 0
     weak_form += elasticity_term(active_fun, F, J, p, v)
     weak_form += pressure_term(q, J)
-    weak_form += robin_bnd_cond_term(u, v) 
+    weak_form += robin_bnd_cond_term(u, v)
+    weak_form += ufl.derivative(rigig_body_motion(mesh, r, u), state, test_state)
 
     return weak_form, state, u
 
@@ -151,5 +170,8 @@ if __name__ == "__main__":
 
     for a in active_strain:
         active_fun.assign(a)
-        df.solve(weak_form == 0, state)
-
+        df.solve(
+            weak_form == 0,
+            state,
+            solver_parameters={"newton_solver": {"linear_solver": "superlu_dist"}},
+        )
