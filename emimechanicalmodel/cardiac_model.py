@@ -492,10 +492,9 @@ class CardiacModel(ABC):
         """
 
         Defines a Robin boundary condition for all sides, to model resistance from surrounding tissue during contraction.
-        Note that this should not be used combined with the term removing ridig motion as given above; but rather replace it.
 
         """
-        robin_value = df.Constant(1.0)
+        robin_value = df.Constant(0.1)
         robin_bcs_term = df.inner(robin_value * self.u, self.v) * df.ds
 
         return robin_bcs_term

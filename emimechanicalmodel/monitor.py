@@ -137,18 +137,23 @@ class Monitor:
             )
     
         # intracellular/extracellular/both:
+        
+        if isinstance(self.cardiac_model, EMIModel):
+            intracellular_subdomains = list(model.subdomains)[:]
+            if 0 in intracellular_subdomains:
+                intracellular_subdomains.remove(0)
+            extracellular_subdomain = [0]
 
-        intracellular_subdomains = list(model.subdomains)[:]
-        if 0 in intracellular_subdomains:
-            intracellular_subdomains.remove(0)
-        extracellular_subdomain = [0]
-
-        descriptions = ["extracellular", "intracellular", "whole_domain"]
-        subdomains = [
-            extracellular_subdomain,
-            intracellular_subdomains,            
-            model.subdomains,
-        ]
+            descriptions = ["extracellular", "intracellular", "whole_domain"]
+            subdomains = [
+                extracellular_subdomain,
+                intracellular_subdomains,            
+                model.subdomains,
+            ]
+        
+        else:
+            descriptions = ["whole_domain"]
+            whole_domain = [0]
 
         for (desc, subdomain) in zip(descriptions, subdomains):
             # then across all subdomains:
@@ -185,8 +190,9 @@ class Monitor:
             scalar_functions[f"evaluate_collagen_stress_magnitude"] = model.evaluate_collagen_stress_magnitude
             scalar_functions[f"evaluate_collagen_strain_magnitude"] = model.evaluate_collagen_strain_magnitude
         
-        scalar_functions[f"evaluate_cellular_stress_magnitude"] = model.evaluate_cellular_stress_magnitude
-        scalar_functions[f"evaluate_cellular_strain_magnitude"] = model.evaluate_cellular_strain_magnitude 
+            scalar_functions[f"evaluate_cellular_stress_magnitude"] = model.evaluate_cellular_stress_magnitude
+            scalar_functions[f"evaluate_cellular_strain_magnitude"] = model.evaluate_cellular_strain_magnitude 
+        
         scalar_functions[f"relative_shortening"] = model.evaluate_average_shortening
 
         scalar_values = {"states": []}
