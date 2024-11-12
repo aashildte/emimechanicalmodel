@@ -83,7 +83,7 @@ class EMIHolzapfelMaterial:
         J_iso = pow(J, -1.0 / float(self.dim))
         C_iso = J_iso ** 2 * F.T * F
 
-        IIFx = df.tr(C_iso)
+        IIFx = df.tr(C)
         I4e1 = df.inner(C_iso * e1, e1)
 
         cond = lambda a: ufl.conditional(a > 0, a, 0)
