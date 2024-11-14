@@ -13,6 +13,7 @@ import dolfin as df
 
 from .emi_model import EMIModel
 from .emi_holzapfelmaterial_collagen import EMIMatrixHolzapfelMaterial
+from .sarcomere_model import SarcomereModel
 
 class Monitor:
     """
@@ -150,7 +151,9 @@ class Monitor:
                 intracellular_subdomains,            
                 model.subdomains,
             ]
-        
+        elif isinstance(self.cardiac_model, SarcomereModel):
+            subdomains = [[1, 2, 3, 4]]
+            descriptions = ["whole_domain"]
         else:
             descriptions = ["whole_domain"]
             whole_domain = [0]

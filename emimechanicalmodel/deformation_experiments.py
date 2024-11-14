@@ -69,8 +69,9 @@ class Contraction(DeformationExperiment):
         return []
     
     def evaluate_normal_load(self, F, P):
-        return vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 2)
-
+        # on xmin and xmax surfaces/boundaries
+        return (vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 1) + \
+                vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 2))/2
 
 class StretchFF(DeformationExperiment):
     def __init__(self, mesh, V_CG):
@@ -108,8 +109,6 @@ class ShearFS(DeformationExperiment):
         return vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 2)
 
     def evaluate_shear_load(self, F, P):
-        print("HER!")
-
         return vss.evaluate_shear_load(F, P, self.CG, self.mesh, self.ds, 2, "ydir")
 
 

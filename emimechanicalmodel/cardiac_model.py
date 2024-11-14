@@ -494,8 +494,10 @@ class CardiacModel(ABC):
         Defines a Robin boundary condition for all sides, to model resistance from surrounding tissue during contraction.
 
         """
-        robin_value = df.Constant(0.1)
-        robin_bcs_term = df.inner(robin_value * self.u, self.v) * df.ds
+        ds = self.ds
+        robin_value = df.Constant(0.01)
+        robin_bcs_term = df.inner(robin_value * self.u, self.v) * ds(1) \
+                + df.inner(robin_value * self.u, self.v) * ds(2)
 
         return robin_bcs_term
 
