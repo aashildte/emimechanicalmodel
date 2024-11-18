@@ -42,6 +42,13 @@ jobs:
           python-version: 3.8
           auto-activate-base: false
 
+      - name: Install dependencies and build docs
+        run: |
+          pip install .
+          pip install jupyter
+          pip install jupyter-book
+          jupyter book build -W docs
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:

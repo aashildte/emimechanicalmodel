@@ -18,4 +18,3 @@ parts:
     chapters:
     - file: "model_options/contractility"
     - file: "model_options/material_models"
-    - file: "model_options/compressibility"
