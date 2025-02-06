@@ -605,8 +605,6 @@ class CardiacModel(ABC):
         v = self.F * unit_vector
         v /= df.sqrt(df.dot(v, v))
         stress = df.inner(v, self.sigma * v)
-        if not 0 in subdomain_ids:
-            print("subdomain stress", subdomain_ids, self.integrate_subdomain(stress, subdomain_ids) / self.calculate_volume(subdomain_ids))
 
         return self.integrate_subdomain(stress, subdomain_ids) / self.calculate_volume(
             subdomain_ids
