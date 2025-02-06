@@ -38,6 +38,7 @@ class CardiacModel(ABC):
         active_model,
         compressibility_model,
         verbose=0,
+        robin_bcs_value=0,
     ):
         """
 
@@ -60,6 +61,7 @@ class CardiacModel(ABC):
         self.active_model = active_model
         self.compressibility_model = compressibility_model
         self.experiment_str = experiment
+        self.robin_bcs_value = robin_bcs_value
 
         self._set_direction_vectors()
 
@@ -406,7 +408,7 @@ class CardiacModel(ABC):
         if self.experiment_str == "contraction":
             state, test_state = self.state, self.test_state
             weak_form += self._remove_rigid_motion_term(u, r, state, test_state)
-            #weak_form += self._add_robin_bnd_term()
+            weak_form += self._add_robin_bnd_term()
         
         (self.F, self.E, self.sigma, self.P, self.u, self.weak_form,) = (
             F,
@@ -494,8 +496,9 @@ class CardiacModel(ABC):
         Defines a Robin boundary condition for all sides, to model resistance from surrounding tissue during contraction.
 
         """
+        
         ds = self.ds
-        robin_value = df.Constant(0.01)
+        robin_value = df.Constant(self.robin_bcs_value)
         robin_bcs_term = df.inner(robin_value * self.u, self.v) * ds(1) \
                 + df.inner(robin_value * self.u, self.v) * ds(2)
 
@@ -562,8 +565,7 @@ class CardiacModel(ABC):
 
         integral = 0
         for subdomain_id in subdomain_ids:
-            integral += df.assemble(fun * dx(int(subdomain_id)))
-        
+            integral += df.assemble(fun * dx(int(subdomain_id)))        
 
         return integral
 
@@ -603,43 +605,13 @@ class CardiacModel(ABC):
         v = self.F * unit_vector
         v /= df.sqrt(df.dot(v, v))
         stress = df.inner(v, self.sigma * v)
+        if not 0 in subdomain_ids:
+            print("subdomain stress", subdomain_ids, self.integrate_subdomain(stress, subdomain_ids) / self.calculate_volume(subdomain_ids))
+
         return self.integrate_subdomain(stress, subdomain_ids) / self.calculate_volume(
             subdomain_ids
         )
     
-        """
-        def evaluate_load(self, wall_idts):
-
-        idts according to:
-        boundaries = {
-            "x_min": {"subdomain": Wall(0, "min", dimensions), "idt": 1},
-            "x_max": {"subdomain": Wall(0, "max", dimensions), "idt": 2},
-            "y_min": {"subdomain": Wall(1, "min", dimensions), "idt": 3},
-            "y_max": {"subdomain": Wall(1, "max", dimensions), "idt": 4},
-            "z_min": {"subdomain": Wall(2, "min", dimensions), "idt": 5},
-            "z_max": {"subdomain": Wall(2, "max", dimensions), "idt": 6},
-        }
-
-
-        F, P = self.F, self.P
-
-        unit_vector = df.FacetNormal(self.mesh)
-
-        load = df.inner(P * unit_vector, unit_vector)
-
-        total_load = 0
-        area = 0
-
-        for wall_idt in wall_idts:
-            total_load += df.assemble(load * self.deformation.ds(wall_idt))
-            area += df.assemble(
-                df.det(F)
-                * df.inner(df.inv(F).T * unit_vector, unit_vector)
-                * self.deformation.ds(wall_idt)
-            )
-        
-        return total_load / area
-        """
 
     def evaluate_normal_load(self):
         """
@@ -806,6 +778,10 @@ class CardiacModel(ABC):
             #* df.inner(df.inv(F).T * normal_vector, normal_vector)
             df.Constant(1) * ds(wall_idt)
         )
+    
+        if area < 1E-14:
+            return 0
+
         return df.assemble(f*ds(wall_idt)) / area
 
 

@@ -40,6 +40,8 @@ def load_mesh(mesh_file: str, verbose=1):
     else:
         h5_file.read(volumes, "subdomains")
 
+    #import IPython; IPython.embed()
+
     if verbose > 0:
         print("Mesh and subdomains loaded successfully.")
         print(

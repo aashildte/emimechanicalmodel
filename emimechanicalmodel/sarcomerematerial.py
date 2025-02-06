@@ -17,6 +17,8 @@ def assign_discrete_values(function, subdomain_map, subdomain_value):
     Assigns function values to a function based on a subdomain map;
     usually just element by element in a DG-0 function.
 
+    Here assuming all subunits have idts in a 1000-range
+
     Args:
         function (df.Function): function to be changed
         subdomain_map (df.MeshFunction): subdomain division,
@@ -25,12 +27,9 @@ def assign_discrete_values(function, subdomain_map, subdomain_value):
         value_i: to be assigned to omega_i
         value_e: to be assigned to omega_e
 
-    Note that all cells are assigned the same value homogeneously.
-
     """
 
-    function.vector()[:] = np.where(
-        subdomain_map == subdomain_value,
+    function.vector()[:] = np.where(np.logical_and(subdomain_map >= subdomain_value, subdomain_map < (subdomain_value + 1000)),
         1,
         0,
     )
@@ -53,16 +52,24 @@ class EMIHolzapfelMaterial_with_substructures:
         self,
         U,
         subdomain_map,
+        subdomains,
         a_i_sarcomeres=df.Constant(2.85),
         a_if_sarcomeres=df.Constant(9.914),
         a_i_zlines=df.Constant(11.4),
-        a_i_cytoskeleton=df.Constant(5.70),
-        a_if_cytoskeleton=df.Constant(19.83),
+        b_i_zlines=df.Constant(11.67),
+        a_i_cytoskeleton=df.Constant(0.01),
+        a_if_cytoskeleton=df.Constant(0.1),
         a_i_connections=df.Constant(5.7),
+        b_i_connections=df.Constant(11.67),
         b=df.Constant(11.67),
         b_f=df.Constant(24.72),
+        disabled_connection_fraction=1.0,
+        disabled_connection_stiffness=0.0001,
+
     ):
         self.dim = U.mesh().topology().dim()
+        self.subdomain_map = subdomain_map
+        self.subdomains = subdomains
 
         # assign material paramters via characteristic functions
         xi_sarcomeres = df.Function(U)
@@ -70,20 +77,52 @@ class EMIHolzapfelMaterial_with_substructures:
         xi_cytoskeleton = df.Function(U)
         xi_connections = df.Function(U)
         
-        assign_discrete_values(xi_sarcomeres, subdomain_map, 1)
-        assign_discrete_values(xi_zlines, subdomain_map, 2)
-        assign_discrete_values(xi_cytoskeleton, subdomain_map, 3)
-        assign_discrete_values(xi_connections, subdomain_map, 4)
+        assign_discrete_values(xi_sarcomeres, subdomain_map, 1000)
+        assign_discrete_values(xi_zlines, subdomain_map, 2000)
+        assign_discrete_values(xi_cytoskeleton, subdomain_map, 3000)
+        assign_discrete_values(xi_connections, subdomain_map, 4000)
+        
+        a_i_connections_map = self._assign_connection_stiffness(disabled_connection_fraction, a_i_connections, disabled_connection_stiffness)
+        a_i_connections_fun = df.Function(U)
+        a_i_connections_fun.vector()[:] = a_i_connections_map
+
+        total = xi_sarcomeres.vector()[:] + xi_zlines.vector()[:] + xi_cytoskeleton.vector()[:] + xi_connections.vector()[:]
+        assert sum(total) == len(total), "Error: A part of the domain is not assigned material properties."
 
         a = a_i_sarcomeres * xi_sarcomeres + \
             a_i_zlines * xi_zlines + \
             a_i_cytoskeleton * xi_cytoskeleton + \
-            a_i_connections * xi_connections
+            a_i_connections_fun
         
         a_f = a_if_sarcomeres * xi_sarcomeres + \
               a_if_cytoskeleton * xi_cytoskeleton
 
+        b = b * xi_sarcomeres + \
+            b_i_zlines * xi_zlines + \
+            b * xi_cytoskeleton + \
+            b_i_connections * xi_connections
+
         self.a, self.b, self.a_f, self.b_f = a, b, a_f, b_f
+
+    def _assign_connection_stiffness(self, disabled_connection_fraction, a_i_functional, a_i_dysfunctional):
+
+        subdomain_array = self.subdomain_map[:]
+        vector = np.zeros_like(subdomain_array)
+
+        # find highest number sarcomere subdomain
+        for i in self.subdomains:
+            if 4000 <= i < 5000:
+                #vector = np.where(subdomain_array == i, 1.0, vector)
+                
+                if np.random.random() < disabled_connection_fraction:
+                    #np.random.seed(i)
+                    #dysf_value = max(0, np.random.normal(a_i_dysfunctional, 0.01))
+                    #print("connection stiffness: ", dysf_value)
+                    vector = np.where(subdomain_array == i, a_i_dysfunctional, vector)
+                else:
+                    vector = np.where(subdomain_array == i, a_i_functional, vector)
+                
+        return vector
 
     def get_strain_energy_term(self, F):
 

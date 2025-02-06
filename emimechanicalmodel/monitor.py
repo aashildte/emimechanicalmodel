@@ -113,7 +113,7 @@ class Monitor:
 
         # per subdomain; not actively used but let's keep it here in case we
         # need it again
-               
+        """     
         for subdomain_id in model.subdomains:
             scalar_functions[f"stress_xdir_subdomain_{subdomain_id}"] = partial(
                 model.evaluate_subdomain_stress_fibre_dir, subdomain_ids=subdomain_id
@@ -136,7 +136,7 @@ class Monitor:
             scalar_functions[f"strain_zdir_subdomain_{subdomain_id}"] = partial(
                 model.evaluate_subdomain_strain_normal_dir, subdomain_ids=subdomain_id
             )
-    
+        """
         # intracellular/extracellular/both:
         
         if isinstance(self.cardiac_model, EMIModel):
@@ -152,12 +152,25 @@ class Monitor:
                 model.subdomains,
             ]
         elif isinstance(self.cardiac_model, SarcomereModel):
-            subdomains = [[1, 2, 3, 4]]
-            descriptions = ["whole_domain"]
+            subdomains = [
+                    self.cardiac_model.sarcomere_regions,
+                    #self.cardiac_model.zline_regions,
+                    #self.cardiac_model.cytoskeleton_regions,
+                    #self.cardiac_model.connection_regions,
+                    self.cardiac_model.subdomains
+            ]
+        
+            descriptions = [
+                    "Sarcomeres",
+                    #"Zlines",
+                    #"Cytoskeleton",
+                    #"connections",
+                    "whole domain",
+                    ]
         else:
             descriptions = ["whole_domain"]
-            whole_domain = [0]
-
+            whole_domain = cardiac_model.subdomains
+        
         for (desc, subdomain) in zip(descriptions, subdomains):
             # then across all subdomains:
             scalar_functions[f"stress_xdir_{desc}"] = partial(
@@ -184,7 +197,7 @@ class Monitor:
             scalar_functions[f"active_tension_{desc}"] = partial(
                 model.evaluate_active_tension, subdomain_ids=subdomain
             )
-        
+        """
         if isinstance(self.cardiac_model.mat_model, EMIMatrixHolzapfelMaterial):
             scalar_functions[f"collagen_fiber_direction_stress"] = model.evaluate_collagen_stress_fiber_direction
             scalar_functions[f"collagen_transfiber_direction_stress"] = model.evaluate_collagen_stress_fiber_direction
@@ -195,7 +208,7 @@ class Monitor:
         
             scalar_functions[f"evaluate_cellular_stress_magnitude"] = model.evaluate_cellular_stress_magnitude
             scalar_functions[f"evaluate_cellular_strain_magnitude"] = model.evaluate_cellular_strain_magnitude 
-        
+        """
         scalar_functions[f"relative_shortening"] = model.evaluate_average_shortening
 
         scalar_values = {"states": []}

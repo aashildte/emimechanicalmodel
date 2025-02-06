@@ -49,6 +49,7 @@ class EMIModel(CardiacModel):
         compressibility_model="incompressible",
         compressibility_parameters={},
         verbose=0,
+        robin_bcs_value=0,
     ):
         # mesh properties, subdomains
         self.verbose = verbose
@@ -87,6 +88,7 @@ class EMIModel(CardiacModel):
             active_model,
             compressibility_model,
             verbose,
+            robin_bcs_value,
         )
         
 
@@ -216,12 +218,12 @@ class EMIModel(CardiacModel):
         e1, e2 = self.fiber_dir, self.sheet_dir
 
         E11 = df.inner(e1, self.E * e1)**2
-        E12 = abs(df.inner(e1, self.E * e2))**2
-        E22 = df.inner(e2, self.E * e2)**2
+        #E12 = abs(df.inner(e1, self.E * e2))**2
+        #E22 = df.inner(e2, self.E * e2)**2
 
         total_strain = self.integrate_subdomain(E11, self.intracellular_space) #+ 2*self.integrate_subdomain(E12, self.intracellular_space) + self.integrate_subdomain(E22, self.intracellular_space)
 
-        return total_strain**0.5 / self.calculate_volume(self.intracellular_space)
+        return total_strain / self.calculate_volume(self.intracellular_space)
 
 
     def evaluate_cellular_stress_magnitude(self):
@@ -231,19 +233,19 @@ class EMIModel(CardiacModel):
         TODO generalize these to one function with subdomains as an argument
 
         Returns:
-            ..math:: || \overline{E} || integrated over the extracellular space
+            ..math:: || \overline{sigma} || integrated over the extracellular space
 
         """
  
         e1, e2 = self.fiber_dir, self.sheet_dir
 
-        sigma11 = df.inner(e1, self.sigma * e1)**2
-        sigma12 = abs(df.inner(e1, self.sigma * e2))**2
-        sigma22 = df.inner(e2, self.sigma * e2)**2
+        sigma11 = df.inner(e1, self.sigma * e1)
+        #sigma12 = abs(df.inner(e1, self.sigma * e2))**2
+        #sigma22 = df.inner(e2, self.sigma * e2)**2
 
         total_stress = self.integrate_subdomain(sigma11, self.intracellular_space) #+ 2*self.integrate_subdomain(sigma12, self.intracellular_space) + self.integrate_subdomain(sigma22, self.intracellular_space)
-
-        return total_stress**0.5 / self.calculate_volume(self.intracellular_space)
+        print(total_stress / self.calculate_volume(self.intracellular_space))
+        return total_stress / self.calculate_volume(self.intracellular_space)
 
     def evaluate_collagen_strain_magnitude(self):
         """
@@ -255,13 +257,13 @@ class EMIModel(CardiacModel):
        
         e1, e2 = self.mat_model.collagen_field
 
-        E11 = df.inner(e1, self.E * e1)**2
-        E12 = abs(df.inner(e1, self.E * e2))**2
-        E22 = df.inner(e2, self.E * e2)**2
+        E11 = df.inner(e1, self.E * e1)
+        #E12 = abs(df.inner(e1, self.E * e2))**2
+        #E22 = df.inner(e2, self.E * e2)**2
 
         total_strain = self.integrate_subdomain(E11, 0) #+ 2*self.integrate_subdomain(E12, 0) + self.integrate_subdomain(E22, 0)
 
-        return total_strain**0.5 / self.calculate_volume(0)
+        return total_strain / self.calculate_volume(0)
     
 
     def evaluate_collagen_stress_magnitude(self):
@@ -274,13 +276,13 @@ class EMIModel(CardiacModel):
        
         e1, e2 = self.mat_model.collagen_field
 
-        sigma11 = df.inner(e1, self.sigma * e1)**2
-        sigma12 = abs(df.inner(e1, self.sigma * e2))**2
-        sigma22 = df.inner(e2, self.sigma * e2)**2
+        sigma11 = df.inner(e1, self.sigma * e1)
+        #sigma12 = abs(df.inner(e1, self.sigma * e2))**2
+        #sigma22 = df.inner(e2, self.sigma * e2)**2
 
         total_stress = self.integrate_subdomain(sigma11, 0) #+ 2*self.integrate_subdomain(sigma12, 0) + self.integrate_subdomain(sigma22, 0)
 
-        return total_stress**0.5 / self.calculate_volume(0)
+        return total_stress / self.calculate_volume(0)
 
 
 
