@@ -7,7 +7,11 @@ Material model; the Guccione model adapted to the EMI framework.
 """
 
 import dolfin as df
-import ufl
+
+try:
+    import ufl
+except ModuleNotFoundError:
+    import ufl_legacy as ufl
 
 from .mesh_setup import assign_discrete_values
 

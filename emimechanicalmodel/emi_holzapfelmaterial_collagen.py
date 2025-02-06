@@ -10,7 +10,11 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 import dolfin as df
-import ufl
+
+try:
+    import ufl
+except ModuleNotFoundError:
+    import ufl_legacy as ufl
 
 from .mesh_setup import assign_discrete_values
 

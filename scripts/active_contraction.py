@@ -75,9 +75,8 @@ def read_cl_args():
 
 time = np.linspace(0, time_max, num_time_steps)  # ms
 active_values = compute_active_component(time)
-active_values *= 2
-peak_index = np.argmax(active_values)
-print(np.max(active_values))
+active_values *= 300
+
 # load mesh, subdomains
 
 mesh, volumes = load_mesh(mesh_file, verbose)
@@ -98,7 +97,7 @@ model = EMIModel(
     volumes,
     material_parameters=material_params,
     experiment="contraction",
-    active_model="active_strain",
+    active_model="active_stress",
     verbose=verbose,
 )
 
@@ -127,7 +126,7 @@ for i in range(num_time_steps):
     if verbose >= 1 and MPI.COMM_WORLD.Get_rank() == 0:
         print(f"Time step {i+1} / {num_time_steps}", flush=True)
 
-    project = plot_all_steps or (plot_at_peak and i == peak_index)
+    project = True
 
     model.update_active_fn(a_str)
     model.solve(project=project)
