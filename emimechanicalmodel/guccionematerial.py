@@ -6,7 +6,11 @@
 
 import numpy as np
 import dolfin as df
-import ufl
+
+try:
+    import ufl
+except ModuleNotFoundError:
+    import ufl_legacy as ufl
 
 
 class GuccioneMaterial:

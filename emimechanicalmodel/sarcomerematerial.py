@@ -9,7 +9,11 @@ including intracellular substructures (sarcomere, z-lines, connections, cytoskel
 
 import numpy as np
 import dolfin as df
-import ufl
+
+try:
+    import ufl
+except ModuleNotFoundError:
+    import ufl_legacy as ufl
 
 def assign_discrete_values(function, subdomain_map, subdomain_value):
     """

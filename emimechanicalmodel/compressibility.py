@@ -6,9 +6,12 @@
 
 from abc import ABC, abstractmethod
 from .mesh_setup import assign_discrete_values
-import ufl
 import dolfin as df
 
+try:
+    import ufl
+except ModuleNotFoundError:
+    import ufl_legacy as ufl
 
 class CompressibleMaterial(ABC):
     @abstractmethod
