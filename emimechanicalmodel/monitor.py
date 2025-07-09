@@ -151,52 +151,50 @@ class Monitor:
                 intracellular_subdomains,            
                 model.subdomains,
             ]
-        elif isinstance(self.cardiac_model, SarcomereModel):
-            subdomains = [
-                    self.cardiac_model.sarcomere_regions,
-                    #self.cardiac_model.zline_regions,
-                    #self.cardiac_model.cytoskeleton_regions,
-                    #self.cardiac_model.connection_regions,
-                    self.cardiac_model.subdomains
-            ]
         
-            descriptions = [
-                    "Sarcomeres",
-                    #"Zlines",
-                    #"Cytoskeleton",
-                    #"connections",
-                    "whole domain",
-                    ]
+            for (desc, subdomain) in zip(descriptions, subdomains):
+                # then across all subdomains:
+                scalar_functions[f"stress_xdir_{desc}"] = partial(
+                    model.evaluate_subdomain_stress_fibre_dir, subdomain_ids=subdomain
+                )
+                scalar_functions[f"stress_ydir_{desc}"] = partial(
+                    model.evaluate_subdomain_stress_sheet_dir, subdomain_ids=subdomain
+                )
+                scalar_functions[f"stress_zdir_{desc}"] = partial(
+                    model.evaluate_subdomain_stress_normal_dir, subdomain_ids=subdomain
+                )
+
+                scalar_functions[f"strain_xdir_{desc}"] = partial(
+                    model.evaluate_subdomain_strain_fibre_dir, subdomain_ids=subdomain
+                )
+                scalar_functions[f"strain_ydir_{desc}"] = partial(
+                    model.evaluate_subdomain_strain_sheet_dir,
+                    subdomain_ids=subdomain,
+                )
+                scalar_functions[f"strain_zdir_{desc}"] = partial(
+                    model.evaluate_subdomain_strain_normal_dir, subdomain_ids=subdomain
+                )
+
+                scalar_functions[f"active_tension_{desc}"] = partial(
+                    model.evaluate_active_tension, subdomain_ids=subdomain
+                )
+        elif isinstance(self.cardiac_model, SarcomereModel):
+            sarcomere_units = self.cardiac_model.sarcomere_regions
+
+            for subdomain in sarcomere_units:
+                desc = f"sarcomere_{subdomain}"
+                print("Evaluating: ", desc)
+                scalar_functions[f"stress_xdir_{desc}"] = partial(
+                    model.evaluate_subdomain_stress_fibre_dir, subdomain_ids=subdomain
+                )
+
+                #scalar_functions[f"strain_xdir_{desc}"] = partial(
+                #    model.evaluate_subdomain_strain_fibre_dir, subdomain_ids=subdomain
+                #)
         else:
             descriptions = ["whole_domain"]
-            whole_domain = cardiac_model.subdomains
+            whole_domain = self.cardiac_model.subdomains
         
-        for (desc, subdomain) in zip(descriptions, subdomains):
-            # then across all subdomains:
-            scalar_functions[f"stress_xdir_{desc}"] = partial(
-                model.evaluate_subdomain_stress_fibre_dir, subdomain_ids=subdomain
-            )
-            scalar_functions[f"stress_ydir_{desc}"] = partial(
-                model.evaluate_subdomain_stress_sheet_dir, subdomain_ids=subdomain
-            )
-            scalar_functions[f"stress_zdir_{desc}"] = partial(
-                model.evaluate_subdomain_stress_normal_dir, subdomain_ids=subdomain
-            )
-
-            scalar_functions[f"strain_xdir_{desc}"] = partial(
-                model.evaluate_subdomain_strain_fibre_dir, subdomain_ids=subdomain
-            )
-            scalar_functions[f"strain_ydir_{desc}"] = partial(
-                model.evaluate_subdomain_strain_sheet_dir,
-                subdomain_ids=subdomain,
-            )
-            scalar_functions[f"strain_zdir_{desc}"] = partial(
-                model.evaluate_subdomain_strain_normal_dir, subdomain_ids=subdomain
-            )
-
-            scalar_functions[f"active_tension_{desc}"] = partial(
-                model.evaluate_active_tension, subdomain_ids=subdomain
-            )
         """
         if isinstance(self.cardiac_model.mat_model, EMIMatrixHolzapfelMaterial):
             scalar_functions[f"collagen_fiber_direction_stress"] = model.evaluate_collagen_stress_fiber_direction

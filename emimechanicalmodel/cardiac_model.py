@@ -338,10 +338,16 @@ class CardiacModel(ABC):
             psi_passive = mat_model.get_strain_energy_term(F)
             psi_comp = comp_model.get_strain_energy_term(F, self.p)
 
+            self.lambd = I4
+            self.Ta = psi_active
+
+            self.P_active = df.diff(psi_active, F)
+            self.P_passive = df.diff(psi_passive, F)
+            self.P_comp = df.diff(psi_comp, F)
+
             psi = psi_active + psi_passive + psi_comp
             P = df.diff(psi, F)
         else:
-
             sqrt_fun = (df.Constant(1) - active_fn) ** (-0.5)
 
             if self.dim == 3:
@@ -390,6 +396,10 @@ class CardiacModel(ABC):
         E = 0.5 * (C - I)  # the Green-Lagrange strain tensor
 
         sigma = (1 / df.det(F)) * P * F.T
+
+        #self.sigma_active = (1 / df.det(F)) * self.P_active * F.T
+        #self.sigma_passive = (1 / df.det(F)) * self.P_passive * F.T
+        #self.sigma_comp = (1 / df.det(F)) * self.P_comp * F.T
 
         N = df.FacetNormal(self.mesh)
 
@@ -649,6 +659,7 @@ class CardiacModel(ABC):
             (see eq. (17) in the paper)
 
         """
+        print("Evaluating stress in: ", subdomain_ids)
         unit_vector = self.fiber_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_ids)
 
@@ -716,6 +727,7 @@ class CardiacModel(ABC):
             (see eq. (16) in the paper)
 
         """
+        print("Evaluating strain in: ", subdomain_ids)
         unit_vector = self.fiber_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
 

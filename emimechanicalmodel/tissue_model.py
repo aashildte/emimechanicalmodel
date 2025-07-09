@@ -124,7 +124,10 @@ class TissueModel(CardiacModel):
         and (for efficiency) not otherwise.
 
         """
-
+        
+        self.tracked_variables = [] #u, p, E, sigma, P, active_CG, Ta_DG]
+        self.projections = [] #u_proj, p_proj, E_proj, sigma_proj, P_proj, active_proj, Ta_proj]
+        return
         mesh = self.mesh
 
         # define function spaces
@@ -150,7 +153,11 @@ class TissueModel(CardiacModel):
         sigma_proj = ProjectionFunction(self.sigma, sigma)
         P_proj = ProjectionFunction(self.P, P)
 
-        self.projections = [u_proj, p_proj, E_proj, sigma_proj, P_proj]
+        active_CG = df.Function(U_CG, name="Active stress imposed (kPa)")
+        active_proj = ProjectionFunction(self.active_fn, active_CG)
+        Ta_DG = df.Function(U_CG, name="Active stress function (kPa)")
+        Ta_proj = ProjectionFunction(self.Ta, Ta_DG)
+        
+        self.tracked_variables = [u, p, E, sigma, P, active_CG, Ta_DG]
+        self.projections = [u_proj, p_proj, E_proj, sigma_proj, P_proj, active_proj, Ta_proj]
 
-        # gather tracked functions into a list for easy access
-        self.tracked_variables = [u, p, E, sigma, P]

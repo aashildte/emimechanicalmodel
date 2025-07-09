@@ -10,6 +10,8 @@ from .emi_holzapfelmaterial import EMIHolzapfelMaterial
 from .fibrotic_tissue_model import FibrosisModel
 from .sarcomere_model import SarcomereModel
 
+from .compressibility import SarcomereNearlyIncompressibleMaterial
+
 from .mesh_setup import (
     load_mesh,
     assign_discrete_values,

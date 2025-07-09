@@ -7,16 +7,30 @@
 from abc import ABC, abstractmethod
 from .mesh_setup import assign_discrete_values
 import dolfin as df
+import numpy as np
 
 try:
     import ufl
 except ModuleNotFoundError:
     import ufl_legacy as ufl
 
+
 class CompressibleMaterial(ABC):
-    @abstractmethod
-    def get_strain_energy_term(J, p):
-        pass
+    def __init__(self):
+        self.kappa = df.Constant(1000)
+
+    def get_strain_energy_term(self, F, p=None):
+        """
+        Args:
+            J - determinant of the deformation tensor
+            p - hydrostatic pressure (no purpose here)
+
+        Returns;
+            psi_incompressible; contribution to the total strain anergy function
+
+        """
+        J = ufl.det(F)
+        return self.kappa * (J * df.ln(J) - J + 1)
 
 
 class IncompressibleMaterial(CompressibleMaterial):
@@ -35,6 +49,40 @@ class IncompressibleMaterial(CompressibleMaterial):
         """
         J = ufl.det(F)
         return p * (J - 1)
+
+
+class SarcomereNearlyIncompressibleMaterial(CompressibleMaterial):
+    def __init__(
+            self,
+            U,
+            subdomain_map,
+            kappa_sarcomeres=df.Constant(100),
+            kappa_zlines=df.Constant(1000),
+            kappa_connections=df.Constant(1000),
+            kappa_cytoskeleton=df.Constant(1000),
+            ):
+    
+        # assign material paramters via characteristic functions
+        xi_sarcomeres = df.Function(U)
+        xi_zlines = df.Function(U)
+        xi_cytoskeleton = df.Function(U)
+        xi_connections = df.Function(U)
+        
+        self.assign_discrete_values(xi_sarcomeres, subdomain_map, 1000)
+        self.assign_discrete_values(xi_zlines, subdomain_map, 2000)
+        self.assign_discrete_values(xi_cytoskeleton, subdomain_map, 3000)
+        self.assign_discrete_values(xi_connections, subdomain_map, 4000)
+
+        self.kappa = kappa_sarcomeres*xi_sarcomeres + \
+                     kappa_zlines*xi_zlines + \
+                     kappa_connections*xi_connections + \
+                     kappa_cytoskeleton*xi_cytoskeleton
+
+    def assign_discrete_values(self, function, subdomain_map, subdomain_value):
+        function.vector()[:] = np.where(np.logical_and(subdomain_map >= subdomain_value, subdomain_map < (subdomain_value + 1000)),
+            1,
+            0,
+        )
 
 
 class EMINearlyIncompressibleMaterial(CompressibleMaterial):
@@ -63,18 +111,6 @@ class EMINearlyIncompressibleMaterial(CompressibleMaterial):
 
         self.kappa = kappa_i * xi_i + kappa_e * xi_e
 
-    def get_strain_energy_term(self, F, p=None):
-        """
-        Args:
-            J - determinant of the deformation tensor
-            p - hydrostatic pressure (no purpose here)
-
-        Returns;
-            psi_incompressible; contribution to the total strain anergy function
-
-        """
-        J = ufl.det(F)
-        return self.kappa * (J * df.ln(J) - J + 1)
 
 
 class NearlyIncompressibleMaterial(CompressibleMaterial):
@@ -92,16 +128,3 @@ class NearlyIncompressibleMaterial(CompressibleMaterial):
 
         """
         self.kappa = kappa
-
-    def get_strain_energy_term(self, F, p=None):
-        """
-        Args:
-            J - determinant of the deformation tensor
-            p - hydrostatic pressure (no purpose here)
-
-        Returns;
-            psi_incompressible; contribution to the total strain anergy function
-
-        """
-        J = ufl.det(F)
-        return self.kappa * (J * df.ln(J) - J + 1)

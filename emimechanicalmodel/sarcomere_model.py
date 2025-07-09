@@ -11,7 +11,7 @@ import numpy as np
 from emimechanicalmodel.cardiac_model import CardiacModel
 from emimechanicalmodel.sarcomerematerial import EMIHolzapfelMaterial_with_substructures as MaterialModel
 from emimechanicalmodel.sarcomerematerial import assign_discrete_values
-from emimechanicalmodel.compressibility import IncompressibleMaterial, EMINearlyIncompressibleMaterial
+from emimechanicalmodel.compressibility import IncompressibleMaterial, SarcomereNearlyIncompressibleMaterial
 from emimechanicalmodel.proj_fun import ProjectionFunction
 
 
@@ -61,7 +61,7 @@ class SarcomereModel(CardiacModel):
         if compressibility_model=="incompressible":
             comp_model = IncompressibleMaterial()
         elif compressibility_model=="nearly_incompressible":
-            comp_model = EMINearlyIncompressibleMaterial(U, subdomain_map, **compressibility_parameters)
+            comp_model = SarcomereNearlyIncompressibleMaterial(U, subdomain_map, **compressibility_parameters)
         else:
             print("Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'.")
 
@@ -132,8 +132,8 @@ class SarcomereModel(CardiacModel):
         for i in self.subdomains:
             np.random.seed(i)
             if 1000 <= i < 2000 and np.random.uniform() >= self.fraction_sarcomeres_disabled:
-                scaling_value = max(0, np.random.normal(1, 0.07))
-                print("scaling value: ", scaling_value)
+                scaling_value = max(0, np.random.normal(1, 0.1))
+                #print("scaling value: ", scaling_value)
                 vector = np.where(volumes_array == i, scaling_value, vector)
         self.sarcomere_scaling = vector
 
