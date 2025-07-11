@@ -309,56 +309,13 @@ class EMIModel(CardiacModel):
         u_DG = df.Function(V_DG, name="Displacement (µm)")
         E_DG = df.Function(T_DG, name="Strain")
         sigma_DG = df.Function(T_DG, name="Cauchy stress (kPa)")
-        P_DG = df.Function(T_DG, name="Piola-Kirchhoff stress (kPa)")
-
-        P_DG_active = df.Function(T_DG, name="Active component P (kPa)")
-        P_DG_passive = df.Function(T_DG, name="Passive component P (kPa)")
-        P_DG_incomp = df.Function(T_DG, name="Incompressibility comp P (kPa)")
-
-        P_active_proj = ProjectionFunction(self.P_active, P_DG_active)
-        P_passive_proj = ProjectionFunction(self.P_passive, P_DG_passive)
-        P_incomp_proj = ProjectionFunction(self.P_comp, P_DG_incomp)
-        
-        sigma_DG_active = df.Function(T_DG, name="Active component sigma (kPa)")
-        sigma_DG_passive = df.Function(T_DG, name="Passive component sigma (kPa)")
-        sigma_DG_incomp = df.Function(T_DG, name="Incompressibility comp sigma (kPa)")
-        
-        sigma_active_proj = ProjectionFunction(self.sigma_active, sigma_DG_active)
-        sigma_passive_proj = ProjectionFunction(self.sigma_passive, sigma_DG_passive)
-        sigma_incomp_proj = ProjectionFunction(self.sigma_comp, sigma_DG_incomp)
+        active_DG = df.Function(U_DG, name="Active stress imposed (kPa)")
 
         p_proj = ProjectionFunction(self.p, p_DG)
         u_proj = ProjectionFunction(self.u, u_DG)
         E_proj = ProjectionFunction(self.E, E_DG)
-
         sigma_proj = ProjectionFunction(self.sigma, sigma_DG)
-        P_proj = ProjectionFunction(self.P, P_DG)
-        
-        active_DG = df.Function(U_DG, name="Active stress imposed (kPa)")
         active_proj = ProjectionFunction(self.active_fn, active_DG)
-        Ta_DG = df.Function(U_DG, name="Active stress function (kPa)")
-        Ta_proj = ProjectionFunction(self.Ta, Ta_DG)
-        lambda_DG = df.Function(U_DG, name="Lambda squared (-))")
-        lambda_proj = ProjectionFunction(self.lambd, lambda_DG)
 
-        if isinstance(self.mat_model, EMIMatrixHolzapfelMaterial):
-            sigma_collagen = df.Function(U_DG, name="Collagen Cauchy stress (kPa)")
-            E_collagen = df.Function(U_DG, name="Collagen strain (-)")
-            e1, _ = self.mat_model.collagen_field
-
-            sigma_collagen_proj = ProjectionFunction(df.inner(self.sigma*e1, e1), sigma_collagen)
-            E_collagen_proj = ProjectionFunction(df.inner(self.E*e1, e1), E_collagen)
-
-        self.u_DG = u_DG
-        self.p_DG = p_DG
-        self.E_DG = E_DG
-        self.sigma_DG = sigma_DG
-        self.PiolaKirchhoff_DG = P_DG
-
-        self.tracked_variables = [u_DG, p_DG, E_DG, sigma_DG, P_DG, P_DG_active, P_DG_passive, P_DG_incomp, sigma_DG_active, sigma_DG_passive, sigma_DG_incomp, active_DG, Ta_DG, lambda_DG]    
-        self.projections = [u_proj, p_proj, E_proj, sigma_proj, P_proj, P_active_proj, P_passive_proj, P_incomp_proj, sigma_active_proj, sigma_passive_proj, sigma_incomp_proj, active_proj, Ta_proj, lambda_proj]
-
-        if isinstance(self.mat_model, EMIMatrixHolzapfelMaterial):
-            self.tracked_variables += [sigma_collagen, E_collagen]
-            self.projections += [sigma_collagen_proj, E_collagen_proj]
-
+        self.tracked_variables = [u_DG, p_DG, E_DG, sigma_DG, active_DG]
+        self.projections = [u_proj, p_proj, E_proj, sigma_proj, active_proj]
