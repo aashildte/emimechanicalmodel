@@ -341,10 +341,6 @@ class CardiacModel(ABC):
             self.lambd = I4
             self.Ta = psi_active
 
-            self.P_active = df.diff(psi_active, F)
-            self.P_passive = df.diff(psi_passive, F)
-            self.P_comp = df.diff(psi_comp, F)
-
             psi = psi_active + psi_passive + psi_comp
             P = df.diff(psi, F)
         else:
