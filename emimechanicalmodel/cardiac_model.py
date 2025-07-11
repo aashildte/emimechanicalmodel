@@ -393,10 +393,6 @@ class CardiacModel(ABC):
 
         sigma = (1 / df.det(F)) * P * F.T
 
-        #self.sigma_active = (1 / df.det(F)) * self.P_active * F.T
-        #self.sigma_passive = (1 / df.det(F)) * self.P_passive * F.T
-        #self.sigma_comp = (1 / df.det(F)) * self.P_comp * F.T
-
         N = df.FacetNormal(self.mesh)
 
         ds = self.deformation.ds
