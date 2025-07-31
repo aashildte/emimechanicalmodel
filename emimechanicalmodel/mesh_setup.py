@@ -40,8 +40,6 @@ def load_mesh(mesh_file: str, verbose=1):
     else:
         h5_file.read(volumes, "subdomains")
 
-    #import IPython; IPython.embed()
-
     if verbose > 0:
         print("Mesh and subdomains loaded successfully.")
         print(
@@ -50,6 +48,48 @@ def load_mesh(mesh_file: str, verbose=1):
         )
 
     return mesh, volumes
+
+def load_mesh_sarcomere(mesh_file: str, verbose=1):
+    """
+
+    Loads mesh and submeshes (mesh function) from given mesh file.
+    Subdomain visualisation is saved in a pvd / vtu file,
+
+    Args:
+        mesh_file - h5 file
+        verbose - 0 or 1, print more information for 1
+
+    Returns:
+        mesh - dolfin mesh
+        volumes - dolfin mesh function, defining the two subdomains
+
+    """
+
+    comm = MPI.COMM_WORLD
+    h5_file = df.HDF5File(comm, mesh_file, "r")
+    mesh = df.Mesh()
+    h5_file.read(mesh, "mesh", False)
+
+    dim = mesh.topology().dim()
+    volumes = df.MeshFunction("size_t", mesh, dim, 0)
+
+    # this needs to match whatever the subdomain is called in the mesh file
+    if dim == 3:
+        h5_file.read(volumes, "volumes")
+    else:
+        h5_file.read(volumes, "subdomains")
+
+    if verbose > 0:
+        print("Mesh and subdomains loaded successfully.")
+        print(
+            "Number of nodes: %g, number of elements: %g"
+            % (mesh.num_vertices(), mesh.num_cells())
+        )
+
+    sarcomere_file = mesh_file.split(".h")[0] + ".npy"
+    sarcomere_angles = np.load(sarcomere_file)
+
+    return mesh, volumes, sarcomere_angles
 
 
 def write_collagen_to_file(mesh_file):

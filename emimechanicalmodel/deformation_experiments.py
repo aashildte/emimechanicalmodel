@@ -63,11 +63,16 @@ class DeformationExperiment:
 class Contraction(DeformationExperiment):
     def __init__(self, mesh, V_CG):
         super().__init__(mesh, V_CG)
+        self.bcs_l = []
 
     @property
     def bcs(self):
-        return []
+        return self.bcs_l
     
+    def set_isometric_bcs(self):
+        # same as for stretch ff except that we never update any components
+        self.bcs_l, self.bcsfun = vss.stretch_xx_comp(self.V_CG, self.boundary_markers)
+
     def evaluate_normal_load(self, F, P):
         # on xmin and xmax surfaces/boundaries
         return (vss.evaluate_normal_load(F, P, self.CG, self.mesh, self.ds, 1) + \

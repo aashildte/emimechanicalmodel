@@ -36,6 +36,7 @@ class SarcomereModel(CardiacModel):
         self,
         mesh,
         volumes,
+        sarcomere_angles,
         experiment,
         material_model="holzapfel",
         material_parameters={},
@@ -45,11 +46,13 @@ class SarcomereModel(CardiacModel):
         verbose=0,
         robin_bcs_value=0,
         fraction_sarcomeres_disabled=0.0,
+        isometric=False,
     ):
         # mesh properties, subdomains
         self.verbose = verbose
         self.volumes = volumes
         self.set_subdomains(volumes)
+        self.sarcomere_angles = sarcomere_angles
 
         U = df.FunctionSpace(mesh, "DG", 0)
         subdomain_map = volumes.array()  # only works for DG-0
@@ -77,8 +80,81 @@ class SarcomereModel(CardiacModel):
             compressibility_model,
             verbose,
             robin_bcs_value,
+            isometric,
         )
-        
+   
+    def _set_direction_vectors(self):
+
+        sarcomere_angles = self.sarcomere_angles  # array-like
+        subdomains = self.subdomain_map           # assumed to match self.volumes
+        mesh = self.mesh
+
+        V = df.VectorFunctionSpace(mesh, "DG", 0)
+        Q = df.FunctionSpace(mesh, "DG", 0)
+
+        fiber_dir = df.Function(V, name="Fiber direction")
+        sheet_dir = df.Function(V, name="Sheet direction")
+        angle_fn = df.Function(Q, name="Angle distribution (radians)")
+
+        # 1. Build angle_fn.vector() in a parallel-safe way
+        angle_vals = angle_fn.vector().get_local()
+        cell_domains = self.volumes.array()  # per-cell subdomain ID
+
+        for i in range(len(angle_vals)):  # these are local cells only
+            s = cell_domains[i]
+            if 1000 <= s < 2000:
+                angle_vals[i] = np.pi/2 - sarcomere_angles[int(s)-1000]
+            else:
+                angle_vals[i] = 0.0
+
+        angle_fn.vector().set_local(angle_vals)
+        angle_fn.vector().apply("insert")  # ensure MPI sync
+
+        # 2. Get local DOF range for the vector fields
+        dofmap_V = V.dofmap()
+        local_range = fiber_dir.vector().local_range()
+        lo, hi = local_range
+        size = hi - lo
+
+        fiber_dir_vals = np.zeros(size)
+        sheet_dir_vals = np.zeros(size)
+
+        # Get angle array for local cells
+        angle_array = angle_fn.vector().get_local()
+
+        for cell in df.cells(mesh):
+            cell_idx = cell.index()
+            cell_dofs = dofmap_V.cell_dofs(cell_idx)
+
+            # Skip if this cell's DOFs are not owned by this process
+            if cell_dofs[0] < lo or cell_dofs[1] >= hi:
+                continue
+
+            theta = angle_array[cell_idx]
+            cos_t = np.cos(theta)
+            sin_t = np.sin(theta)
+            R = np.array([[cos_t, -sin_t],
+                          [sin_t,  cos_t]])
+
+            v_fib = R @ np.array([1.0, 0.0])
+            v_sheet = R @ np.array([0.0, 1.0])
+
+            fiber_dir_vals[cell_dofs[0] - lo] = v_fib[0]
+            fiber_dir_vals[cell_dofs[1] - lo] = v_fib[1]
+
+            sheet_dir_vals[cell_dofs[0] - lo] = v_sheet[0]
+            sheet_dir_vals[cell_dofs[1] - lo] = v_sheet[1]
+
+        # 3. Safely assign local values and apply
+        fiber_dir.vector().set_local(fiber_dir_vals)
+        sheet_dir.vector().set_local(sheet_dir_vals)
+
+        fiber_dir.vector().apply("insert")
+        sheet_dir.vector().apply("insert")
+
+        # 4. Save fields
+        self.fiber_dir = fiber_dir
+        self.sheet_dir = sheet_dir
 
     def set_subdomains(self, volumes):
         mpi_comm = MPI.COMM_WORLD
@@ -112,49 +188,64 @@ class SarcomereModel(CardiacModel):
             print(f"Global subdomains (rank {rank}):{subdomains}")
             print("Number of subdomains in total: ", self.num_subdomains)
 
+
     def _define_active_fn(self):
         """
-
-        Defines an active strain/stress function for active contraction;
-        supposed to be updated by update_active_fn step by step.
-        This function gives us "gamma" in the active strain approach,
-        and "T_a" in the active stress approach.
-
+        Defines an active strain/stress function for active contraction.
         """
-        self.active_fn = df.Function(self.U, name="Active tension")
-        self.active_fn.vector()[:] = 0  # initial value
-       
-        #self.sarcomere_scaling = df.Function(self.U, name="Scaling")
-        volumes_array = self.volumes.array()[:]
 
-        vector = np.zeros_like(self.active_fn.vector()[:])
-        print("fraction sarcomeres disabled: ", self.fraction_sarcomeres_disabled)
-        for i in self.subdomains:
-            np.random.seed(i)
-            if 1000 <= i < 2000 and np.random.uniform() >= self.fraction_sarcomeres_disabled:
+        comm = self.U.mesh().mpi_comm()
+        rank = comm.Get_rank()
+
+        self.active_fn = df.Function(self.U, name="Active tension")
+        self.active_fn.vector().zero()
+
+        # Create array to store values per cell, then interpolate to CG function
+        V0 = df.FunctionSpace(self.U.mesh(), "DG", 0)  # cellwise constant
+        active_dg0 = df.Function(V0)
+        active_dg0_values = active_dg0.vector().get_local()
+
+        cell_to_subdomain = self.volumes.array()
+        cell_map = V0.dofmap().entity_dofs(self.U.mesh(), self.U.mesh().topology().dim())
+
+        if rank == 0:
+            print("fraction sarcomeres disabled:", self.fraction_sarcomeres_disabled)
+
+        for cell in df.cells(self.U.mesh()):
+            cell_index = cell.index()
+            subdomain_id = cell_to_subdomain[cell_index]
+            np.random.seed(subdomain_id)
+            if 1000 <= subdomain_id < 2000 and np.random.uniform() >= self.fraction_sarcomeres_disabled:
                 scaling_value = max(0, np.random.normal(1, 0.1))
-                #print("scaling value: ", scaling_value)
-                vector = np.where(volumes_array == i, scaling_value, vector)
-        self.sarcomere_scaling = vector
+            else:
+                scaling_value = 0.0
+
+            # Assign to DG0 function
+            dof = cell_map[cell_index]
+            active_dg0_values[dof] = scaling_value
+
+        active_dg0.vector().set_local(active_dg0_values)
+        active_dg0.vector().apply("insert")
+
+        # Interpolate to the continuous space U
+        self.active_fn = df.interpolate(active_dg0, self.U)
+
+        # Store local array for reference
+        self.sarcomere_scaling = df.Function(self.U, name="Sarcomere scaling")
+        self.sarcomere_scaling.assign(self.active_fn)
+
 
     def update_active_fn(self, value):
         """
-
-        Updates the above active active function.
+        Updates the active strain/stress function by scaling the stored sarcomere field.
 
         Args:
-            value (float) – value to be assigned to the active strain functionn
-               defined as non-zero over the intracellular domain
-
-        # IDEA: update iteratively across all sarcomere subdomains, by assigning new
-        values region by region
-
+            value (float): Scalar multiplier for sarcomere activity.
         """
+        self.active_fn.vector().zero()
+        self.active_fn.vector().axpy(value, self.sarcomere_scaling.vector())
+        self.active_fn.vector().apply("insert")
 
-        print("value: ", value)
-        self.active_fn.vector()[:] = self.sarcomere_scaling*value
-        print(np.max(self.active_fn.vector()[:]))
-        print("")
 
     def _define_projections(self):
         """

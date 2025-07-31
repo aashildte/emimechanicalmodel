@@ -50,6 +50,7 @@ class EMIModel(CardiacModel):
         compressibility_parameters={},
         verbose=0,
         robin_bcs_value=0,
+        isometric=False,
     ):
         # mesh properties, subdomains
         self.verbose = verbose
@@ -89,6 +90,7 @@ class EMIModel(CardiacModel):
             compressibility_model,
             verbose,
             robin_bcs_value,
+            isometric,
         )
         
 

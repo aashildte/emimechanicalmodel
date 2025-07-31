@@ -39,6 +39,7 @@ class CardiacModel(ABC):
         compressibility_model,
         verbose=0,
         robin_bcs_value=0,
+        isometric=False,
     ):
         """
 
@@ -62,6 +63,7 @@ class CardiacModel(ABC):
         self.compressibility_model = compressibility_model
         self.experiment_str = experiment
         self.robin_bcs_value = robin_bcs_value
+        self.isometric = isometric
 
         self._set_direction_vectors()
 
@@ -86,11 +88,15 @@ class CardiacModel(ABC):
             "shear_sn": ShearSN,
         }
         self.deformation = exp_dict[experiment](mesh, self.V_CG)
+
+
         self.ds = self.deformation.ds
         self._define_external_load()
 
         self._define_kinematic_variables()
 
+        if experiment=="contraction" and isometric:
+            self.deformation.set_isometric_bcs()
         self.bcs = self.deformation.bcs
 
         # define solver and initiate tracked variables
@@ -338,9 +344,6 @@ class CardiacModel(ABC):
             psi_passive = mat_model.get_strain_energy_term(F)
             psi_comp = comp_model.get_strain_energy_term(F, self.p)
 
-            self.lambd = I4
-            self.Ta = psi_active
-
             psi = psi_active + psi_passive + psi_comp
             P = df.diff(psi, F)
         else:
@@ -410,7 +413,9 @@ class CardiacModel(ABC):
         if self.experiment_str == "contraction":
             state, test_state = self.state, self.test_state
             weak_form += self._remove_rigid_motion_term(u, r, state, test_state)
-            weak_form += self._add_robin_bnd_term()
+
+            if not self.isometric:
+                weak_form += self._add_robin_bnd_term()
         
         (self.F, self.E, self.sigma, self.P, self.u, self.weak_form,) = (
             F,
@@ -537,7 +542,7 @@ class CardiacModel(ABC):
             },
             form_compiler_parameters={"optimize": True},
         )
-        
+
         """
         self._solver.solve(self.problem, self.state.vector())
         """ 
@@ -545,7 +550,6 @@ class CardiacModel(ABC):
         if project:
             for proj_fun in self.projections:
                 proj_fun.project()
-
 
     def integrate_subdomain(self, fun, subdomain_ids):
         """
