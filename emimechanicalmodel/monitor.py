@@ -179,6 +179,8 @@ class Monitor:
                     model.evaluate_active_tension, subdomain_ids=subdomain
                 )
         elif isinstance(self.cardiac_model, SarcomereModel):
+            pass
+            """
             sarcomere_units = self.cardiac_model.sarcomere_regions
 
             for subdomain in sarcomere_units:
@@ -191,6 +193,7 @@ class Monitor:
                 #scalar_functions[f"strain_xdir_{desc}"] = partial(
                 #    model.evaluate_subdomain_strain_fibre_dir, subdomain_ids=subdomain
                 #)
+            """
         else:
             descriptions = ["whole_domain"]
             whole_domain = self.cardiac_model.subdomains
