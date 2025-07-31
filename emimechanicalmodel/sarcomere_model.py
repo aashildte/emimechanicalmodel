@@ -192,45 +192,45 @@ class SarcomereModel(CardiacModel):
     def _define_active_fn(self):
         """
         Defines an active strain/stress function for active contraction.
+        This function works in parallel by assigning values only to locally owned DOFs.
         """
-
         comm = self.U.mesh().mpi_comm()
         rank = comm.Get_rank()
 
+        # Create function in the continuous space U
         self.active_fn = df.Function(self.U, name="Active tension")
         self.active_fn.vector().zero()
 
-        # Create array to store values per cell, then interpolate to CG function
-        V0 = df.FunctionSpace(self.U.mesh(), "DG", 0)  # cellwise constant
+        # Cell-wise constant DG0 space
+        V0 = df.FunctionSpace(self.U.mesh(), "DG", 0)
         active_dg0 = df.Function(V0)
-        active_dg0_values = active_dg0.vector().get_local()
 
+        # Map from cell index to subdomain ID
         cell_to_subdomain = self.volumes.array()
-        cell_map = V0.dofmap().entity_dofs(self.U.mesh(), self.U.mesh().topology().dim())
 
-        if rank == 0:
-            print("fraction sarcomeres disabled:", self.fraction_sarcomeres_disabled)
-
-        for cell in df.cells(self.U.mesh()):
+        # Assign values to the DG0 function on locally owned cells
+        for cell in df.cells(self.U.mesh()):  # Iterates over local cells only
             cell_index = cell.index()
             subdomain_id = cell_to_subdomain[cell_index]
+
+            # Seed RNG with subdomain_id for deterministic results
             np.random.seed(subdomain_id)
             if 1000 <= subdomain_id < 2000 and np.random.uniform() >= self.fraction_sarcomeres_disabled:
-                scaling_value = max(0, np.random.normal(1, 0.1))
+                scaling_value = max(0.0, np.random.normal(1.0, 0.1))
             else:
                 scaling_value = 0.0
 
-            # Assign to DG0 function
-            dof = cell_map[cell_index]
-            active_dg0_values[dof] = scaling_value
+            # Set value directly to local DOF
+            dof = V0.dofmap().cell_dofs(cell_index)[0]
+            active_dg0.vector()[dof] = scaling_value
 
-        active_dg0.vector().set_local(active_dg0_values)
+        # Apply changes to ensure global consistency
         active_dg0.vector().apply("insert")
 
-        # Interpolate to the continuous space U
+        # Interpolate to the continuous function space
         self.active_fn = df.interpolate(active_dg0, self.U)
 
-        # Store local array for reference
+        # Store sarcomere scaling field for reuse
         self.sarcomere_scaling = df.Function(self.U, name="Sarcomere scaling")
         self.sarcomere_scaling.assign(self.active_fn)
 
