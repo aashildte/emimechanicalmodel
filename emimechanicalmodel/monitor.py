@@ -140,16 +140,16 @@ class Monitor:
         # intracellular/extracellular/both:
         
         if isinstance(self.cardiac_model, EMIModel):
-            intracellular_subdomains = list(model.subdomains)[:]
-            if 0 in intracellular_subdomains:
-                intracellular_subdomains.remove(0)
+            intracellular_subdomain = [1]
             extracellular_subdomain = [0]
 
-            descriptions = ["extracellular", "intracellular", "whole_domain"]
+            descriptions = [
+                "extracellular",
+                "intracellular",
+                ]
             subdomains = [
                 extracellular_subdomain,
-                intracellular_subdomains,            
-                model.subdomains,
+                intracellular_subdomain,            
             ]
         
             for (desc, subdomain) in zip(descriptions, subdomains):
@@ -179,8 +179,6 @@ class Monitor:
                     model.evaluate_active_tension, subdomain_ids=subdomain
                 )
         elif isinstance(self.cardiac_model, SarcomereModel):
-            pass
-            """
             sarcomere_units = self.cardiac_model.sarcomere_regions
 
             for subdomain in sarcomere_units:
@@ -190,26 +188,13 @@ class Monitor:
                     model.evaluate_subdomain_stress_fibre_dir, subdomain_ids=subdomain
                 )
 
-                #scalar_functions[f"strain_xdir_{desc}"] = partial(
-                #    model.evaluate_subdomain_strain_fibre_dir, subdomain_ids=subdomain
-                #)
-            """
+                scalar_functions[f"strain_xdir_{desc}"] = partial(
+                    model.evaluate_subdomain_strain_fibre_dir, subdomain_ids=subdomain
+                )
         else:
             descriptions = ["whole_domain"]
             whole_domain = self.cardiac_model.subdomains
         
-        """
-        if isinstance(self.cardiac_model.mat_model, EMIMatrixHolzapfelMaterial):
-            scalar_functions[f"collagen_fiber_direction_stress"] = model.evaluate_collagen_stress_fiber_direction
-            scalar_functions[f"collagen_transfiber_direction_stress"] = model.evaluate_collagen_stress_fiber_direction
-            scalar_functions[f"collagen_fiber_direction_strain"] = model.evaluate_collagen_strain_fiber_direction
-            scalar_functions[f"collagen_transfiber_direction_strain"] = model.evaluate_collagen_strain_fiber_direction
-            scalar_functions[f"evaluate_collagen_stress_magnitude"] = model.evaluate_collagen_stress_magnitude
-            scalar_functions[f"evaluate_collagen_strain_magnitude"] = model.evaluate_collagen_strain_magnitude
-        
-            scalar_functions[f"evaluate_cellular_stress_magnitude"] = model.evaluate_cellular_stress_magnitude
-            scalar_functions[f"evaluate_cellular_strain_magnitude"] = model.evaluate_cellular_strain_magnitude 
-        """
         scalar_functions[f"relative_shortening"] = model.evaluate_average_shortening
 
         scalar_values = {"states": []}

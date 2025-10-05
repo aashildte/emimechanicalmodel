@@ -55,13 +55,24 @@ class EMIModel(CardiacModel):
         # mesh properties, subdomains
         self.verbose = verbose
         self.volumes = volumes
-        self.set_subdomains(volumes)
 
+        self.set_subdomains(mesh, volumes)
+
+        """
+        self.xi_e_endo = df.Function(U)
+        assign_discrete_values(self.xi_e_endo, subdomain_map, 1, 0)
+        
+        self.xi_e_peri = df.Function(U)
+        assign_discrete_values(self.xi_e_peri, subdomain_map, 2, 0)
+
+        self.xi_i = df.Function(U)
+        self.xi_i.vector()[:] = 1 - self.xi_e_peri.vector()[:] - self.xi_e_endo.vector()[:]
+        
+        assert np.max(self.xi_i.vector()[:]) < 2, "Error! Check xi_i"
+        """
+        
         U = df.FunctionSpace(mesh, "DG", 0)
         subdomain_map = volumes.array()  # only works for DG-0
-        self.xi_i = df.Function(U)
-        assign_discrete_values(self.xi_i, subdomain_map, 1, 0)
-
         if material_model=="holzapfel":
             mat_model = EMIHolzapfelMaterial(U, subdomain_map, **material_parameters)
         elif material_model=="holzapfel_collagen":
@@ -94,11 +105,18 @@ class EMIModel(CardiacModel):
         )
         
 
-    def set_subdomains(self, volumes):
+    def set_subdomains(self, mesh, volumes):
         mpi_comm = MPI.COMM_WORLD
         rank = mpi_comm.Get_rank()
-        
-        local_subdomains = set(volumes.array())
+    
+        dim = mesh.topology().dim()
+
+        volumes_binary = df.MeshFunction("size_t", mesh, dim, 0)
+
+        vol_values = volumes.array()[:]
+        volumes_binary.array()[:] = np.where(vol_values < 3, 0, 1)         # less than 3 for endomysium or perimysium!
+
+        local_subdomains = set(volumes_binary.array())
         subdomains = mpi_comm.gather(local_subdomains, root=0)
 
         if rank == 0:
@@ -110,15 +128,14 @@ class EMIModel(CardiacModel):
             global_subdomains = None
 
         self.subdomains = mpi_comm.bcast(global_subdomains, root=0)
-        self.num_subdomains = max(self.subdomains) 
-        self.intracellular_space = self.subdomains[:]
-        self.intracellular_space.remove(0)       # remove matrix space
+        self.num_subdomains = max(self.subdomains)
+        self.subdomains_binary = volumes_binary
 
         if self.verbose == 2:
             print(f"Local subdomains (rank {rank}):{local_subdomains}")  
             print("Number of subdomains in total: ", self.num_subdomains)
             print(f"Global subdomains:{self.subdomains}")  
-
+   
 
     def _define_active_fn(self):
         """
@@ -143,8 +160,8 @@ class EMIModel(CardiacModel):
                defined as non-zero over the intracellular domain
 
         """
-        assign_discrete_values(self.active_fn, self.subdomain_map, value, 0) 
-
+        assign_discrete_values(self.active_fn, self.subdomains_binary.array()[:], value, 0) 
+        
     
     def evaluate_collagen_stress_magnitude(self):
         """
@@ -311,13 +328,17 @@ class EMIModel(CardiacModel):
         u_DG = df.Function(V_DG, name="Displacement (µm)")
         E_DG = df.Function(T_DG, name="Strain")
         sigma_DG = df.Function(T_DG, name="Cauchy stress (kPa)")
+        sigma_DG_active = df.Function(T_DG, name="Active Cauchy stress (kPa)")
+        sigma_DG_passive = df.Function(T_DG, name="Passive Cauchy stress (kPa)")
         active_DG = df.Function(U_DG, name="Active stress imposed (kPa)")
 
         p_proj = ProjectionFunction(self.p, p_DG)
         u_proj = ProjectionFunction(self.u, u_DG)
         E_proj = ProjectionFunction(self.E, E_DG)
         sigma_proj = ProjectionFunction(self.sigma, sigma_DG)
+        sigma_proj_active = ProjectionFunction(self.sigma_active, sigma_DG_active)
+        sigma_proj_passive = ProjectionFunction(self.sigma_passive, sigma_DG_passive)
         active_proj = ProjectionFunction(self.active_fn, active_DG)
 
-        self.tracked_variables = [u_DG, p_DG, E_DG, sigma_DG, active_DG]
-        self.projections = [u_proj, p_proj, E_proj, sigma_proj, active_proj]
+        self.tracked_variables = [u_DG, p_DG, E_DG, sigma_DG, sigma_DG_active, sigma_DG_passive, active_DG]
+        self.projections = [u_proj, p_proj, E_proj, sigma_proj, sigma_proj_active, sigma_proj_passive, active_proj]

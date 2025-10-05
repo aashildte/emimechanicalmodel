@@ -46,6 +46,7 @@ class SarcomereModel(CardiacModel):
         verbose=0,
         robin_bcs_value=0,
         fraction_sarcomeres_disabled=0.0,
+        isometric=False,
     ):
         # mesh properties, subdomains
         self.verbose = verbose
@@ -79,34 +80,63 @@ class SarcomereModel(CardiacModel):
             compressibility_model,
             verbose,
             robin_bcs_value,
+            isometric,
         )
-   
+
+    def _compute_sarcomere_angles(self):
+        sarcomere_angles = self.sarcomere_angles
+        mesh = self.mesh
+        cell_domains = self.volumes
+
+        Q = df.FunctionSpace(mesh, "DG", 0)
+        angle_fn = df.Function(Q, name="Angle distribution (radians)")
+
+        dofmap = Q.dofmap()
+        angle_array = angle_fn.vector().get_local()
+
+        for cell in df.cells(mesh):
+            cell_idx = cell.index()
+            dof = dofmap.cell_dofs(cell_idx)[0]
+            subdomain_id = cell_domains[cell_idx]
+
+            if 1000 <= subdomain_id < 2000:
+                angle_array[dof] = np.pi / 2 - sarcomere_angles[subdomain_id - 1000]
+            else:
+                angle_array[dof] = 0.0
+
+        angle_fn.vector().set_local(angle_array)
+        angle_fn.vector().apply("insert")
+
+        return angle_fn
+
+
+
+
     def _set_direction_vectors(self):
-        """
-        Local method to compute and store fiber and sheet directions.
-        """
-        angle_fn = self._compute_sarcomere_angles()
         
+        # if no variation we can use this
+        #self.fiber_dir = df.as_vector([1., 0.])
+        #self.sheet_dir = df.as_vector([0., 1.])
+        #return
+
+        angle_fn = self._compute_sarcomere_angles()
+
         V = df.VectorFunctionSpace(self.mesh, "DG", 0)
         fiber_dir = df.Function(V, name="Fiber direction")
         sheet_dir = df.Function(V, name="Sheet direction")
-        
+
         dofmap_V = V.dofmap()
-        local_range = fiber_dir.vector().local_range()
-        lo, hi = local_range
-        size = hi - lo
-
-        fiber_dir_vals = np.zeros(size)
-        sheet_dir_vals = np.zeros(size)
-
         angle_array = angle_fn.vector().get_local()
+
+        fiber_vec = fiber_dir.vector()
+        sheet_vec = sheet_dir.vector()
+
+        fiber_array = fiber_vec.get_local()
+        sheet_array = sheet_vec.get_local()
 
         for cell in df.cells(self.mesh):
             cell_idx = cell.index()
             cell_dofs = dofmap_V.cell_dofs(cell_idx)
-
-            if cell_dofs[0] < lo or cell_dofs[1] >= hi:
-                continue
 
             theta = angle_array[cell_idx]
             cos_t = np.cos(theta)
@@ -117,45 +147,25 @@ class SarcomereModel(CardiacModel):
             v_fib = R @ np.array([1.0, 0.0])
             v_sheet = R @ np.array([0.0, 1.0])
 
-            fiber_dir_vals[cell_dofs[0] - lo] = v_fib[0]
-            fiber_dir_vals[cell_dofs[1] - lo] = v_fib[1]
+            fiber_array[cell_dofs[0]] = v_fib[0]
+            fiber_array[cell_dofs[1]] = v_fib[1]
 
-            sheet_dir_vals[cell_dofs[0] - lo] = v_sheet[0]
-            sheet_dir_vals[cell_dofs[1] - lo] = v_sheet[1]
+            sheet_array[cell_dofs[0]] = v_sheet[0]
+            sheet_array[cell_dofs[1]] = v_sheet[1]
 
-        fiber_dir.vector().set_local(fiber_dir_vals)
-        sheet_dir.vector().set_local(sheet_dir_vals)
-
-        fiber_dir.vector().apply("insert")
-        sheet_dir.vector().apply("insert")
+        fiber_vec.set_local(fiber_array)
+        sheet_vec.set_local(sheet_array)
+        fiber_vec.apply("insert")
+        sheet_vec.apply("insert")
 
         self.fiber_dir = fiber_dir
         self.sheet_dir = sheet_dir
 
+        with df.XDMFFile(self.mesh.mpi_comm(), "fiber_direction.xdmf") as xdmf_fiber:
+            xdmf_fiber.write(fiber_dir)
 
-    def _compute_sarcomere_angles(self):
-        sarcomere_angles = self.sarcomere_angles  # array-like
-        subdomains = self.subdomain_map           # assumed to match self.volumes
-        mesh = self.mesh
-
-        Q = df.FunctionSpace(mesh, "DG", 0)
-
-        angle_fn = df.Function(Q, name="Angle distribution (radians)")
-
-        angle_vals = angle_fn.vector().get_local()
-        cell_domains = self.volumes.array()  # per-cell subdomain ID
-
-        for i in range(len(angle_vals)):  # these are local cells only
-            s = cell_domains[i]
-            if 1000 <= s < 2000:
-                angle_vals[i] = np.pi/2 - sarcomere_angles[int(s)-1000]
-            else:
-                angle_vals[i] = 0.0
-
-        angle_fn.vector().set_local(angle_vals)
-        angle_fn.vector().apply("insert")  # ensure MPI sync
-
-        return angle_fn
+        with df.XDMFFile(self.mesh.mpi_comm(), "sheet_direction.xdmf") as xdmf_sheet:
+            xdmf_sheet.write(sheet_dir)
 
 
     def set_subdomains(self, volumes):
@@ -229,24 +239,46 @@ class SarcomereModel(CardiacModel):
         active_dg0.vector().set_local(active_dg0_values)
         active_dg0.vector().apply("insert")
 
-        # Interpolate to the continuous space U
+        # TODO not necessary .. Interpolate to the continuous space U
         self.active_fn = df.interpolate(active_dg0, self.U)
+        self.active_fn.vector().zero()
 
         # Store local array for reference
         self.sarcomere_scaling = df.Function(self.U, name="Sarcomere scaling")
         self.sarcomere_scaling.assign(self.active_fn)
 
 
-    def update_active_fn(self, value):
+    def update_active_fn(self, value_map):
         """
         Updates the active strain/stress function by scaling the stored sarcomere field.
 
         Args:
             value (float): Scalar multiplier for sarcomere activity.
         """
+        
+        print(value_map)
         self.active_fn.vector().zero()
-        self.active_fn.vector().axpy(value, self.sarcomere_scaling.vector())
+        #self.active_fn.vector().axpy(value, self.sarcomere_scaling.vector())
+        #self.active_fn.vector().apply("insert")
+        
+        active_values = self.active_fn.vector().get_local()
+        
+        cell_to_subdomain = self.volumes.array()
+        cell_map = self.U.dofmap().entity_dofs(self.U.mesh(), self.U.mesh().topology().dim())
+
+        for cell in df.cells(self.U.mesh()):
+            cell_index = cell.index()
+            subdomain_id = cell_to_subdomain[cell_index]
+            
+            # Assign to DG0 function
+            dof = cell_map[cell_index]
+            idt = cell_to_subdomain[dof]
+            if idt in value_map:
+                active_values[dof] = value_map[idt]
+
+        self.active_fn.vector().set_local(active_values)
         self.active_fn.vector().apply("insert")
+
 
 
     def _define_projections(self):

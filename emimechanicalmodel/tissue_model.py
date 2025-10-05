@@ -14,6 +14,7 @@ from emimechanicalmodel.cardiac_model import CardiacModel
 from emimechanicalmodel.holzapfelmaterial import HolzapfelMaterial
 from emimechanicalmodel.guccionematerial import GuccioneMaterial
 from emimechanicalmodel.fomovskymaterial import FomovskyMaterial
+from emimechanicalmodel.bellinimaterial import BelliniMaterial
 from emimechanicalmodel.compressibility import (
     IncompressibleMaterial,
     NearlyIncompressibleMaterial,
@@ -46,6 +47,7 @@ class TissueModel(CardiacModel):
         compressibility_model="incompressible",
         compressibility_parameters={},
         verbose=0,
+        isometric=False,
     ):
 
         self.num_subdomains = 1
@@ -63,6 +65,8 @@ class TissueModel(CardiacModel):
             mat_model = GuccioneMaterial(**material_parameters)
         elif material_model == "fomovsky":
             mat_model = FomovskyMaterial(**material_parameters)
+        elif material_model == "Bellini":
+            mat_model = BelliniMaterial(**material_parameters)
         else:
             print(
                 "Error: Uknown material model; please specify as 'holzapfel' or 'guccione' or 'fomovsky'."
@@ -89,6 +93,7 @@ class TissueModel(CardiacModel):
             active_model,
             compressibility_model,
             verbose,
+            isometric,
         )
 
     def _define_active_fn(self):
@@ -125,9 +130,6 @@ class TissueModel(CardiacModel):
 
         """
         
-        self.tracked_variables = [] #u, p, E, sigma, P, active_CG, Ta_DG]
-        self.projections = [] #u_proj, p_proj, E_proj, sigma_proj, P_proj, active_proj, Ta_proj]
-        return
         mesh = self.mesh
 
         # define function spaces
@@ -155,9 +157,7 @@ class TissueModel(CardiacModel):
 
         active_CG = df.Function(U_CG, name="Active stress imposed (kPa)")
         active_proj = ProjectionFunction(self.active_fn, active_CG)
-        Ta_DG = df.Function(U_CG, name="Active stress function (kPa)")
-        Ta_proj = ProjectionFunction(self.Ta, Ta_DG)
         
-        self.tracked_variables = [u, p, E, sigma, P, active_CG, Ta_DG]
-        self.projections = [u_proj, p_proj, E_proj, sigma_proj, P_proj, active_proj, Ta_proj]
+        self.tracked_variables = [u, p, E, sigma, P, active_CG]
+        self.projections = [u_proj, p_proj, E_proj, sigma_proj, P_proj, active_proj]
 

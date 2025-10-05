@@ -248,9 +248,9 @@ class CardiacModel(ABC):
         for idt in [1, 2, 3, 4]:
             self.Gext[idt] = df.Constant(0)
 
-        #if self.dim == 3:
-        #    self.Gext[5] = df.Constant(0)
-        #    self.Gext[6] = df.Constant(0)
+        if self.dim == 3:
+            self.Gext[5] = df.Constant(0)
+            self.Gext[6] = df.Constant(0)
 
 
     def update_external_load(self, load_values):
@@ -339,13 +339,17 @@ class CardiacModel(ABC):
 
             C = pow(J, -float(2) / 3) * F.T * F
             I4 = df.inner(C * e1, e1)
-
+        
             psi_active = active_fn / 2.0 * (I4 - 1)
             psi_passive = mat_model.get_strain_energy_term(F)
             psi_comp = comp_model.get_strain_energy_term(F, self.p)
 
             psi = psi_active + psi_passive + psi_comp
             P = df.diff(psi, F)
+
+            self.P_active = df.diff(psi_active, F)
+            self.P_passive = df.diff(psi_passive, F)
+            self.P_comp = df.diff(psi_comp, F)
         else:
             sqrt_fun = (df.Constant(1) - active_fn) ** (-0.5)
 
@@ -364,6 +368,10 @@ class CardiacModel(ABC):
             psi_passive = mat_model.get_strain_energy_term(F_e)
             psi_comp = comp_model.get_strain_energy_term(F_e, self.p)
             psi = psi_passive + psi_comp
+            
+            self.P_active = df.diff(psi, F)      # TODO check this one mathematically; also for active strain?
+            self.P_passive = df.diff(psi_passive, F)
+            self.P_comp = df.diff(psi_comp, F)
 
             P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T)
 
@@ -395,6 +403,9 @@ class CardiacModel(ABC):
         E = 0.5 * (C - I)  # the Green-Lagrange strain tensor
 
         sigma = (1 / df.det(F)) * P * F.T
+
+        self.sigma_active = (1 / df.det(F)) * self.P_active * F.T
+        self.sigma_passive = (1 / df.det(F)) * self.P_passive * F.T + (1 / df.det(F)) * self.P_comp * F.T
 
         N = df.FacetNormal(self.mesh)
 
@@ -567,7 +578,7 @@ class CardiacModel(ABC):
         if isinstance(subdomain_ids, int) or isinstance(subdomain_ids, np.uint64):
             subdomain_ids = [subdomain_ids]
 
-        dx = df.Measure("dx", domain=self.mesh, subdomain_data=self.volumes)
+        dx = df.Measure("dx", domain=self.mesh, subdomain_data=self.subdomains_binary)
 
         integral = 0
         for subdomain_id in subdomain_ids:
@@ -655,9 +666,12 @@ class CardiacModel(ABC):
             (see eq. (17) in the paper)
 
         """
-        print("Evaluating stress in: ", subdomain_ids)
         unit_vector = self.fiber_dir
-        return self.evaluate_subdomain_stress(unit_vector, subdomain_ids)
+        stress = self.evaluate_subdomain_stress(unit_vector, subdomain_ids)
+        print("Evaluating stress in: ", subdomain_ids)
+        print("Subdomain stress: ", stress)
+        return stress
+
 
     def evaluate_subdomain_stress_sheet_dir(self, subdomain_ids):
         """
@@ -723,7 +737,7 @@ class CardiacModel(ABC):
             (see eq. (16) in the paper)
 
         """
-        print("Evaluating strain in: ", subdomain_ids)
+        #print("Evaluating strain in: ", subdomain_ids)
         unit_vector = self.fiber_dir
         return self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
 

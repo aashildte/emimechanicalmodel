@@ -16,8 +16,8 @@ except ModuleNotFoundError:
 
 
 class CompressibleMaterial(ABC):
-    def __init__(self):
-        self.kappa = df.Constant(1000)
+    def __init__(self, kappa=1000):
+        self.kappa = kappa 
 
     def get_strain_energy_term(self, F, p=None):
         """

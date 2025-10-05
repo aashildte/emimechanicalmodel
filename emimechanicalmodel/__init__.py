@@ -5,6 +5,7 @@ from .tissue_model import TissueModel
 from .emi_model import EMIModel
 from .monitor import Monitor
 
+from .bellinimaterial import BelliniMaterial
 from .holzapfelmaterial import HolzapfelMaterial
 from .emi_holzapfelmaterial import EMIHolzapfelMaterial
 from .fibrotic_tissue_model import FibrosisModel

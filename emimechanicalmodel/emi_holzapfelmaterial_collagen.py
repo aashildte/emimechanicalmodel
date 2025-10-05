@@ -16,7 +16,31 @@ try:
 except ModuleNotFoundError:
     import ufl_legacy as ufl
 
-from .mesh_setup import assign_discrete_values
+
+def assign_discrete_values(function, subdomain_map, value_i, value_e):
+    """
+
+    Assigns function values to a function based on a subdomain map;
+    usually just element by element in a DG-0 function.
+
+    Args:
+        function (df.Function): function to be changed
+        subdomain_map (df.MeshFunction): subdomain division,
+            extracellular space expected to have value 0,
+            intracellular space expected to have values >= 1
+        value_i: to be assigned to omega_i
+        value_e: to be assigned to omega_e
+
+    Note that all cells are assigned the same value homogeneously.
+
+    """
+
+    id_extra = 0
+    function.vector()[:] = np.where(
+        subdomain_map == id_extra,
+        value_e,
+        value_i,
+    )
 
 
 class EMIMatrixHolzapfelMaterial:
@@ -28,7 +52,8 @@ class EMIMatrixHolzapfelMaterial:
     Args:
         U - function space for discrete function; DG-0 is a good choice
         subdomain_map - mapping from volume array to U; for DG-0 this is trivial
-
+        collagen_dist - df function
+        a_i, ..., b_ef - mateiral parameters for intracellular, endomysial, and perimysial subdomains
     """
 
     def __init__(
@@ -38,23 +63,27 @@ class EMIMatrixHolzapfelMaterial:
         collagen_dist,
         a_i=df.Constant(5.70),
         b_i=df.Constant(11.67),
-        a_e=df.Constant(5.70),
-        b_e=df.Constant(11.67),
+        a_e_endo=df.Constant(5.70),
+        b_e_endo=df.Constant(11.67),
+        a_e_peri=df.Constant(5.70),
+        b_e_peri=df.Constant(11.67),
         a_if=df.Constant(19.83),
         b_if=df.Constant(24.72),
-        a_ef=df.Constant(19.83),
-        b_ef=df.Constant(24.72),
+        a_ef_endo=df.Constant(19.83),
+        b_ef_endo=df.Constant(24.72),
+        a_ef_peri=df.Constant(19.83),
+        b_ef_peri=df.Constant(24.72),
     ):
         # these are df.Constants, which can be changed from the outside
         self.a_i, self.a_e, self.b_i, self.b_e, self.a_if, self.b_if, self.a_ef, self.b_ef = (
             a_i,
-            a_e,
+            a_e_endo,
             b_i,
-            b_e,
+            b_e_endo,
             a_if,
             b_if,
-            a_ef,
-            b_ef,
+            a_ef_endo,
+            b_ef_endo,
         )
 
         self.dim = U.mesh().topology().dim()
@@ -67,23 +96,50 @@ class EMIMatrixHolzapfelMaterial:
             self.e2 = df.as_vector([0.0, 1.0, 0.0])
 
         self.U = U
-        #self.V = V
         self.mesh = U.mesh()
-
+        
         # assign material paramters via characteristic functions
         xi_i = df.Function(U)
-        assign_discrete_values(xi_i, subdomain_map, 1, 0)
 
-        xi_e = df.Function(U)
-        assign_discrete_values(xi_e, subdomain_map, 0, 1)
+        xi_i.vector()[:] = np.where(
+            subdomain_map > 2,
+            1,
+            0,
+        )
+        
+        xi_e_endo = df.Function(U)
+        xi_e_endo.vector()[:] = np.where(
+            subdomain_map == 1,
+            1,
+            0,
+        )
+        
+        xi_e_peri = df.Function(U)
+        xi_e_peri.vector()[:] = np.where(
+            subdomain_map == 2,
+            1,
+            0,
+        )
+
+        volumes_total = df.Function(U)
+        volumes_total.vector()[:] += xi_i.vector()[:]
+        volumes_total.vector()[:] += xi_e_endo.vector()[:]
+        volumes_total.vector()[:] += xi_e_peri.vector()[:]
+
+
+        df.File("cells.pvd") << xi_i
+        df.File("endo.pvd") << xi_e_endo
+        df.File("peri.pvd") << xi_e_peri
+
+        max_v = max(volumes_total.vector()[:])
+        min_v = min(volumes_total.vector()[:])
+        
+        assert abs(max_v - 1) < 1E-14 and abs(min_v - 1) < 1E-14, f"Error: not all elements are assigned a tag. Max, min: {max_v}, {min_v}"
 
         self.collagen_field = self.calculate_collagen_fiber_direction(collagen_dist)
 
-        #V = df.VectorFunctionSpace(U.mesh(), "CG", 2)
-        #output_folder = "contraction_experiments_spatial"
-        #df.File(f"{output_folder}/fiber_direction.pvd") << df.project(self.collagen_field[0], V)
+        self.xi_i, self.xi_e_endo, self.xi_e_peri = xi_i, xi_e_endo, xi_e_peri
 
-        self.xi_i, self.xi_e = xi_i, xi_e
 
     def calculate_collagen_fiber_direction(self, theta):
         R = df.as_matrix(
@@ -99,7 +155,7 @@ class EMIMatrixHolzapfelMaterial:
     def get_strain_energy_term(self, F):
         
         a_i, a_e, b_i, b_e, a_if, b_if, a_ef, b_ef = self.a_i, self.a_e, self.b_i, self.b_e, self.a_if, self.b_if, self.a_ef, self.b_ef
-        xi_i, xi_e = self.xi_i, self.xi_e
+        xi_i, xi_e_endo, xi_e_peri = self.xi_i, self.xi_e_endo, self.xi_e_peri
        
         ecm_f, _ = self.collagen_field
 
@@ -118,8 +174,10 @@ class EMIMatrixHolzapfelMaterial:
         W_myocytes = a_i*xi_i / (2 * b_i) * (df.exp(b_i * (IIFx - self.dim)) - 1) + \
                      a_if*xi_i / (2 * b_if) * (df.exp(b_if * cond(I4_myocytes - 1) ** 2) - 1)
         
-        W_matrix = a_e*xi_e / (2 * b_e) * (df.exp(b_e * (IIFx - self.dim)) - 1) + \
-                     a_ef*xi_e / (2 * b_ef) * (df.exp(b_ef * cond(I4_matrix - 1) ** 2) - 1)
+        W_matrix_endo = a_e*xi_e_endo / (2 * b_e) * (df.exp(b_e * (IIFx - self.dim)) - 1) + \
+                     a_ef*xi_e_endo / (2 * b_ef) * (df.exp(b_ef * cond(I4_matrix - 1) ** 2) - 1)
+        
+        W_matrix_peri = a_e*xi_e_peri / (2 * b_e) * (df.exp(b_e * (IIFx - self.dim)) - 1) + \
+                        a_ef*xi_e_peri / (2 * b_ef) * (df.exp(b_ef * cond(I4_matrix - 1) ** 2) - 1)
 
-
-        return W_myocytes + W_matrix
+        return W_myocytes + W_matrix_endo + W_matrix_peri

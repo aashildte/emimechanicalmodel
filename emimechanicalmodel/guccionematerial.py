@@ -41,7 +41,7 @@ class GuccioneMaterial:
         self._C, self._b_f, self._b_t, self._b_ft = C, b_f, b_t, b_ft
 
     def get_strain_energy_term(self, F):
-        C_ss, b_f, b_t, b_ft = self.C, self.b_f, self.b_t, self.b_ft
+        C_ss, b_f, b_t, b_ft = self.C, self._b_f, self._b_t, self._b_ft
 
         if self.dim == 2:
             e1 = df.as_vector([1.0, 0.0])
@@ -69,8 +69,8 @@ class GuccioneMaterial:
         )
 
         if self.dim == 3:
-            E13 = (df.inner(E * e1, e3),)
-            E23 = (df.inner(E * e2, e3),)
+            E13 = df.inner(E * e1, e3)
+            E23 = df.inner(E * e2, e3)
 
             E31, E32, E33 = (
                 df.inner(E * e3, e1),
