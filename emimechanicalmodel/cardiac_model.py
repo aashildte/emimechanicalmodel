@@ -578,7 +578,7 @@ class CardiacModel(ABC):
         if isinstance(subdomain_ids, int) or isinstance(subdomain_ids, np.uint64):
             subdomain_ids = [subdomain_ids]
 
-        dx = df.Measure("dx", domain=self.mesh, subdomain_data=self.subdomains_binary)
+        dx = df.Measure("dx", domain=self.mesh, subdomain_data=self.volumes)
 
         integral = 0
         for subdomain_id in subdomain_ids:

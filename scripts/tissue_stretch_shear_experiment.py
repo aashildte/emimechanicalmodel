@@ -77,42 +77,27 @@ def read_cl_args():
 # stretch array; increase from 0 to max
 
 stretch = np.linspace(0, strain, num_steps)
+
+N_10 = 0
+for i, s in enumerate(stretch):
+    if s >= 0.1:
+        N_10 = i
+        break
+
 peak_index = num_steps - 1
 
 # load mesh, subdomains
 
-mesh = df.UnitSquareMesh(3, 3)
-#mesh = df.UnitCubeMesh(3, 3, 3)
+#mesh = df.UnitSquareMesh(3, 3)
+mesh = df.UnitCubeMesh(3, 3, 3)
 
 # initiate model
         
-"""
-material_params = {
-    "a": 2.113,
-    "b": 4.319,
-    "a_f": 6.595,
-    "b_f": 4.340, #4.340,
-    "a_s": 0.00082, #0.00082,
-    "b_s": 0.004,
-    "a_fs": 0.393,
-    "b_fs": 1.154,
-}
-"""
-
-material_params = {
-    "a": 0.059,
-    "b": 8.023,
-    "a_f": 18.472,
-    "b_f": 16.026,
-    "a_s": 2.481,
-    "b_s": 11.120,
-    "a_fs": 0.216,
-    "b_fs": 11.436,
-}
-
+material_params = {}
 
 model = TissueModel(
     mesh,
+    material_model="Bellini",
     material_parameters=material_params,
     experiment=experiment,
     verbose=verbose,
@@ -135,4 +120,122 @@ for (i, st_val) in enumerate(stretch):
     
     load[i] = model.evaluate_normal_load()
     print(load[i])
-np.save(f"schematics_2D/holzapfel_{experiment}.npy", load)
+
+import matplotlib.pyplot as plt
+plt.plot(stretch, load, color="black", label=r"$LA_{ant}$")
+plt.plot(stretch[N_10], load[N_10], "o", color="black", label=r"$LA_{ant}$")
+
+material_params = {
+        "c_iso" : 1.52,
+        "k1" :2.36,
+        "k2" : 12.65,
+        "k3" : 1.56,
+        "k4" : 7.17,
+}
+
+model = TissueModel(
+    mesh,
+    material_model="Bellini",
+    material_parameters=material_params,
+    experiment=experiment,
+    verbose=verbose,
+)
+
+# setup parameters - define the parameter space to explore
+
+# then run the simulation
+
+load = np.zeros_like(stretch)
+
+for (i, st_val) in enumerate(stretch):
+
+    print(f"Step {i+1} / {num_steps}", flush=True)
+
+    model.assign_stretch(st_val)
+
+    project = (plot_all_steps) or (plot_at_peak and i == peak_index)
+    model.solve(project=project)
+    
+    load[i] = model.evaluate_normal_load()
+    print(load[i])
+
+plt.plot(stretch, load, "--", color="black", label=r"$LA_{post}$")
+plt.plot(stretch[N_10], load[N_10], "o", color="black", label=r"$LA_{post}$")
+
+material_params = {
+        "c_iso" : 0.63,
+        "k1" : 3.27,
+        "k2" : 7.62,
+        "k3" : 1.75,
+        "k4" : 3.24,
+}
+
+model = TissueModel(
+    mesh,
+    material_model="Bellini",
+    material_parameters=material_params,
+    experiment=experiment,
+    verbose=verbose,
+)
+
+# setup parameters - define the parameter space to explore
+
+# then run the simulation
+
+load = np.zeros_like(stretch)
+
+for (i, st_val) in enumerate(stretch):
+
+    print(f"Step {i+1} / {num_steps}", flush=True)
+
+    model.assign_stretch(st_val)
+
+    project = (plot_all_steps) or (plot_at_peak and i == peak_index)
+    model.solve(project=project)
+    
+    load[i] = model.evaluate_normal_load()
+    print(load[i])
+
+plt.plot(stretch, load, "-", color="tab:red", label=r"$LA_{ant}$, VTP")
+plt.plot(stretch[N_10], load[N_10], "o", color="tab:red", label=r"$LA_{ant}$, VTP")
+
+material_params = {
+        "c_iso" : 2.37,
+        "k1" : 5.38,
+        "k2" : 11.37,
+        "k3" : 2.11,
+        "k4" : 4.03,
+}
+
+model = TissueModel(
+    mesh,
+    material_model="Bellini",
+    material_parameters=material_params,
+    experiment=experiment,
+    verbose=verbose,
+)
+
+# setup parameters - define the parameter space to explore
+
+# then run the simulation
+
+load = np.zeros_like(stretch)
+
+for (i, st_val) in enumerate(stretch):
+
+    print(f"Step {i+1} / {num_steps}", flush=True)
+
+    model.assign_stretch(st_val)
+
+    project = (plot_all_steps) or (plot_at_peak and i == peak_index)
+    model.solve(project=project)
+    
+    load[i] = model.evaluate_normal_load()
+    print(load[i])
+
+plt.plot(stretch, load, "--", color="tab:red", label=r"$LA_{post}$, VTP")
+plt.plot(stretch[N_10], load[N_10], "o", color="tab:red", label=r"$LA_{post}$, VTP")
+
+plt.legend()
+
+plt.show()

@@ -3,6 +3,7 @@ from .cardiac_model import CardiacModel
 from .nonlinear_problem import NonlinearProblem, NewtonSolver
 from .tissue_model import TissueModel
 from .emi_model import EMIModel
+from .emi_model_collagen import EMIModelCollagen
 from .monitor import Monitor
 
 from .bellinimaterial import BelliniMaterial
@@ -18,7 +19,6 @@ from .mesh_setup import (
     load_mesh_sarcomere,
     assign_discrete_values,
     load_mesh_with_collagen_structure,
-    write_collagen_to_file,
 )
 
 from .deformation_experiments import (

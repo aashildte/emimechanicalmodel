@@ -18,7 +18,7 @@ from emimechanicalmodel.mesh_setup import write_collagen_to_file
 
 from emimechanicalmodel import (
     load_mesh_with_collagen_structure,
-    EMIModel,
+    EMIModelCollagen,
 )
 
 from parameter_setup import (
@@ -81,7 +81,7 @@ material_params = {
 }
 
 
-model = EMIModel(
+model = EMIModelCollagen(
     mesh,
     volumes,
     experiment=experiment,

@@ -19,7 +19,7 @@ from emimechanicalmodel import (
     compute_active_component,
     load_mesh,
     load_mesh_with_collagen_structure,
-    EMIModel,
+    EMIModelCollagen,
 )
 
 from parameter_setup import (
@@ -47,10 +47,6 @@ active_values *= 1200
 
 scale_i = float(sys.argv[3])
 scale_e = float(sys.argv[4])
-
-#print(active_values[93], active_values[-1])
-#exit()
-
 
 # load mesh, subdomains
 
@@ -87,7 +83,7 @@ material_params = {
 }
 # initiate EMI model
 
-model = EMIModel(
+model = EMIModelCollagen(
     mesh,
     volumes,
     active_model="active_stress",
