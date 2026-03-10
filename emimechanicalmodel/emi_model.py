@@ -69,6 +69,9 @@ class EMIModel(CardiacModel):
         U = df.FunctionSpace(mesh, "DG", 0)
         subdomain_map = volumes.array()  # only works for DG-0
 
+        self.dx = df.Measure("dx", domain=mesh, subdomain_data=self.volumes)
+
+
         if material_model == "holzapfel":
             mat_model = EMIHolzapfelMaterial(U, subdomain_map, **material_parameters)
         elif material_model == "guccione":
@@ -126,7 +129,7 @@ class EMIModel(CardiacModel):
                defined as non-zero over the intracellular domain
 
         """
-
+        print("active tension value: ", value)
         assign_discrete_values(self.active_fn, self.subdomain_map, value, 0)
 
 
@@ -153,17 +156,17 @@ class EMIModel(CardiacModel):
         u_DG = df.Function(V_DG, name="Displacement (µm)")
         E_DG = df.Function(T_DG, name="Strain")
         sigma_DG = df.Function(T_DG, name="Cauchy stress (kPa)")
-        sigma_DG_active = df.Function(T_DG, name="Active Cauchy stress (kPa)")
-        sigma_DG_passive = df.Function(T_DG, name="Passive Cauchy stress (kPa)")
+        #sigma_DG_active = df.Function(T_DG, name="Active Cauchy stress (kPa)")
+        #sigma_DG_passive = df.Function(T_DG, name="Passive Cauchy stress (kPa)")
         active_DG = df.Function(U_DG, name="Active stress imposed (kPa)")
 
         p_proj = ProjectionFunction(self.p, p_DG)
         u_proj = ProjectionFunction(self.u, u_DG)
         E_proj = ProjectionFunction(self.E, E_DG)
         sigma_proj = ProjectionFunction(self.sigma, sigma_DG)
-        sigma_proj_active = ProjectionFunction(self.sigma_active, sigma_DG_active)
-        sigma_proj_passive = ProjectionFunction(self.sigma_passive, sigma_DG_passive)
+        #sigma_proj_active = ProjectionFunction(self.sigma_active, sigma_DG_active)
+        #sigma_proj_passive = ProjectionFunction(self.sigma_passive, sigma_DG_passive)
         active_proj = ProjectionFunction(self.active_fn, active_DG)
 
-        self.tracked_variables = [u_DG, p_DG, E_DG, sigma_DG, sigma_DG_active, sigma_DG_passive, active_DG]
-        self.projections = [u_proj, p_proj, E_proj, sigma_proj, sigma_proj_active, sigma_proj_passive, active_proj]
+        self.tracked_variables = [u_DG, p_DG, E_DG, sigma_DG, active_DG]
+        self.projections = [u_proj, p_proj, E_proj, sigma_proj, active_proj]

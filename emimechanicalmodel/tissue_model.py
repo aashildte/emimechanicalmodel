@@ -56,6 +56,7 @@ class TissueModel(CardiacModel):
         dim = mesh.topology().dim()
         self.volumes = df.MeshFunction("size_t", mesh, dim, 0)
         self.volumes.array()[:] = 0
+        self.dx = df.Measure("dx", domain=mesh, subdomain_data=self.volumes)
 
         material_parameters["dim"] = dim
 

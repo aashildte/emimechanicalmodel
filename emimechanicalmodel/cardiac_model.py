@@ -102,6 +102,8 @@ class CardiacModel(ABC):
         # define solver and initiate tracked variables
         self._define_solver(verbose)
         self._define_projections()
+        self._initialize_vertex_indices()
+        self.initialize_sarcomere_side_vertices()
 
     def _set_direction_vectors(self):
         dim = self.dim
@@ -265,8 +267,6 @@ class CardiacModel(ABC):
             load_value = load_values[wall_idt]
             self.Gext[wall_idt].assign(load_value)
 
-
-
     def assign_stretch(self, stretch_value):
         """
 
@@ -332,12 +332,12 @@ class CardiacModel(ABC):
             "active_strain",
         ], "Error: Unknown active model, please specify as 'active_stress' or 'active_strain'."
 
-        J = df.det(F)
 
         if active_model == "active_stress":
+            
             e1 = self.fiber_dir
-
-            C = pow(J, -float(2) / 3) * F.T * F
+            J = df.det(F)
+            C = pow(J, -float(self.dim) / 3) * F.T * F
             I4 = df.inner(C * e1, e1)
         
             psi_active = active_fn / 2.0 * (I4 - 1)
@@ -346,36 +346,31 @@ class CardiacModel(ABC):
 
             psi = psi_active + psi_passive + psi_comp
             P = df.diff(psi, F)
-
-            self.P_active = df.diff(psi_active, F)
-            self.P_passive = df.diff(psi_passive, F)
-            self.P_comp = df.diff(psi_comp, F)
         else:
-            sqrt_fun = (df.Constant(1) - active_fn) ** (-0.5)
+
+            a = df.Constant(1) - active_fn
+            sqrt_fun = a**(-0.5)
 
             if self.dim == 3:
-                F_a = df.as_tensor(
-                    (
-                        (df.Constant(1) - active_fn, 0, 0),
-                        (0, sqrt_fun, 0),
-                        (0, 0, sqrt_fun),
-                    )
-                )
+                F_a = df.as_tensor(((a, 0, 0),
+                                (0, sqrt_fun, 0),
+                                (0, 0, sqrt_fun)))
             else:
                 F_a = df.as_tensor(((df.Constant(1) - active_fn, 0), (0, sqrt_fun)))
-
+ 
             F_e = df.variable(F * df.inv(F_a))
+
             psi_passive = mat_model.get_strain_energy_term(F_e)
-            psi_comp = comp_model.get_strain_energy_term(F_e, self.p)
+            psi_comp    = comp_model.get_strain_energy_term(F_e, self.p)
             psi = psi_passive + psi_comp
-            
-            self.P_active = df.diff(psi, F)      # TODO check this one mathematically; also for active strain?
-            self.P_passive = df.diff(psi_passive, F)
-            self.P_comp = df.diff(psi_comp, F)
 
             P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T)
 
+        assert P.ufl_shape == df.grad(self.v).ufl_shape
+
         return P
+
+
 
     @abstractmethod
     def _define_projections(self):
@@ -403,10 +398,6 @@ class CardiacModel(ABC):
         E = 0.5 * (C - I)  # the Green-Lagrange strain tensor
 
         sigma = (1 / df.det(F)) * P * F.T
-
-        self.sigma_active = (1 / df.det(F)) * self.P_active * F.T
-        self.sigma_passive = (1 / df.det(F)) * self.P_passive * F.T + (1 / df.det(F)) * self.P_comp * F.T
-
         N = df.FacetNormal(self.mesh)
 
         ds = self.deformation.ds
@@ -536,11 +527,8 @@ class CardiacModel(ABC):
         Args:
             project (bool): If True, we update all projection after solving
 
-        """
-        # as per default we are using the manual implementation which
-        # should be at least as fast; however, we will
-        # just keep a simple version here for easy comparison:
-        
+        """ 
+
         df.solve(
             self.weak_form == 0,
             self.state,
@@ -554,14 +542,11 @@ class CardiacModel(ABC):
             form_compiler_parameters={"optimize": True},
         )
 
-        """
-        self._solver.solve(self.problem, self.state.vector())
-        """ 
         # save stress and strain to fenics functions
         if project:
             for proj_fun in self.projections:
                 proj_fun.project()
-
+        
     def integrate_subdomain(self, fun, subdomain_ids):
         """
 
@@ -578,11 +563,9 @@ class CardiacModel(ABC):
         if isinstance(subdomain_ids, int) or isinstance(subdomain_ids, np.uint64):
             subdomain_ids = [subdomain_ids]
 
-        dx = df.Measure("dx", domain=self.mesh, subdomain_data=self.volumes)
-
         integral = 0
         for subdomain_id in subdomain_ids:
-            integral += df.assemble(fun * dx(int(subdomain_id)))        
+            integral += df.assemble(fun * self.dx(int(subdomain_id)))        
 
         return integral
 
@@ -623,9 +606,11 @@ class CardiacModel(ABC):
         v /= df.sqrt(df.dot(v, v))
         stress = df.inner(v, self.sigma * v)
 
-        return self.integrate_subdomain(stress, subdomain_ids) / self.calculate_volume(
-            subdomain_ids
-        )
+        volume = self.calculate_volume(subdomain_ids)
+        if volume < 1E-13:
+            return self.integrate_subdomain(stress, subdomain_ids)  # or 0?
+
+        return self.integrate_subdomain(stress, subdomain_ids) / volume
     
 
     def evaluate_normal_load(self):
@@ -639,7 +624,6 @@ class CardiacModel(ABC):
 
         """
         l = self.deformation.evaluate_normal_load(self.F, self.P)
-        print("load: ", l)
         return l
 
     def evaluate_shear_load(self):
@@ -667,8 +651,8 @@ class CardiacModel(ABC):
 
         """
         unit_vector = self.fiber_dir
-        stress = self.evaluate_subdomain_stress(unit_vector, subdomain_ids)
         print("Evaluating stress in: ", subdomain_ids)
+        stress = self.evaluate_subdomain_stress(unit_vector, subdomain_ids)
         print("Subdomain stress: ", stress)
         return stress
 
@@ -720,7 +704,7 @@ class CardiacModel(ABC):
 
         """
         strain = df.inner(unit_vector, self.E * unit_vector)
-       
+         
         return self.integrate_subdomain(strain, subdomain_ids) / self.calculate_volume(
             subdomain_ids
         )
@@ -737,9 +721,13 @@ class CardiacModel(ABC):
             (see eq. (16) in the paper)
 
         """
-        #print("Evaluating strain in: ", subdomain_ids)
         unit_vector = self.fiber_dir
-        return self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
+        strain = self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
+
+        print("Evaluating fiber strain in: ", subdomain_ids)
+        print("Subdomain strain: ", strain)
+
+        return strain
 
     def evaluate_subdomain_strain_sheet_dir(self, subdomain_ids):
         """
@@ -757,7 +745,12 @@ class CardiacModel(ABC):
         rank = comm.Get_rank()
         
         unit_vector = self.sheet_dir
-        return self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
+        strain= self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
+        
+        print("Evaluating sheet strain in: ", subdomain_ids)
+        print("Subdomain strain: ", strain)
+
+        return strain
 
     def evaluate_subdomain_strain_normal_dir(self, subdomain_ids):
         """
@@ -833,5 +826,135 @@ class CardiacModel(ABC):
         
         relative_shortening = (disp_max - disp_min)/length
         print("relative shortening: ", relative_shortening*100)
-
+        
         return relative_shortening
+
+    def _initialize_vertex_indices(self):
+        """
+        Precompute vertex indices for each subdomain.
+        Call this once after mesh and subdomains are loaded.
+        """
+
+        self.subdomain_vertices = {}
+
+        mesh = self.mesh
+        dim = mesh.geometry().dim()
+
+        # get coordinates once
+        coords = mesh.coordinates()
+        self.coords = coords
+
+        # volumes: MeshFunction over cells
+        for rid in self.volumes.array():  # loop over all subdomain IDs
+            self.subdomain_vertices[rid] = []
+
+        # map vertices to subdomain IDs
+        for cell in df.cells(mesh):
+            cid = int(self.volumes[cell])
+            for v in cell.entities(0):
+                self.subdomain_vertices[cid].append(v)
+
+        # remove duplicates
+        for rid in self.subdomain_vertices:
+            self.subdomain_vertices[rid] = np.unique(self.subdomain_vertices[rid])
+
+    def initialize_sarcomere_side_vertices(self):
+        """
+        Identify left and right boundary vertices for each subdomain region.
+        Stores them as self.left_vertices and self.right_vertices.
+        """
+
+        coords = self.mesh.coordinates()
+        self.left_vertices = {}
+        self.right_vertices = {}
+
+        tol = 1e-8  # small numerical tolerance
+
+        for rid, verts in self.subdomain_vertices.items():
+            if len(verts) == 0:
+                continue
+
+            xvals = coords[verts, 0]
+            xmin, xmax = np.min(xvals), np.max(xvals)
+
+            left_verts = [v for v in verts if abs(coords[v, 0] - xmin) < tol]
+            right_verts = [v for v in verts if abs(coords[v, 0] - xmax) < tol]
+
+            self.left_vertices[rid] = np.array(left_verts, dtype=int)
+            self.right_vertices[rid] = np.array(right_verts, dtype=int)
+
+        print(f"Initialized side vertices for {len(self.subdomain_vertices)} subdomains.")
+
+
+    def compute_regional_shortening(self):
+        """
+        Compute relative shortening for all subdomains based on
+        average displacement along the fiber direction (x-direction).
+
+        Returns:
+            dict: region_id -> relative shortening
+        """
+        import numpy as np
+        from mpi4py import MPI
+        import dolfin as df
+
+        comm = MPI.COMM_WORLD
+
+        # Fiber direction (assumed x)
+        f0 = df.Constant([1.0, 0.0])
+
+        # Project x-displacement component to CG1
+        V = df.FunctionSpace(self.mesh, "CG", 1)
+        xcomp = df.project(df.inner(self.u, f0), V)
+
+        # Extract vertex-wise displacement values
+        u_vals_global = xcomp.compute_vertex_values(self.mesh)
+        coords = self.mesh.coordinates()
+
+        # Compute global reference shortening
+        global_short = self.evaluate_average_shortening()
+        print(f"Global shortening for reference: {global_short:.6f}")
+
+        results = {}
+
+        # Iterate over internal subdomains
+        for rid, verts in self.subdomain_vertices.items():
+            left_vertices = self.left_vertices[rid]
+            right_vertices = self.right_vertices[rid]
+
+            if len(left_vertices) == 0 or len(right_vertices) == 0:
+                results[rid] = 0.0
+                continue
+
+            # Get original x-coordinates
+            x_orig = coords[:, 0]
+            xmin = np.min(x_orig[verts])
+            xmax = np.max(x_orig[verts])
+
+            # Compute current x-positions = original + displacement
+            x_left = x_orig[left_vertices] + u_vals_global[left_vertices]
+            x_right = x_orig[right_vertices] + u_vals_global[right_vertices]
+
+            # Average left/right surface positions
+            avg_left = np.mean(x_left)
+            avg_right = np.mean(x_right)
+
+            # Compute sarcomere length change
+            L_current = avg_right - avg_left
+            L0 = xmax - xmin
+            rel_short = (L_current - L0) / L0
+
+            results[rid] = rel_short
+
+            # Optional: sanity check against global shortening
+            if abs(rel_short) < 0.5 * abs(global_short):
+                print(
+                    f"WARNING: Sarcomere {rid} relative shortening much smaller than global!\n"
+                    f"avg_left={avg_left:.6e}, avg_right={avg_right:.6e}, "
+                    f"L0={L0:.6e}, rel_short={rel_short:.6e}"
+                )
+
+            print(f"Sarcomere {rid}: left {len(left_vertices)} vertices, right {len(right_vertices)} vertices")
+
+        return results
+

@@ -187,7 +187,7 @@ def setup_monitor(
     """
 
     _, meshid = os.path.split(mesh_file)
-    meshid = meshid.split(".")[0]
+    meshid = meshid.split(".")[:-1]
 
     param_space = {
         "experiment": experiment,

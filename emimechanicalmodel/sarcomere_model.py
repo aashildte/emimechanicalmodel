@@ -13,6 +13,7 @@ from emimechanicalmodel.sarcomerematerial import EMIHolzapfelMaterial_with_subst
 from emimechanicalmodel.sarcomerematerial import assign_discrete_values
 from emimechanicalmodel.compressibility import IncompressibleMaterial, SarcomereNearlyIncompressibleMaterial
 from emimechanicalmodel.proj_fun import ProjectionFunction
+from emimechanicalmodel.emi_holzapfelmaterial import EMIHolzapfelMaterial
 
 
 class SarcomereModel(CardiacModel):
@@ -36,8 +37,8 @@ class SarcomereModel(CardiacModel):
         self,
         mesh,
         volumes,
-        sarcomere_angles,
         experiment,
+        sarcomere_angles=None,
         material_model="holzapfel",
         material_parameters={},
         active_model="active_strain",
@@ -51,15 +52,16 @@ class SarcomereModel(CardiacModel):
         # mesh properties, subdomains
         self.verbose = verbose
         self.volumes = volumes
+        
         self.set_subdomains(volumes)
         self.sarcomere_angles = sarcomere_angles
 
         U = df.FunctionSpace(mesh, "DG", 0)
+        
         subdomain_map = volumes.array()  # only works for DG-0
-        #self.xi_sarcomeres = df.Function(U)
-        #assign_discrete_values(self.xi_sarcomeres, subdomain_map, 1)      # contractile units!
-
+        
         mat_model = MaterialModel(U, subdomain_map, self.subdomains, **material_parameters)
+        #mat_model = EMIHolzapfelMaterial(U, subdomain_map)
 
         if compressibility_model=="incompressible":
             comp_model = IncompressibleMaterial()
@@ -68,11 +70,13 @@ class SarcomereModel(CardiacModel):
         else:
             print("Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'.")
 
+        
+
         self.fraction_sarcomeres_disabled = fraction_sarcomeres_disabled
 
         self.U, self.subdomain_map, self.mat_model, self.comp_model = \
                 U, subdomain_map, mat_model, comp_model
-
+        
         super().__init__(
             mesh,
             experiment,
@@ -93,14 +97,14 @@ class SarcomereModel(CardiacModel):
 
         dofmap = Q.dofmap()
         angle_array = angle_fn.vector().get_local()
-
+        
         for cell in df.cells(mesh):
             cell_idx = cell.index()
             dof = dofmap.cell_dofs(cell_idx)[0]
             subdomain_id = cell_domains[cell_idx]
-
-            if 1000 <= subdomain_id < 2000:
-                angle_array[dof] = np.pi / 2 - sarcomere_angles[subdomain_id - 1000]
+            
+            if subdomain_id < 1000:
+                angle_array[dof] = sarcomere_angles[subdomain_id - 1]
             else:
                 angle_array[dof] = 0.0
 
@@ -110,14 +114,15 @@ class SarcomereModel(CardiacModel):
         return angle_fn
 
 
-
-
-    def _set_direction_vectors(self):
-        
-        # if no variation we can use this
-        #self.fiber_dir = df.as_vector([1., 0.])
-        #self.sheet_dir = df.as_vector([0., 1.])
-        #return
+    def _set_direction_vectors(self, use_spatially_varying_fibers=False):     
+        if not use_spatially_varying_fibers:
+            if self.dim==2:
+                self.fiber_dir = df.as_vector([1., 0.])
+                self.sheet_dir = df.as_vector([0., 1.])
+            else:
+                self.fiber_dir = df.as_vector([1., 0., 0.])
+                self.sheet_dir = df.as_vector([0., 1., 0.])
+            return
 
         angle_fn = self._compute_sarcomere_angles()
 
@@ -160,46 +165,64 @@ class SarcomereModel(CardiacModel):
 
         self.fiber_dir = fiber_dir
         self.sheet_dir = sheet_dir
-
-        with df.XDMFFile(self.mesh.mpi_comm(), "fiber_direction.xdmf") as xdmf_fiber:
+        
+        """
+        with df.XDMFFile(self.mesh.mpi_comm(), "fiber_direction2.xdmf") as xdmf_fiber:
             xdmf_fiber.write(fiber_dir)
 
-        with df.XDMFFile(self.mesh.mpi_comm(), "sheet_direction.xdmf") as xdmf_sheet:
+        with df.XDMFFile(self.mesh.mpi_comm(), "sheet_direction2.xdmf") as xdmf_sheet:
             xdmf_sheet.write(sheet_dir)
-
+        """
 
     def set_subdomains(self, volumes):
+        mesh = volumes.mesh()
         mpi_comm = MPI.COMM_WORLD
         rank = mpi_comm.Get_rank()
+
+        # Original subdomain labels (local array)
+        local_subdomains = volumes.array()
+
+        # New MeshFunction with remapped labels
+        new_subdomains = df.MeshFunction(
+            "size_t", mesh, mesh.topology().dim()
+        )
+        new_subdomains.set_all(0)  # default background
+
+        # Iterate over cells and remap
+        for cell in df.cells(mesh):
+            old_id = volumes[cell]
+            
+            if 1 <= old_id < 1000:
+                new_subdomains[cell] = 1  # sarcomere
+            elif old_id == 2000:
+                new_subdomains[cell] = 2  # cytoskeleton
+            elif old_id == 3000:
+                new_subdomains[cell] = 3  # cytoskeleton
+            elif old_id == 4000:
+                new_subdomains[cell] = 4  # connection
+            elif old_id == 5000:
+                new_subdomains[cell] = 5  # nucleus/substrate
+            """
+
+            if 1 <= old_id < 1000:
+                new_subdomains[cell] = 1  # sarcomere
+            elif 1000 <= old_id < 2000:
+                new_subdomains[cell] = 2  # z-line
+            elif 2000 <= old_id < 3000:
+                new_subdomains[cell] = 3  # cytoskeleton
+            elif old_id==3000:
+                new_subdomains[cell] = 4  # cytoskeleton
+            elif old_id==3001:
+                new_subdomains[cell] = 5  # connection
+            elif old_id == 5000:
+                new_subdomains[cell] = 6  # nucleus/substrate
+            """
+        # Store results
         
-        local_subdomains = set(volumes.array())
-        subdomains = mpi_comm.gather(local_subdomains, root=0)
-
-        if rank == 0:
-            global_subdomains = []
-            for s in subdomains:
-                global_subdomains += s
-            global_subdomains = list(set(global_subdomains))
-        else:
-            global_subdomains = None
-
-        self.subdomains = mpi_comm.bcast(global_subdomains, root=0)
-        self.num_subdomains = len(self.subdomains) 
-        self.intracellular_space = self.subdomains[:]
-        #self.intracellular_space.remove(0)       # remove matrix space
-         
-        # each sub-region:
-        self.sarcomere_regions = filter(lambda x: 1000 <= x < 2000, local_subdomains)
-        self.zline_regions = filter(lambda x: 2000 <= x < 3000, local_subdomains)
-        self.cytoskeleton_regions = filter(lambda x: 3000 <= x < 4000, local_subdomains)
-        self.connection_regions = filter(lambda x: 4000 <= x < 5000, local_subdomains)
         self.local_subdomains = local_subdomains
+        self.subdomains = new_subdomains
 
-        if self.verbose == 2:
-            print(f"Local subdomains (rank {rank}):{local_subdomains}")  
-            print(f"Global subdomains (rank {rank}):{subdomains}")
-            print("Number of subdomains in total: ", self.num_subdomains)
-
+        self.dx = df.Measure("dx", domain=mesh, subdomain_data=self.subdomains)
 
     def _define_active_fn(self):
         """
@@ -213,39 +236,36 @@ class SarcomereModel(CardiacModel):
         self.active_fn.vector().zero()
 
         # Create array to store values per cell, then interpolate to CG function
-        V0 = df.FunctionSpace(self.U.mesh(), "DG", 0)  # cellwise constant
-        active_dg0 = df.Function(V0)
-        active_dg0_values = active_dg0.vector().get_local()
+        sarcomere_scaling = df.Function(self.U)
+        sarcomere_scaling_values = sarcomere_scaling.vector().get_local()
 
         cell_to_subdomain = self.volumes.array()
-        cell_map = V0.dofmap().entity_dofs(self.U.mesh(), self.U.mesh().topology().dim())
+        cell_map = self.U.dofmap().entity_dofs(self.U.mesh(), self.U.mesh().topology().dim())
+        
+        cell_to_dof = [self.U.dofmap().cell_dofs(i)[0] for i in range(self.U.mesh().num_cells())]
 
-        if rank == 0:
-            print("fraction sarcomeres disabled:", self.fraction_sarcomeres_disabled)
 
         for cell in df.cells(self.U.mesh()):
             cell_index = cell.index()
             subdomain_id = cell_to_subdomain[cell_index]
             np.random.seed(subdomain_id)
-            if 1000 <= subdomain_id < 2000 and np.random.uniform() >= self.fraction_sarcomeres_disabled:
-                scaling_value = max(0, np.random.normal(1, 0.1))
+            if 1 <= subdomain_id < 999 and np.random.uniform(0, 1) <= (1.0 - self.fraction_sarcomeres_disabled):
+                scaling_value = np.random.normal(loc=1.0, scale=0.1)
             else:
-                scaling_value = 0.0
+                scaling_value = 0
 
             # Assign to DG0 function
             dof = cell_map[cell_index]
-            active_dg0_values[dof] = scaling_value
+            sarcomere_scaling_values[dof] = scaling_value
 
-        active_dg0.vector().set_local(active_dg0_values)
-        active_dg0.vector().apply("insert")
+        sarcomere_scaling.vector().set_local(sarcomere_scaling_values)
+        sarcomere_scaling.vector().apply("insert")
 
-        # TODO not necessary .. Interpolate to the continuous space U
-        self.active_fn = df.interpolate(active_dg0, self.U)
-        self.active_fn.vector().zero()
+        self.sarcomere_scaling = sarcomere_scaling
 
         # Store local array for reference
-        self.sarcomere_scaling = df.Function(self.U, name="Sarcomere scaling")
-        self.sarcomere_scaling.assign(self.active_fn)
+        #self.sarcomere_scaling = df.Function(self.U, name="Sarcomere scaling")
+        #self.sarcomere_scaling.assign(self.active_fn)
 
 
     def update_active_fn(self, value_map):
@@ -256,30 +276,11 @@ class SarcomereModel(CardiacModel):
             value (float): Scalar multiplier for sarcomere activity.
         """
         
-        print(value_map)
+        #self.active_fn = df.Constant(0)
+
         self.active_fn.vector().zero()
-        #self.active_fn.vector().axpy(value, self.sarcomere_scaling.vector())
-        #self.active_fn.vector().apply("insert")
-        
-        active_values = self.active_fn.vector().get_local()
-        
-        cell_to_subdomain = self.volumes.array()
-        cell_map = self.U.dofmap().entity_dofs(self.U.mesh(), self.U.mesh().topology().dim())
-
-        for cell in df.cells(self.U.mesh()):
-            cell_index = cell.index()
-            subdomain_id = cell_to_subdomain[cell_index]
-            
-            # Assign to DG0 function
-            dof = cell_map[cell_index]
-            idt = cell_to_subdomain[dof]
-            if idt in value_map:
-                active_values[dof] = value_map[idt]
-
-        self.active_fn.vector().set_local(active_values)
+        self.active_fn.vector().axpy(value_map, self.sarcomere_scaling.vector())
         self.active_fn.vector().apply("insert")
-
-
 
     def _define_projections(self):
         """
@@ -296,7 +297,7 @@ class SarcomereModel(CardiacModel):
 
         # define function spaces
 
-        U_DG = df.FunctionSpace(mesh, "DG", 1)
+        U_DG = df.FunctionSpace(mesh, "DG", 2)
         V_DG = df.VectorFunctionSpace(mesh, "DG", 2)
         T_DG = df.TensorFunctionSpace(mesh, "DG", 2)
 

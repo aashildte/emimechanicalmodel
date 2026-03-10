@@ -72,13 +72,13 @@ def load_mesh_sarcomere(mesh_file: str, verbose=1):
 
     dim = mesh.topology().dim()
     volumes = df.MeshFunction("size_t", mesh, dim, 0)
-
+    
     # this needs to match whatever the subdomain is called in the mesh file
-    if dim == 3:
-        h5_file.read(volumes, "volumes")
-    else:
-        h5_file.read(volumes, "subdomains")
-
+    #if dim == 3:
+    #    h5_file.read(volumes, "volumes")
+    #else:
+    h5_file.read(volumes, "subdomains")
+    
     if verbose > 0:
         print("Mesh and subdomains loaded successfully.")
         print(
@@ -86,10 +86,10 @@ def load_mesh_sarcomere(mesh_file: str, verbose=1):
             % (mesh.num_vertices(), mesh.num_cells())
         )
 
-    sarcomere_file = mesh_file.split(".h")[0] + ".npy"
-    sarcomere_angles = np.load(sarcomere_file)
-
-    return mesh, volumes, sarcomere_angles
+    #sarcomere_file = mesh_file.split(".h")[0] + "_angles.npy"
+    #sarcomere_angles = np.load(sarcomere_file)
+    
+    return mesh, volumes, None #sarcomere_angles
 
 
 

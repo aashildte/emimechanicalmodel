@@ -60,23 +60,27 @@ class SarcomereNearlyIncompressibleMaterial(CompressibleMaterial):
             kappa_zlines=df.Constant(1000),
             kappa_connections=df.Constant(1000),
             kappa_cytoskeleton=df.Constant(1000),
+            kappa_nucleus=df.Constant(1000),
             ):
     
         # assign material paramters via characteristic functions
-        xi_sarcomeres = df.Function(U)
-        xi_zlines = df.Function(U)
-        xi_cytoskeleton = df.Function(U)
-        xi_connections = df.Function(U)
+        #xi_sarcomeres = df.Function(U)
+        #xi_zlines = df.Function(U)
+        #xi_cytoskeleton = df.Function(U)
+        #xi_connections = df.Function(U)
+        #xi_nucleus = df.Function(U)
         
-        self.assign_discrete_values(xi_sarcomeres, subdomain_map, 1000)
-        self.assign_discrete_values(xi_zlines, subdomain_map, 2000)
-        self.assign_discrete_values(xi_cytoskeleton, subdomain_map, 3000)
-        self.assign_discrete_values(xi_connections, subdomain_map, 4000)
+        #self.assign_discrete_values(xi_sarcomeres, subdomain_map, 1000)
+        #self.assign_discrete_values(xi_zlines, subdomain_map, 3000)
+        #self.assign_discrete_values(xi_cytoskeleton, subdomain_map, 4000)
+        #self.assign_discrete_values(xi_connections, subdomain_map, 5000)
+        #self.assign_discrete_values(xi_connections, subdomain_map, 6000)
 
-        self.kappa = kappa_sarcomeres*xi_sarcomeres + \
-                     kappa_zlines*xi_zlines + \
-                     kappa_connections*xi_connections + \
-                     kappa_cytoskeleton*xi_cytoskeleton
+        self.kappa = df.Constant(1000)
+        #kappa_sarcomeres*xi_sarcomeres + \
+        #             kappa_zlines*xi_zlines + \
+        #             kappa_connections*xi_connections + \
+        #             kappa_cytoskeleton*xi_cytoskeleton
 
     def assign_discrete_values(self, function, subdomain_map, subdomain_value):
         function.vector()[:] = np.where(np.logical_and(subdomain_map >= subdomain_value, subdomain_map < (subdomain_value + 1000)),

@@ -1,39 +1,14 @@
 #! /bin/bash
 
 export OMP_NUM_THREADS=2
-mpirun -n 2 python scripts/contraction_fibrosis.py geometries/2d_mesh_baseline_10_0.h5 500 1 1 
 
-for seed in 1 2 3 4 5
-do
-	for k in 0 10
-	do
-		for fib in "replacement" "interstitial"
-		do
-	       		mesh="2d_mesh_${fib}_N_10_k_${k}_seed_${seed}.h5"
-			mpirun -n 2 python scripts/contraction_fibrosis.py geometries/$mesh 500 1 1 &
-			mpirun -n 2 python scripts/contraction_fibrosis.py geometries/$mesh 500 2 2
-		done
-	done
-done
+#for sc in 200.0 150.0 100.0 50.0 25.0 12.5 6.25 5.0 2.5 1.25 0.625 0.5 0.25 0.125 0.0625 0.05 0.025; do
+#	m="meshes/varying_cells_buckling_with_ECM/cell2_baseline.h5"	
+#	mpirun -n 2 python scripts/active_contraction_sarcomere_model.py -m $m -o /data1/aashild/sarcomere_model/chatgpt_stiffness_params_isotropic -tm 137 -t 137 --z-line-scale-factor $sc
+#done
 
-seed=1
-for k in 0 10
-do
-	for fib in "replacement" "interstitial"
-	do
-		mesh="2d_mesh_${fib}_N_10_k_${k}_seed_${seed}.h5"
-		for sc in 1.5 2 2.5 3 3.5 4
-		do
-			mpirun -n 2 python scripts/contraction_fibrosis.py geometries/$mesh 137 $sc 1
-		done
-		for sc in 2 3 4 5 6 7 8
-		do
-			mpirun -n 2 python scripts/contraction_fibrosis.py geometries/$mesh 137 1 $sc
-		done
-		
-		for sc in 3 4 5 6
-		do
-			mpirun -n 2 python scripts/contraction_fibrosis.py geometries/$mesh 137 $sc $sc
-		done
-	done
+
+
+for mesh in sarcomere_geometry_withECM_50_10_clength_0.6.h5 sarcomere_geometry_withECM_55_10_clength_0.6.h5 sarcomere_geometry_withECM_60_10_clength_0.6.h5 sarcomere_geometry_withECM_65_10_clength_0.6.h5 sarcomere_geometry_withECM_70_10_clength_0.6.h5 sarcomere_geometry_withECM_75_10_clength_0.6.h5 sarcomere_geometry_withECM_80_10_clength_0.6.h5; do
+	mpirun -n 2 python scripts/active_contraction_sarcomere_model.py -m meshes/mitochondria_geometries_added_withECM/$mesh -o /data1/aashild/sarcomere_model/new_sarcomere_lesion_experiments_org_stiffness_params -tm 137 -t 137
 done
