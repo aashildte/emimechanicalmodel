@@ -66,6 +66,8 @@ The code in this repo has been used for a few publications. The code is always e
 - Åshild Telle, Joakim Sundnes, Samuel T. Wall: *Modeling Cardiac Mechanics on a Sub-Cellular Scale*. *Modeling Excitable Tissue*, 2021: [Publication](https://link.springer.com/chapter/10.1007/978-3-030-61157-6_3) - [code (Zenodo)](https://zenodo.org/records/3769029)
 - Åshild Telle, James D. Trotter, Xing Cai, Henrik Finsberg, Miroslav Kuchta, Joakim Sundnes & Samuel T. Wall: *A cell-based framework for modeling cardiac mechanics*. *Biomech Model Mechanobiol*, 2023: [Publication](https://link.springer.com/article/10.1007/s10237-022-01660-8) - [code (Zenodo)](https://zenodo.org/records/7137689)
 
+- Åshild Telle, Mary M. Maleckar, Samuel T. Wall, Joseph D. Powers, Christoph M. Augustin, Joakim Sundnes & Patrick M. Boyle: *Mechanical Modeling of Cardiac Fibrosis With Explicit Spatial Representation of Cellular Structure and Collagen Alignment*, *J Biomech Eng., 2026: [Publication](https://asmedigitalcollection.asme.org/biomechanical/article-abstract/148/2/021007/1226518/Mechanical-Modeling-of-Cardiac-Fibrosis-With) - [code (Zenodo)](https://zenodo.org/records/17282444)
+
 # Contributors, issues, questions
 
 This software is developed and maintained by Åshild Telle (Simula Reserach Laboratory; University of Washington). Any issues, questions or general requests can be sent to aashild@uw.edu.

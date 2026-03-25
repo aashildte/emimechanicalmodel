@@ -92,34 +92,38 @@ class EMIHolzapfelMaterial_with_substructures:
         
         assign_discrete_values(xi_ECM, subdomain_map, 0, 0)
         assign_discrete_values(xi_sarcomeres, subdomain_map, 1, 999)
-        assign_discrete_values(xi_zlines, subdomain_map, 2000, 2000) 
-        assign_discrete_values(xi_cytoskeleton, subdomain_map, 3000, 3000)
-        assign_discrete_values(xi_connections, subdomain_map, 4000, 4000)
+        assign_discrete_values(xi_zlines, subdomain_map, 1000, 1000) 
+        assign_discrete_values(xi_cytoskeleton, subdomain_map, 2000, 2000)
+        assign_discrete_values(xi_connections, subdomain_map, 3000, 3001)
         #assign_discrete_values(xi_nucleus, subdomain_map, 5000, 0)
-        assign_discrete_values(xi_nucleus, subdomain_map, 5000, 5000) # "substrate"
+        assign_discrete_values(xi_nucleus, subdomain_map, 4000, 4000) # or "substrate"
         
         total = xi_sarcomeres.vector()[:] + xi_zlines.vector()[:] + xi_cytoskeleton.vector()[:] + xi_connections.vector()[:] + xi_nucleus.vector()[:] + xi_ECM.vector()[:]         
-        
+       
+        subdomains = list(set(subdomain_map))
+        subdomains.sort()
+        print("subdomains: ", subdomains)
         assert sum(total) == len(total), "Error: A part of the domain is not assigned material properties."
         
         a = (
             a_i_sarcomeres    * xi_sarcomeres
-          + a_i_sarcomeres        * xi_zlines
+          + a_i_zlines        * xi_zlines
           + a_i_cytoskeleton  * xi_cytoskeleton
-          + a_i_sarcomeres   * xi_connections
-          + a_i_sarcomeres       * xi_nucleus
+          + a_i_connections   * xi_connections
+          + a_i_nucleus       * xi_nucleus
           + a_e               * xi_ECM
         )
 
         a_f = (
             a_if_sarcomeres   * xi_sarcomeres
           + a_if_cytoskeleton * xi_cytoskeleton
+          + a_if_cytoskeleton * xi_connections
         )
 
         self.a, self.b, self.a_f, self.b_f = a, b, a_f, b_f
 
     
-    def get_strain_energy_term(self, F):
+    def get_strain_energy_term(self, F, e1=df.as_vector([1.0, 0.0, 0.0])):
 
         a, b, a_f, b_f = (
             self.a,
@@ -128,21 +132,14 @@ class EMIHolzapfelMaterial_with_substructures:
             self.b_f,
         )
 
-        if self.dim == 2:
-            e1 = df.as_vector([1.0, 0.0])
-            e2 = df.as_vector([0.0, 1.0])
-        elif self.dim == 3:
-            e1 = df.as_vector([1.0, 0.0, 0.0])
-            e2 = df.as_vector([0.0, 1.0, 0.0])
-
+        dim = 3
         J = df.det(F)
         C = F.T * F
-        J_iso = J**(-2.0/float(self.dim))
+        J_iso = J**(-2.0/dim)
         C_iso = J_iso * C
 
         IIFx = df.tr(C_iso)
         I4e1 = df.inner(C_iso * e1, e1)
-        #I8fs = df.inner(C_iso * e1, e2)
 
         cond = lambda a: ufl.conditional(a > 0, a, 0)
 

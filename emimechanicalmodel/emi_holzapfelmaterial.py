@@ -68,7 +68,7 @@ class EMIHolzapfelMaterial:
         # these are fenics functions defined over all of omega, not likely to be accessed
         self._a, self._b, self._a_f, self._b_f = a, b, a_f, b_f
 
-    def get_strain_energy_term(self, F):
+    def get_strain_energy_term(self, F, e1=df.as_vector([1.0, 0.0, 0.0])):
 
         a, b, a_f, b_f = (
             self._a,
@@ -77,14 +77,16 @@ class EMIHolzapfelMaterial:
             self._b_f,
         )
 
-        if self.dim == 2:
-            e1 = df.as_vector([1.0, 0.0])
-        elif self.dim == 3:
-            e1 = df.as_vector([1.0, 0.0, 0.0])
+        #if self.dim == 2:
+        #    e1 = df.as_vector([1.0, 0.0])
+        #elif self.dim == 3:
+        e1 = df.as_vector([1.0, 0.0, 0.0])
+        dim = 3
 
         J = df.det(F)
         C = J ** 2 * F.T * F
-        J_iso = pow(J, -1.0 / float(self.dim))
+        J_iso = pow(J, -1.0 / dim)
+        #J_iso = pow(J, -1.0 / float(self.dim))
         C_iso = J_iso ** 2 * F.T * F
 
         IIFx = df.tr(C_iso)
@@ -92,7 +94,7 @@ class EMIHolzapfelMaterial:
 
         cond = lambda a: ufl.conditional(a > 0, a, 0)
 
-        W_hat = a / (2 * b) * (df.exp(b * (IIFx - self.dim)) - 1)
+        W_hat = a / (2 * b) * (df.exp(b * (IIFx - dim)) - 1)
         W_f = a_f / (2 * b_f) * (df.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
 
         return W_hat + W_f

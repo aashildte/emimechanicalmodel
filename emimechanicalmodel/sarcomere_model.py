@@ -59,7 +59,6 @@ class SarcomereModel(CardiacModel):
         U = df.FunctionSpace(mesh, "DG", 0)
         
         subdomain_map = volumes.array()  # only works for DG-0
-        
         mat_model = MaterialModel(U, subdomain_map, self.subdomains, **material_parameters)
         #mat_model = EMIHolzapfelMaterial(U, subdomain_map)
 
@@ -69,8 +68,6 @@ class SarcomereModel(CardiacModel):
             comp_model = SarcomereNearlyIncompressibleMaterial(U, subdomain_map, **compressibility_parameters)
         else:
             print("Error: Unknown material model; please specify as 'incompressible' or 'nearly_incompressible'.")
-
-        
 
         self.fraction_sarcomeres_disabled = fraction_sarcomeres_disabled
 
@@ -114,7 +111,10 @@ class SarcomereModel(CardiacModel):
         return angle_fn
 
 
-    def _set_direction_vectors(self, use_spatially_varying_fibers=False):     
+    def _set_direction_vectors(self):
+
+        use_spatially_varying_fibers = (self.sarcomere_angles is not None)
+        
         if not use_spatially_varying_fibers:
             if self.dim==2:
                 self.fiber_dir = df.as_vector([1., 0.])
@@ -194,13 +194,13 @@ class SarcomereModel(CardiacModel):
             
             if 1 <= old_id < 1000:
                 new_subdomains[cell] = 1  # sarcomere
-            elif old_id == 2000:
+            elif old_id == 1000:
                 new_subdomains[cell] = 2  # cytoskeleton
-            elif old_id == 3000:
+            elif old_id == 2000:
                 new_subdomains[cell] = 3  # cytoskeleton
-            elif old_id == 4000:
+            elif old_id == 3000:
                 new_subdomains[cell] = 4  # connection
-            elif old_id == 5000:
+            elif old_id == 4000:
                 new_subdomains[cell] = 5  # nucleus/substrate
             """
 
@@ -252,7 +252,8 @@ class SarcomereModel(CardiacModel):
             if 1 <= subdomain_id < 999 and np.random.uniform(0, 1) <= (1.0 - self.fraction_sarcomeres_disabled):
                 scaling_value = np.random.normal(loc=1.0, scale=0.1)
             else:
-                scaling_value = 0
+                scaling_value = 0.0
+            #scaling_value = 1.0
 
             # Assign to DG0 function
             dof = cell_map[cell_index]

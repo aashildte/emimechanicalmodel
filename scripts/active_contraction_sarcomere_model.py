@@ -69,6 +69,10 @@ def read_cl_args():
     parser.add_argument("--cytoskeleton-scale-factor",
             type=float,
             default=1.0)
+    
+    parser.add_argument("--isometric",
+            action="store_true",
+            default=False)
 
     pp = parser.parse_args()
 
@@ -89,6 +93,7 @@ def read_cl_args():
         pp.sarcomere_scale_factor_af,
         pp.ECM_scale_factor,
         pp.cytoskeleton_scale_factor,
+        pp.isometric,
     )
 
 
@@ -111,6 +116,7 @@ def read_cl_args():
     sarcomere_scale_af,
     ECM_scale,
     cytoskeleton_scale,
+    isometric,
 ) = read_cl_args()
 
 # compute active stress, given from the Rice model
@@ -125,33 +131,29 @@ mesh, volumes, angles = load_mesh_sarcomere(mesh_file, verbose)
 #mesh, volumes = load_mesh(mesh_file, verbose)
 enable_monitor = True  # save output if != None
 
-
 material_params = {
         "a_i_sarcomeres" : 1.0*sarcomere_scale,
         "a_if_sarcomeres" : 5.0*sarcomere_scale_af,
-        "a_i_zlines": 5.0,
-        "a_i_connections" : 5.0,
-        "a_i_cytoskeleton" : 1.0,
+        "a_i_zlines": 4.0*zline_scale,
+        "a_i_connections" : 4.0*zline_scale,
+        "a_i_cytoskeleton" : 0.25*cytoskeleton_scale,
         "a_if_cytoskeleton" : 5.0,
-        "a_e" : 1.0,
-        "a_i_nucleus" : 1.0,
+        "a_e" : 1.0*ECM_scale,
+        "a_i_nucleus" : 4.0,
         }
-
-material_params = {}
 
 model = SarcomereModel(
     mesh,
     volumes,
-    angles,
+    sarcomere_angles=angles,
     material_parameters=material_params,
     experiment="contraction",
     active_model="active_stress",
     compressibility_model="nearly_incompressible",
     verbose=verbose,
+    isometric=isometric,
 )
 
-output_folder = "test"
-#enable_monitor = False
 if enable_monitor:
     monitor = setup_monitor(
         f"active_contraction_exp",
@@ -171,25 +173,15 @@ if verbose < 2:
 # then run the simulation
 for i in range(num_time_steps):
     time_pt, a_str = time[i], active_values[i]
-    a_str = 0.0
-    print("a_str", a_str)
 
     if verbose >= 1 and MPI.COMM_WORLD.Get_rank() == 0:
         print(f"Time step {i+1} / {num_time_steps}", flush=True)
 
     project = (i==(num_time_steps - 1))
     
-    u_func = model.state.split()[0]
-    u_max = u_func.vector().norm("linf")
-    print("||u||_max before solve:", u_max)
     model.update_active_fn(a_str)
     model.solve(project=project)
 
-    u_func = model.state.split()[0]
-    u_max = u_func.vector().norm("linf")
-    print("||u||_max after solve:", u_max)
-
-    #exit()
     if enable_monitor:
         monitor.update_scalar_functions(time_pt)
 

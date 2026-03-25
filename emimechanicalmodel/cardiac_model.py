@@ -332,16 +332,33 @@ class CardiacModel(ABC):
             "active_strain",
         ], "Error: Unknown active model, please specify as 'active_stress' or 'active_strain'."
 
+        if self.dim == 2:
+            J2 = df.det(F)
 
+            #if self.compressibility_model == "nearly_incompressible":
+            F33 = 1.0 / J2      # 3D‑like behavior
+            #else:
+            #    F33 = 1.0           # true 2D area behavior
+
+            F = df.as_tensor([[F[0,0], F[0,1], 0],
+                              [F[1,0], F[1,1], 0],
+                              [0,        0,    F33]])
+            F = df.variable(F)
+
+        
+            e1 = df.as_vector([self.fiber_dir[0], self.fiber_dir[1], 0.0])
+        else:
+            e1 = self.fiber_dir
+        
         if active_model == "active_stress":
             
-            e1 = self.fiber_dir
             J = df.det(F)
-            C = pow(J, -float(self.dim) / 3) * F.T * F
+            #C = pow(J, -float(self.dim) / 3) * F.T * F
+            C = pow(J, -2/3) * F.T * F
             I4 = df.inner(C * e1, e1)
         
             psi_active = active_fn / 2.0 * (I4 - 1)
-            psi_passive = mat_model.get_strain_energy_term(F)
+            psi_passive = mat_model.get_strain_energy_term(F, e1)
             psi_comp = comp_model.get_strain_energy_term(F, self.p)
 
             psi = psi_active + psi_passive + psi_comp
@@ -351,12 +368,12 @@ class CardiacModel(ABC):
             a = df.Constant(1) - active_fn
             sqrt_fun = a**(-0.5)
 
-            if self.dim == 3:
-                F_a = df.as_tensor(((a, 0, 0),
-                                (0, sqrt_fun, 0),
-                                (0, 0, sqrt_fun)))
-            else:
-                F_a = df.as_tensor(((df.Constant(1) - active_fn, 0), (0, sqrt_fun)))
+            #if self.dim == 3:
+            F_a = df.as_tensor(((a, 0, 0),
+                               (0, sqrt_fun, 0),
+                               (0, 0, sqrt_fun)))
+            #else:
+            #    F_a = df.as_tensor(((df.Constant(1) - active_fn, 0), (0, sqrt_fun)))
  
             F_e = df.variable(F * df.inv(F_a))
 
@@ -365,6 +382,10 @@ class CardiacModel(ABC):
             psi = psi_passive + psi_comp
 
             P = df.det(F_a) * df.diff(psi, F_e) * df.inv(F_a.T)
+
+        if self.dim == 2:
+            P = df.as_tensor([[P[0,0], P[0,1]],
+                              [P[1,0], P[1,1]]])
 
         assert P.ufl_shape == df.grad(self.v).ufl_shape
 
@@ -599,8 +620,6 @@ class CardiacModel(ABC):
             ..math::
             v = \frac{F \cdot e} \frac{|| F \cdot e ||}
 
-        (see eq. (17) in the paper)
-
         """
         v = self.F * unit_vector
         v /= df.sqrt(df.dot(v, v))
@@ -651,9 +670,7 @@ class CardiacModel(ABC):
 
         """
         unit_vector = self.fiber_dir
-        print("Evaluating stress in: ", subdomain_ids)
         stress = self.evaluate_subdomain_stress(unit_vector, subdomain_ids)
-        print("Subdomain stress: ", stress)
         return stress
 
 
@@ -670,6 +687,38 @@ class CardiacModel(ABC):
         """
         unit_vector = self.sheet_dir
         return self.evaluate_subdomain_stress(unit_vector, subdomain_ids)
+
+    
+    def evaluate_subdomain_stress_fiber_sheet_dir(self, subdomain_ids):
+        """
+
+        Args:
+            subdomain_ids (integer or list of integers): cell idt(s) or/and ECM idt
+
+        Returns:
+            ..math::
+            \sum \int_{\Omega_subdomain_id} v \cdot \sigma v dx
+
+        where
+            ..math::
+            v = \frac{F \cdot e} \frac{|| F \cdot e ||}
+
+        """
+        f = self.F * self.fiber_dir
+        f /= df.sqrt(df.dot(f, f))
+
+        s = self.F * self.sheet_dir
+        s /= df.sqrt(df.dot(s, s))
+
+        stress = df.inner(f, self.sigma * s)
+                
+        volume = self.calculate_volume(subdomain_ids)
+        if volume < 1E-13:
+            return self.integrate_subdomain(stress, subdomain_ids)
+
+        return self.integrate_subdomain(stress, subdomain_ids) / volume
+
+
 
     def evaluate_subdomain_stress_normal_dir(self, subdomain_ids):
         """
@@ -717,17 +766,40 @@ class CardiacModel(ABC):
             subdomain_ids (integer or list of integers): cell idt(s) or/and ECM idt
 
         Returns:
-            ..math:: \overline{E_{ff}}
-            (see eq. (16) in the paper)
+            ..math:: \overline{E_{fs}}
 
         """
         unit_vector = self.fiber_dir
         strain = self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
 
-        print("Evaluating fiber strain in: ", subdomain_ids)
-        print("Subdomain strain: ", strain)
-
         return strain
+    
+
+    def evaluate_subdomain_strain_sheet_fibre_dir(self, subdomain_ids):
+        """
+
+        Args:
+            subdomain_ids (integer or list of integers): cell idt(s) or/and ECM idt
+
+        Returns:
+            ..math:: \overline{E_{ff}}
+            (see eq. (16) in the paper)
+
+        """
+        
+
+        strain = df.inner(self.fiber_dir, self.E * self.sheet_dir)
+         
+        strain_val = self.integrate_subdomain(strain, subdomain_ids) / self.calculate_volume(
+            subdomain_ids
+        )
+        
+        print("Evaluating sheet strain in: ", subdomain_ids)
+        print("Subdomain strain: ", strain_val)
+
+        return strain_val
+
+
 
     def evaluate_subdomain_strain_sheet_dir(self, subdomain_ids):
         """
@@ -747,9 +819,6 @@ class CardiacModel(ABC):
         unit_vector = self.sheet_dir
         strain= self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
         
-        print("Evaluating sheet strain in: ", subdomain_ids)
-        print("Subdomain strain: ", strain)
-
         return strain
 
     def evaluate_subdomain_strain_normal_dir(self, subdomain_ids):
@@ -825,8 +894,8 @@ class CardiacModel(ABC):
         length = xmax - xmin
         
         relative_shortening = (disp_max - disp_min)/length
-        print("relative shortening: ", relative_shortening*100)
-        
+        print("relative shortening: ", relative_shortening*100, "(%)")
+
         return relative_shortening
 
     def _initialize_vertex_indices(self):
