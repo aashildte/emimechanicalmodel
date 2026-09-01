@@ -36,19 +36,21 @@ def test_fiber_strain_vs_transverse(ModelClass, dim, active_model):
     )
 
     active = 0.01
-    model.update_active_fn(active)
+    
+    model.update_active_fn(i*active)
     model.solve(project=True)
 
     # Strains
-    E_ff = model.evaluate_subdomain_strain_fibre_dir(1)
+    E_ff = model.evaluate_subdomain_strain_fiber_dir(1)
     E_ss = model.evaluate_subdomain_strain_sheet_dir(1)
+    print(ModelClass.__name__, dim, active_model, abs(E_ff), abs(E_ss))
 
     # Assertions
     assert E_ff < 0
-    print(ModelClass.__name__, dim, active_model, abs(E_ff), abs(E_ss))
     assert abs(E_ff) > abs(E_ss)
 
 
 if __name__ == "__main__":
     test_fiber_strain_vs_transverse(EMIModel, 2, "active_stress")
+    test_fiber_strain_vs_transverse(SarcomereModel, 2, "active_stress")
 

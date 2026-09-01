@@ -9,6 +9,7 @@ from .mesh_setup import assign_discrete_values
 import dolfin as df
 import numpy as np
 
+
 try:
     import ufl
 except ModuleNotFoundError:
@@ -56,7 +57,7 @@ class SarcomereNearlyIncompressibleMaterial(CompressibleMaterial):
             self,
             U,
             subdomain_map,
-            kappa_sarcomeres=df.Constant(100),
+            kappa_sarcomeres=df.Constant(1000),
             kappa_zlines=df.Constant(1000),
             kappa_connections=df.Constant(1000),
             kappa_cytoskeleton=df.Constant(1000),
@@ -64,29 +65,64 @@ class SarcomereNearlyIncompressibleMaterial(CompressibleMaterial):
             ):
     
         # assign material paramters via characteristic functions
-        #xi_sarcomeres = df.Function(U)
-        #xi_zlines = df.Function(U)
-        #xi_cytoskeleton = df.Function(U)
-        #xi_connections = df.Function(U)
-        #xi_nucleus = df.Function(U)
+        #xi_ECM = df.Function(U)
+        xi_sarcomeres = df.Function(U)
+        xi_zlines = df.Function(U)
+        xi_cytoskeleton = df.Function(U)
+        xi_connections = df.Function(U)
+        xi_nucleus = df.Function(U)
         
-        #self.assign_discrete_values(xi_sarcomeres, subdomain_map, 1000)
-        #self.assign_discrete_values(xi_zlines, subdomain_map, 3000)
-        #self.assign_discrete_values(xi_cytoskeleton, subdomain_map, 4000)
-        #self.assign_discrete_values(xi_connections, subdomain_map, 5000)
-        #self.assign_discrete_values(xi_connections, subdomain_map, 6000)
+        assign_discrete_values(xi_sarcomeres, subdomain_map, 1, 1999)
+        assign_discrete_values(xi_zlines, subdomain_map, 2000, 2000)
+        assign_discrete_values(xi_cytoskeleton, subdomain_map, 3000, 3000)
+        assign_discrete_values(xi_connections, subdomain_map, 4000, 4000)
+        assign_discrete_values(xi_nucleus, subdomain_map, 5000, 5002)
 
-        self.kappa = df.Constant(1000)
-        #kappa_sarcomeres*xi_sarcomeres + \
-        #             kappa_zlines*xi_zlines + \
-        #             kappa_connections*xi_connections + \
-        #             kappa_cytoskeleton*xi_cytoskeleton
+        total = xi_sarcomeres.vector()[:] + xi_zlines.vector()[:] + xi_cytoskeleton.vector()[:] + xi_connections.vector()[:] + xi_nucleus.vector()[:] #+ xi_ECM.vector()[:]  
+        subdomains = list(set(subdomain_map))
+        subdomains.sort()
+        print("subdomains: ", subdomains)
+        print(sum(total))
+        print(len(total))
+        assert sum(total) == len(total), "Error: A part of the domain is not assigned compressibility properties."
 
-    def assign_discrete_values(self, function, subdomain_map, subdomain_value):
-        function.vector()[:] = np.where(np.logical_and(subdomain_map >= subdomain_value, subdomain_map < (subdomain_value + 1000)),
-            1,
-            0,
-        )
+        #self.kappa = df.Constant(1000)
+        self.kappa = kappa_sarcomeres*xi_sarcomeres + \
+                     kappa_zlines*xi_zlines + \
+                     kappa_connections*xi_connections + \
+                     kappa_cytoskeleton*xi_cytoskeleton + \
+                     kappa_nucleus*xi_nucleus
+
+
+
+def assign_discrete_values(function, subdomain_map, subdomain_value_min, subdomain_value_max):
+    """
+
+    Assigns function values to a function based on a subdomain map;
+    usually just element by element in a DG-0 function.
+
+    Here assuming all subunits have idts in a 1000-range
+
+    Args:
+        function (df.Function): function to be changed
+        subdomain_map (df.MeshFunction): subdomain division,
+            extracellular space expected to have value 0,
+            intracellular space expected to have values >= 1
+        value_i: to be assigned to omega_i
+        value_e: to be assigned to omega_e
+
+    """
+    #function.vector()[:] = np.where(np.logical_and(subdomain_map >= subdomain_value_min, subdomain_map <= subdomain_value_max),
+    #    1,
+    #    0,
+    #)
+
+    mask = np.logical_and(subdomain_map >= subdomain_value_min, subdomain_map <= subdomain_value_max)
+    local = function.vector().get_local().copy()
+    local[:] = 0
+    local[mask] = 1
+    function.vector().set_local(local)
+    function.vector().apply("insert")
 
 
 class EMINearlyIncompressibleMaterial(CompressibleMaterial):

@@ -11,7 +11,7 @@ combinations to separate output files.
 import os
 from SALib.sample import saltelli
 import numpy as np
-
+from argparse import ArgumentParser
 
 def init_SA_problem(N):
     problem = {
@@ -20,7 +20,7 @@ def init_SA_problem(N):
         "bounds": [[0.1, 30] for _ in range(6)],
     }
 
-    param_values = saltelli.sample(problem, N, calc_second_order=False)
+    param_values = saltelli.sample(problem, N, calc_second_order=True)
 
     return problem, param_values
 
@@ -53,7 +53,7 @@ def initiate_sa(N, output_folder):
         np.save(fout, np.array(X))
 
 
-parser = argparse.ArgumentParser()
+parser = ArgumentParser()
 
 parser.add_argument(
     "-N",

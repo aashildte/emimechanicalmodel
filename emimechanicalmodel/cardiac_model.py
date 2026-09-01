@@ -66,6 +66,7 @@ class CardiacModel(ABC):
         self.isometric = isometric
 
         self._set_direction_vectors()
+        self._set_cartesian_vectors()
 
         # define variational form
         self._define_state_space()
@@ -104,6 +105,21 @@ class CardiacModel(ABC):
         self._define_projections()
         self._initialize_vertex_indices()
         self.initialize_sarcomere_side_vertices()
+    
+    def _set_cartesian_vectors(self):
+        dim = self.dim
+
+        # set directions, assuming alignment with the Cartesian axes
+        if dim == 3:
+            self.xdir = df.as_vector([1, 0, 0])
+            self.ydir = df.as_vector([0, 1, 0])
+            self.zdir = df.as_vector([0, 0, 1])
+
+        elif dim == 2:
+            self.xdir = df.as_vector([1, 0])
+            self.ydir = df.as_vector([0, 1])
+        else:
+            raise NotImplementedError
 
     def _set_direction_vectors(self):
         dim = self.dim
@@ -207,9 +223,7 @@ class CardiacModel(ABC):
         state = df.Function(state_space, name="state")
         test_state = df.TestFunction(state_space)
 
-        u = p = r = v = q = s = df.Constant(
-            0
-        )  # if these are not declared they can be ufl variables!
+        u = p = r = v = q = s = df.Constant(0)
 
         if self.compressibility_model == "incompressible":
             if self.experiment_str == "contraction":
@@ -417,6 +431,18 @@ class CardiacModel(ABC):
 
         C = F.T * F  # the right Cauchy-Green tensor
         E = 0.5 * (C - I)  # the Green-Lagrange strain tensor
+
+
+        # TODO move to separate function
+        x = self.xdir
+        lambda_x = df.sqrt(df.dot(x, df.dot(C, x)))
+        self.fiber_shortening = lambda_x
+
+        y = self.ydir
+        lambda_y = df.sqrt(df.dot(y, df.dot(C, y)))
+        self.sheet_shortening = lambda_y
+
+        self.shear_angle_fs = 2.0 * df.dot(x, df.dot(E, y))
 
         sigma = (1 / df.det(F)) * P * F.T
         N = df.FacetNormal(self.mesh)
@@ -658,7 +684,7 @@ class CardiacModel(ABC):
 
         return self.deformation.evaluate_shear_load(self.F, self.P)
 
-    def evaluate_subdomain_stress_fibre_dir(self, subdomain_ids):
+    def evaluate_subdomain_stress_fiber_dir(self, subdomain_ids, use_cartesian=True):
         """
 
         Args:
@@ -669,12 +695,16 @@ class CardiacModel(ABC):
             (see eq. (17) in the paper)
 
         """
-        unit_vector = self.fiber_dir
+        if use_cartesian:
+            unit_vector = self.xdir
+        else:
+            unit_vector = self.fiber_dir
+
         stress = self.evaluate_subdomain_stress(unit_vector, subdomain_ids)
         return stress
 
 
-    def evaluate_subdomain_stress_sheet_dir(self, subdomain_ids):
+    def evaluate_subdomain_stress_sheet_dir(self, subdomain_ids, use_cartesian=True):
         """
 
         Args:
@@ -685,11 +715,16 @@ class CardiacModel(ABC):
             (see eq. (17) in the paper)
 
         """
-        unit_vector = self.sheet_dir
+        
+        if use_cartesian:
+            unit_vector = self.ydir
+        else:
+            unit_vector = self.sheet_dir
+
         return self.evaluate_subdomain_stress(unit_vector, subdomain_ids)
 
     
-    def evaluate_subdomain_stress_fiber_sheet_dir(self, subdomain_ids):
+    def evaluate_subdomain_stress_fiber_sheet_dir(self, subdomain_ids, use_cartesian=True):
         """
 
         Args:
@@ -704,10 +739,18 @@ class CardiacModel(ABC):
             v = \frac{F \cdot e} \frac{|| F \cdot e ||}
 
         """
-        f = self.F * self.fiber_dir
+
+        if use_cartesian:
+            e1 = self.xdir
+            e2 = self.ydir
+        else:
+            e1 = self.fiber_dir
+            e2 = self.sheet_dir
+
+        f = self.F * e1
         f /= df.sqrt(df.dot(f, f))
 
-        s = self.F * self.sheet_dir
+        s = self.F * e2
         s /= df.sqrt(df.dot(s, s))
 
         stress = df.inner(f, self.sigma * s)
@@ -720,7 +763,7 @@ class CardiacModel(ABC):
 
 
 
-    def evaluate_subdomain_stress_normal_dir(self, subdomain_ids):
+    def evaluate_subdomain_stress_normal_dir(self, subdomain_ids, use_cartesian=True):
         """
 
         Args:
@@ -734,7 +777,7 @@ class CardiacModel(ABC):
         if self.dim == 2:
             return 0
 
-        unit_vector = self.normal_dir
+        unit_vector = self.normal_dir # TODO or zdir?
         return self.evaluate_subdomain_stress(unit_vector, subdomain_ids)
 
     def evaluate_subdomain_strain(self, unit_vector, subdomain_ids):
@@ -759,7 +802,7 @@ class CardiacModel(ABC):
         )
 
 
-    def evaluate_subdomain_strain_fibre_dir(self, subdomain_ids):
+    def evaluate_subdomain_strain_fiber_dir(self, subdomain_ids, use_cartesian=True):
         """
 
         Args:
@@ -769,13 +812,17 @@ class CardiacModel(ABC):
             ..math:: \overline{E_{fs}}
 
         """
-        unit_vector = self.fiber_dir
+        if use_cartesian:
+            unit_vector = self.xdir
+        else:
+            unit_vector = self.fiber_dir
+
         strain = self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
 
         return strain
     
 
-    def evaluate_subdomain_strain_sheet_fibre_dir(self, subdomain_ids):
+    def evaluate_subdomain_strain_fiber_sheet_dir(self, subdomain_ids):
         """
 
         Args:
@@ -794,14 +841,11 @@ class CardiacModel(ABC):
             subdomain_ids
         )
         
-        print("Evaluating sheet strain in: ", subdomain_ids)
-        print("Subdomain strain: ", strain_val)
-
         return strain_val
 
 
 
-    def evaluate_subdomain_strain_sheet_dir(self, subdomain_ids):
+    def evaluate_subdomain_strain_sheet_dir(self, subdomain_ids, use_cartesian=True):
         """
 
         Args:
@@ -816,12 +860,16 @@ class CardiacModel(ABC):
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
         
-        unit_vector = self.sheet_dir
+        if use_cartesian:
+            unit_vector = self.ydir
+        else:
+            unit_vector = self.sheet_dir
+        
         strain= self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
         
         return strain
 
-    def evaluate_subdomain_strain_normal_dir(self, subdomain_ids):
+    def evaluate_subdomain_strain_normal_dir(self, subdomain_ids, use_cartesian=True):
         """
 
         Args:
@@ -836,7 +884,11 @@ class CardiacModel(ABC):
         if self.dim == 2:
             return 0
 
-        unit_vector = self.normal_dir
+        if use_cartesian:
+            unit_vector = self.normal_dir
+        else:
+            unit_vector = self.zdir
+
         return self.evaluate_subdomain_strain(unit_vector, subdomain_ids)
 
     
@@ -867,20 +919,23 @@ class CardiacModel(ABC):
         return df.assemble(f*ds(wall_idt)) / area
 
 
-    def evaluate_average_shortening(self):
+    def evaluate_average_shortening(self, use_cartesian=True):
         """
         
         Taken as average displacement at the "xmax" wall minus the "xmin" wall,
         divided by original domain length.
 
         """
-        f0 = self.fiber_dir
+        if use_cartesian:
+            unit_vector = self.xdir
+        else:
+            unit_vector = self.fiber_dir
         
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
         
         
-        xcomp = df.inner(self.u, f0)
+        xcomp = df.inner(self.u, unit_vector)
         disp_min = self.evaluate_ds(xcomp, 1)
         disp_max = self.evaluate_ds(xcomp, 2)
 
@@ -894,9 +949,29 @@ class CardiacModel(ABC):
         length = xmax - xmin
         
         relative_shortening = (disp_max - disp_min)/length
-        print("relative shortening: ", relative_shortening*100, "(%)")
+        
+        #if self.verbose:
+        print("relative shortening: ", relative_shortening*100, "(%)", flush=True)
 
         return relative_shortening
+
+    def evaluate_lambda(self, subdomain_ids):
+             
+        l = self.integrate_subdomain(self.fiber_shortening, subdomain_ids) / self.calculate_volume(
+            subdomain_ids
+        )
+        return l
+
+    def evaluate_lambda_T(self, subdomain_ids):
+         
+        l = self.integrate_subdomain(self.sheet_shortening, subdomain_ids) / self.calculate_volume(
+            subdomain_ids
+        )
+        return l
+
+    def evaluate_shear_angle(self, subdomain_ids):
+        l = self.integrate_subdomain(self.shear_angle_fs, subdomain_ids) / self.calculate_volume(subdomain_ids)
+        return l
 
     def _initialize_vertex_indices(self):
         """
@@ -954,7 +1029,6 @@ class CardiacModel(ABC):
 
         print(f"Initialized side vertices for {len(self.subdomain_vertices)} subdomains.")
 
-
     def compute_regional_shortening(self):
         """
         Compute relative shortening for all subdomains based on
@@ -963,9 +1037,6 @@ class CardiacModel(ABC):
         Returns:
             dict: region_id -> relative shortening
         """
-        import numpy as np
-        from mpi4py import MPI
-        import dolfin as df
 
         comm = MPI.COMM_WORLD
 

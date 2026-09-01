@@ -65,7 +65,7 @@ def test_emi_proj_strain():
     model.update_active_fn(active_value)
     model.solve(project=True)
 
-    assert model.evaluate_subdomain_strain_fibre_dir(1) < 0
+    assert model.evaluate_subdomain_strain_fiber_dir(1) < 0
 
 
 def test_emi_proj_stress():
@@ -77,7 +77,7 @@ def test_emi_proj_stress():
 
     active_value = 0.001
 
-    assert model.evaluate_subdomain_stress_fibre_dir(1) > 0
+    assert model.evaluate_subdomain_stress_fiber_dir(1) > 0
 
 
 @pytest.mark.parametrize(

@@ -88,7 +88,9 @@ def load_mesh_sarcomere(mesh_file: str, verbose=1):
 
     sarcomere_file = mesh_file.split(".h")[0] + "_angles.npy"
     sarcomere_angles = np.load(sarcomere_file)
-    
+    #print(sarcomere_angles)
+    #exit()
+
     return mesh, volumes, sarcomere_angles
 
 

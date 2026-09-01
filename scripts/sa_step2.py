@@ -22,6 +22,7 @@ from emimechanicalmodel import load_mesh, EMIModel
 df.parameters["form_compiler"]["cpp_optimize"] = True
 df.parameters["form_compiler"]["representation"] = "uflacs"
 df.parameters["form_compiler"]["quadrature_degree"] = 4
+df.parameters["use_file_locking"] = False
 df.set_log_level(60)
 
 

@@ -64,24 +64,24 @@ class EMIHolzapfelMaterial_with_substructures:
         U,
         subdomain_map,
         subdomains,
+        sarcomere_scaling,
         a_i_sarcomeres=df.Constant(1.0),
-        a_if_sarcomeres=df.Constant(5.0),
+        a_if_sarcomeres=df.Constant(2.0),
         a_i_zlines=df.Constant(4.0),
         a_i_cytoskeleton=df.Constant(0.5),
         a_if_cytoskeleton=df.Constant(2.0),
         a_i_connections=df.Constant(4.0),
         a_i_nucleus=df.Constant(1.6),
         a_e=df.Constant(1.0),
-        b=df.Constant(5.0),
+        b_i=df.Constant(5.0),
         b_f=df.Constant(5.0),
+        b_i_connections=df.Constant(15.0),
     ):
         self.subdomain_map = subdomain_map
         self.subdomains = subdomains
         self.dim = U.mesh().topology().dim()
         
         assert isinstance(subdomain_map, np.ndarray)
-
-
         # assign material paramters via characteristic functions
         xi_ECM = df.Function(U)
         xi_sarcomeres = df.Function(U)
@@ -91,22 +91,20 @@ class EMIHolzapfelMaterial_with_substructures:
         xi_nucleus = df.Function(U)
         
         assign_discrete_values(xi_ECM, subdomain_map, 0, 0)
-        assign_discrete_values(xi_sarcomeres, subdomain_map, 1, 999)
-        assign_discrete_values(xi_zlines, subdomain_map, 1000, 1000) 
-        assign_discrete_values(xi_cytoskeleton, subdomain_map, 2000, 2000)
-        assign_discrete_values(xi_connections, subdomain_map, 3000, 3001)
-        #assign_discrete_values(xi_nucleus, subdomain_map, 5000, 0)
-        assign_discrete_values(xi_nucleus, subdomain_map, 4000, 4000) # or "substrate"
-        
-        total = xi_sarcomeres.vector()[:] + xi_zlines.vector()[:] + xi_cytoskeleton.vector()[:] + xi_connections.vector()[:] + xi_nucleus.vector()[:] + xi_ECM.vector()[:]         
-       
+        assign_discrete_values(xi_sarcomeres, subdomain_map, 1, 1999)
+        assign_discrete_values(xi_zlines, subdomain_map, 2000, 2000) 
+        assign_discrete_values(xi_cytoskeleton, subdomain_map, 3000, 3000)
+        assign_discrete_values(xi_connections, subdomain_map, 4000, 4001)
+        assign_discrete_values(xi_nucleus, subdomain_map, 5000, 5003) 
+
+        total = xi_sarcomeres.vector()[:] + xi_zlines.vector()[:] + xi_cytoskeleton.vector()[:] + xi_connections.vector()[:] + xi_nucleus.vector()[:] + xi_ECM.vector()[:]          
         subdomains = list(set(subdomain_map))
         subdomains.sort()
         print("subdomains: ", subdomains)
         assert sum(total) == len(total), "Error: A part of the domain is not assigned material properties."
         
         a = (
-            a_i_sarcomeres    * xi_sarcomeres
+            a_i_sarcomeres    * sarcomere_scaling
           + a_i_zlines        * xi_zlines
           + a_i_cytoskeleton  * xi_cytoskeleton
           + a_i_connections   * xi_connections
@@ -115,9 +113,19 @@ class EMIHolzapfelMaterial_with_substructures:
         )
 
         a_f = (
-            a_if_sarcomeres   * xi_sarcomeres
+            a_if_sarcomeres   * xi_nucleus
+          + a_if_sarcomeres   * sarcomere_scaling
           + a_if_cytoskeleton * xi_cytoskeleton
           + a_if_cytoskeleton * xi_connections
+        )
+        
+        b = (
+            b_i               * xi_sarcomeres
+          + b_i               * xi_zlines
+          + b_i               * xi_cytoskeleton
+          + b_i_connections   * xi_connections
+          + b_i               * xi_nucleus
+          + b_i               * xi_ECM
         )
 
         self.a, self.b, self.a_f, self.b_f = a, b, a_f, b_f
@@ -141,7 +149,7 @@ class EMIHolzapfelMaterial_with_substructures:
         IIFx = df.tr(C_iso)
         I4e1 = df.inner(C_iso * e1, e1)
 
-        cond = lambda a: ufl.conditional(a > 0, a, 0)
+        cond = lambda a: a #ufl.conditional(a > 0, a, 0)
 
         W_hat = a / (2 * b) * (df.exp(b * (IIFx - self.dim)) - 1)
         W_f = a_f / (2 * b_f) * (df.exp(b_f * cond(I4e1 - 1) ** 2) - 1)
